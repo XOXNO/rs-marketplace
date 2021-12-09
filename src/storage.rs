@@ -26,7 +26,11 @@ pub trait StorageModule {
 
     #[view(getTokenItemsQuantityForSale)]
     #[storage_mapper("tokenItemsQuantityForSale")]
-    fn token_items_quantity_for_sale(&self, token: TokenIdentifier, nonce: u64) -> SingleValueMapper<BigUint>;
+    fn token_items_quantity_for_sale(
+        &self,
+        token: TokenIdentifier,
+        nonce: u64,
+    ) -> SingleValueMapper<BigUint>;
 
     #[view(getLocalBalance)]
     #[storage_mapper("localTokenBalance")]

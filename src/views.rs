@@ -24,10 +24,15 @@ pub trait ViewsModule: crate::storage::StorageModule {
         let local_balance = self.local_token_balance(token.clone()).get();
         let mut sc_balance = BigUint::zero();
         if (token.is_egld()) {
-            sc_balance = self.blockchain().get_balance(&self.blockchain().get_sc_address());
+            sc_balance = self
+                .blockchain()
+                .get_balance(&self.blockchain().get_sc_address());
         } else if (token.is_valid_esdt_identifier() && token.is_esdt()) {
-            sc_balance = self.blockchain().get_esdt_balance(&self.blockchain().get_sc_address(),
-            &token, nonce);
+            sc_balance = self.blockchain().get_esdt_balance(
+                &self.blockchain().get_sc_address(),
+                &token,
+                nonce,
+            );
         }
         return sc_balance - local_balance;
     }
