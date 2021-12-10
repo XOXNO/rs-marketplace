@@ -20,7 +20,7 @@ pub struct Auction<M: ManagedTypeApi> {
     pub creator_royalties_percentage: BigUint<M>,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq)]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
 pub enum AuctionType {
     None,
     NftBid,

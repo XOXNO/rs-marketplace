@@ -1,32 +1,1663 @@
+use std::ptr::null;
+
+use elrond_wasm::contract_base::{CallableContract, ContractBase};
 use elrond_wasm::types::{
-    BigUint, EsdtLocalRole, EsdtTokenPayment, ManagedAddress, SCResult, TokenIdentifier,
+    Address, BigUint, EsdtLocalRole, EsdtTokenPayment, ManagedAddress, OptionalArg, SCResult,
+    StaticSCError, TokenIdentifier,
 };
+use elrond_wasm_debug::DebugApi;
 use elrond_wasm_debug::{
     assert_sc_error, managed_address, managed_biguint, managed_token_id, rust_biguint,
-    testing_framework::*, tx_mock::TxInputESDT,
+    testing_framework::*, tx_mock::TxContextRef,
 };
-use rust_testing_framework_tester::*;
+use esdt_nft_marketplace::auction::AuctionType;
+use esdt_nft_marketplace::storage::StorageModule;
+use esdt_nft_marketplace::views::ViewsModule;
+use esdt_nft_marketplace::*;
 
-const TEST_OUTPUT_PATH: &'static str = "test.scen.json";
-const TEST_MULTIPLE_SC_OUTPUT_PATH: &'static str = "test_multiple_sc.scen.json";
-const TEST_ESDT_OUTPUT_PATH: &'static str = "test_esdt_generation.scen.json";
-
-const SC_WASM_PATH: &'static str = "output/rust-testing-framework-tester.wasm";
-const ADDER_WASM_PATH: &'static str = "../../examples/adder/output/adder.wasm";
+const SC_WASM_PATH: &'static str = "output/esdt-nft-marketplace.wasm";
+fn init() -> BlockchainStateWrapper {
+    let wrapper = BlockchainStateWrapper::new();
+    return wrapper;
+}
 
 #[test]
-fn test_query() {
-    let mut wrapper = BlockchainStateWrapper::new();
-    let sc_wrapper = wrapper.create_sc_account(
-        &rust_biguint!(2_000),
-        None,
-        rust_testing_framework_tester::contract_obj,
+fn list_nft_bid_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
         SC_WASM_PATH,
     );
 
-    let _ = wrapper.execute_query(&sc_wrapper, |sc| {
-        let actual_balance = sc.get_egld_balance();
-        let expected_balance = managed_biguint!(2_000);
-        assert_eq!(actual_balance, expected_balance);
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
     });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(1);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(1u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            true,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type.eq(&AuctionType::NftBid), true);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+}
+
+#[test]
+fn list_nft_sale_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(1);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(1u32),
+            BigUint::from(1u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            false,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type.eq(&AuctionType::Nft), true);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+}
+
+#[test]
+fn list_sft_bid_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(2);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(2u32),
+            BigUint::from(10u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            false,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type, AuctionType::SftAll);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(2));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+}
+
+#[test]
+fn list_sft_bid_as_nft_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(2);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(10u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            false,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type, AuctionType::Nft);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+}
+
+#[test]
+fn list_sft_all_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(20);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(2u32),
+            BigUint::from(1u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            true,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type, AuctionType::SftAll);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(2));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+}
+
+#[test]
+fn list_sft_one_per_payment_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(20);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(5u32),
+            BigUint::from(10u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            true,
+            OptionalArg::Some(true),
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type, AuctionType::SftOnePerPayment);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(5));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+}
+
+#[test]
+fn list_sft_one_per_payment_as_nft_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(1);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(10u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            true,
+            OptionalArg::Some(true),
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type, AuctionType::NftBid);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+}
+
+#[test]
+fn buy_list_nft_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let payment = &rust_biguint!(100);
+    let cut_fee = 1000;
+    let creator_nft = wrapper.create_user_account(&rust_biguint!(0));
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(0));
+    let seller = wrapper.create_user_account(&rust_biguint!(0));
+    let buyer = wrapper.create_user_account(&rust_biguint!(1000));
+    let scc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &scc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(1000));
+    });
+
+    wrapper.execute_tx(&owner_sc, &scc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b""[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc.accepted_tokens().contains(&managed_token_id!(&b""[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(1);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+    wrapper.set_nft_balance_all_properties(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+        1000u64,
+        Option::Some(&creator_nft),
+        Option::None,
+        Option::None,
+        Option::None,
+    );
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &scc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(100u32),
+            BigUint::from(100u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            false,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        assert_eq!(auction.creator_royalties_percentage, managed_biguint!(1000));
+        assert_eq!(auction.auction_type.eq(&AuctionType::Nft), true);
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+        assert_eq!(
+            sc.blockchain().get_owner_address(),
+            managed_address!(&owner_sc)
+        );
+        assert_eq!(
+            &sc.blockchain().get_sc_address().to_address(),
+            scc.address_ref()
+        );
+    });
+
+    wrapper.check_nft_balance(
+        scc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.execute_tx(&buyer, &scc, &payment, |sc| {
+        let res = sc.buy(
+            managed_token_id!(&b""[..]),
+            0,
+            managed_biguint!(100u64),
+            1,
+            managed_token_id!(token_id),
+            nft_nonce,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        StateChange::Commit
+    });
+    wrapper.check_nft_balance(
+        scc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(&buyer, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_egld_balance(&seller, &rust_biguint!(80));
+    wrapper.check_egld_balance(&buyer, &rust_biguint!(900));
+    wrapper.check_egld_balance(&creator_nft, &rust_biguint!(10));
+    wrapper.check_egld_balance(&owner_sc, &rust_biguint!(10));
+}
+
+#[test]
+fn buy_list_nft_esdt_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let payment = &rust_biguint!(100);
+    let cut_fee = 1000;
+    let creator_nft = wrapper.create_user_account(&rust_biguint!(0));
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(0));
+    let seller = wrapper.create_user_account(&rust_biguint!(0));
+    let buyer = wrapper.create_user_account(&rust_biguint!(0));
+    wrapper.set_esdt_balance(&buyer, &b"ESDT-123456"[..], &rust_biguint!(1000));
+    let scc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &scc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(1000));
+    });
+
+    wrapper.execute_tx(&owner_sc, &scc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"ESDT-123456"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"ESDT-123456"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let payment_token = &b"ESDT-123456"[..];
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(1);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+    wrapper.set_nft_balance_all_properties(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+        1000u64,
+        Option::Some(&creator_nft),
+        Option::None,
+        Option::None,
+        Option::None,
+    );
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &scc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(100u32),
+            BigUint::from(100u32),
+            deadline,
+            managed_token_id!(&b"ESDT-123456"[..]),
+            false,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        assert_eq!(auction.creator_royalties_percentage, managed_biguint!(1000));
+        assert_eq!(auction.auction_type.eq(&AuctionType::Nft), true);
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+        assert_eq!(
+            sc.blockchain().get_owner_address(),
+            managed_address!(&owner_sc)
+        );
+        assert_eq!(
+            &sc.blockchain().get_sc_address().to_address(),
+            scc.address_ref()
+        );
+    });
+
+    wrapper.check_nft_balance(
+        scc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.execute_esdt_transfer(&buyer, &scc, &payment_token, 0, payment, |sc| {
+        let res = sc.buy(
+            managed_token_id!(payment_token),
+            0,
+            managed_biguint!(100u64),
+            1,
+            managed_token_id!(token_id),
+            nft_nonce,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        StateChange::Commit
+    });
+    wrapper.check_nft_balance(
+        scc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(&buyer, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_esdt_balance(&seller, payment_token, &rust_biguint!(80));
+    wrapper.check_esdt_balance(&buyer, payment_token, &rust_biguint!(900));
+    wrapper.check_esdt_balance(&creator_nft, payment_token, &rust_biguint!(10));
+    wrapper.check_esdt_balance(&owner_sc, payment_token, &rust_biguint!(10));
+}
+
+#[test]
+fn buy_list_nft_esdt_meta_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let payment = &rust_biguint!(100);
+    let cut_fee = 1000;
+    let creator_nft = wrapper.create_user_account(&rust_biguint!(0));
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(0));
+    let seller = wrapper.create_user_account(&rust_biguint!(0));
+    let buyer = wrapper.create_user_account(&rust_biguint!(0));
+    wrapper.set_nft_balance(&buyer, &b"ESDT-123456"[..], 5u64, &rust_biguint!(1000), &"");
+    let scc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &scc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(1000));
+    });
+
+    wrapper.execute_tx(&owner_sc, &scc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"ESDT-123456"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"ESDT-123456"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let payment_token = &b"ESDT-123456"[..];
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(1);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+    wrapper.set_nft_balance_all_properties(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+        1000u64,
+        Option::Some(&creator_nft),
+        Option::None,
+        Option::None,
+        Option::None,
+    );
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &scc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(100u32),
+            BigUint::from(100u32),
+            deadline,
+            managed_token_id!(&b"ESDT-123456"[..]),
+            false,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&scc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        assert_eq!(auction.creator_royalties_percentage, managed_biguint!(1000));
+        assert_eq!(auction.auction_type.eq(&AuctionType::Nft), true);
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+        assert_eq!(
+            sc.blockchain().get_owner_address(),
+            managed_address!(&owner_sc)
+        );
+        assert_eq!(
+            &sc.blockchain().get_sc_address().to_address(),
+            scc.address_ref()
+        );
+    });
+
+    wrapper.check_nft_balance(
+        scc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.execute_esdt_transfer(&buyer, &scc, &payment_token, 5, payment, |sc| {
+        let res = sc.buy(
+            managed_token_id!(payment_token),
+            5,
+            managed_biguint!(100u64),
+            1,
+            managed_token_id!(token_id),
+            nft_nonce,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), true);
+        assert_eq!(
+            res.err().unwrap(),
+            StaticSCError::from("The payment token is invalid!")
+        );
+        StateChange::Commit
+    });
+    wrapper.check_nft_balance(
+        scc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(&buyer, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    // wrapper.check_esdt_balance(&seller, payment_token, &rust_biguint!(80));
+    // wrapper.check_esdt_balance(&buyer, payment_token, &rust_biguint!(900));
+    // wrapper.check_esdt_balance(&creator_nft, payment_token, &rust_biguint!(10));
+    // wrapper.check_esdt_balance(&owner_sc, payment_token, &rust_biguint!(10));
+}
+
+#[test]
+fn withdraw_list_nft_sale_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(1);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(1u32),
+            BigUint::from(1u32),
+            BigUint::from(1u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            false,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type.eq(&AuctionType::Nft), true);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(1));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.execute_tx(&seller, &sc, &rust_zero, |sc| {
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        let _ = sc.withdraw(last_auctiton_id);
+        StateChange::Commit
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+}
+
+#[test]
+fn withdraw_list_sft_all_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(2));
+    let seller = wrapper.create_user_account(&rust_biguint!(1));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b"EGLD"[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b"EGLD"[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(100);
+    let nft_balance = rust_biguint!(18);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(18u32),
+            BigUint::from(1u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            true,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type, AuctionType::SftAll);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(18));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &rust_biguint!(0),
+        &nft_attributes,
+    );
+    wrapper.execute_tx(&seller, &sc, &rust_zero, |sc| {
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        let _ = sc.withdraw(last_auctiton_id);
+        StateChange::Commit
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+}
+
+#[test]
+fn end_bid_sft_bid_pass() {
+    let mut wrapper = init();
+    let rust_zero = &rust_biguint!(0);
+    let cut_fee = 2500;
+    let owner_sc = wrapper.create_user_account(&rust_biguint!(0));
+    let seller = wrapper.create_user_account(&rust_biguint!(0));
+    let sc = wrapper.create_sc_account(
+        &rust_zero,
+        Some(&owner_sc),
+        esdt_nft_marketplace::contract_obj,
+        SC_WASM_PATH,
+    );
+
+    // Initt deploy
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.init(cut_fee);
+        StateChange::Commit
+    });
+
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let cut_fee = sc.bid_cut_percentage().get();
+        let is_active = sc.status().get();
+        assert_eq!(accepted_tokens, 0);
+        assert_eq!(is_active, false);
+        assert_eq!(cut_fee, managed_biguint!(2500));
+    });
+
+    wrapper.execute_tx(&owner_sc, &sc, &rust_zero, |sc| {
+        let _ = sc.set_accepted_tokens(managed_token_id!(&b""[..]));
+        let _ = sc.status().set(&true);
+        StateChange::Commit
+    });
+    // Check initial state after deploy
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let accepted_tokens = sc.get_accepted_tokens_count();
+        let status = sc.status().get();
+        let accepted_token = sc
+            .accepted_tokens()
+            .contains(&managed_token_id!(&b""[..]));
+        assert_eq!(accepted_tokens, 1);
+        assert_eq!(accepted_token, true);
+        assert_eq!(status, true);
+    });
+
+    let token_id = &b"NFT-123456"[..];
+    let nft_nonce = 1;
+    let deadline = 1234567890;
+    wrapper.set_block_timestamp(123456789);
+    let nft_balance = rust_biguint!(2);
+    let nft_balance_empty = rust_biguint!(0);
+    let nft_attributes = "";
+
+    wrapper.set_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+    wrapper.execute_esdt_transfer(&seller, &sc, token_id, nft_nonce, &nft_balance, |sc| {
+        let res = sc.listing(
+            managed_token_id!(token_id),
+            nft_nonce,
+            BigUint::from(2u32),
+            BigUint::from(1u32),
+            BigUint::from(10u32),
+            deadline,
+            managed_token_id!(&b""[..]),
+            true,
+            OptionalArg::None,
+            OptionalArg::None,
+        );
+        assert_eq!(res.is_err(), false);
+        // assert_eq!(res.err().unwrap(), StaticSCError::from("The payment token is not valid!"));
+        StateChange::Commit
+    });
+    // // Check after the listing
+    let _ = wrapper.execute_query(&sc, |sc| {
+        let listings_count = sc.get_listings_count();
+        assert_eq!(listings_count, 1);
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        assert_eq!(last_auctiton_id, 1);
+        let auction = sc.auction_by_id(last_auctiton_id).get();
+        assert_eq!(auction.auction_type, AuctionType::SftAll);
+        assert_eq!(auction.original_owner, managed_address!(&seller));
+        let listings_by_wallet = sc.listings_by_wallet(managed_address!(&seller));
+        assert_eq!(listings_by_wallet.contains(&last_auctiton_id), true);
+        let token_items_for_sale = sc.token_items_for_sale(managed_token_id!(token_id));
+        assert_eq!(token_items_for_sale.contains(&nft_nonce), true);
+        let token_auction_ids = sc.token_auction_ids(managed_token_id!(token_id), nft_nonce);
+        assert_eq!(token_auction_ids.contains(&last_auctiton_id), true);
+        let token_items_quantity_for_sale = sc
+            .token_items_quantity_for_sale(managed_token_id!(token_id), nft_nonce)
+            .get();
+        assert_eq!(token_items_quantity_for_sale, managed_biguint!(2));
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(
+        &seller,
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+
+    wrapper.set_block_timestamp(1234569890);
+    wrapper.execute_tx(&seller, &sc, &rust_zero, |sc| {
+        let last_auctiton_id = sc.last_valid_auction_id().get();
+        let res = sc.end_auction(last_auctiton_id);
+        assert_eq!(res.is_err(), false);
+        // assert_sc_error!(res, b"Auction deadline has not passed or the current bid is not equal to the max bid!");
+    
+        StateChange::Commit
+    });
+    wrapper.check_nft_balance(
+        sc.address_ref(),
+        token_id,
+        nft_nonce,
+        &nft_balance_empty,
+        &nft_attributes,
+    );
+    wrapper.check_nft_balance(&seller, token_id, nft_nonce, &nft_balance, &nft_attributes);
+
 }

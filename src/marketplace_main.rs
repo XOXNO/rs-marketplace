@@ -7,8 +7,8 @@ pub mod auction;
 use auction::*;
 
 mod events;
-mod storage;
-mod views;
+pub mod storage;
+pub mod views;
 
 const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
@@ -93,7 +93,6 @@ pub trait EsdtNftMarketplace:
         deadline: u64,
         accepted_payment_token: TokenIdentifier,
         bid: bool,
-        #[var_args] opt_accepted_payment_token_nonce: OptionalArg<u64>,
         #[var_args] opt_sft_max_one_per_payment: OptionalArg<bool>,
         #[var_args] opt_start_time: OptionalArg<u64>,
     ) -> SCResult<u64> {
@@ -164,13 +163,7 @@ pub trait EsdtNftMarketplace:
             "Marketplace cut plus royalties exceeds 100%"
         );
 
-        let accepted_payment_nft_nonce = if accepted_payment_token.is_egld() {
-            0
-        } else {
-            opt_accepted_payment_token_nonce
-                .into_option()
-                .unwrap_or_default()
-        };
+        let accepted_payment_nft_nonce = 0;
 
         let auction_id = self.last_valid_auction_id().get() + 1;
         self.last_valid_auction_id().set(&auction_id);
@@ -274,8 +267,7 @@ pub trait EsdtNftMarketplace:
         );
         require!(current_time < auction.deadline, "Auction ended already!");
         require!(
-            payment_token == auction.payment_token.token_type
-                && payment_token_nonce == auction.payment_token.nonce,
+            payment_token == auction.payment_token.token_type,
             "Wrong token used as payment!"
         );
         require!(auction.current_winner != caller, "Can't outbid yourself!");
@@ -304,23 +296,21 @@ pub trait EsdtNftMarketplace:
                 &auction.current_bid,
                 b"Trust Market refunded your bid!",
             );
-            self.listings_bids(auction.current_winner)
+            self.listings_bids(auction.current_winner.clone())
                 .remove(&auction_id);
-            let new_token_balance =
-                self.local_token_balance(nft_type.clone()).get() - (auction.current_bid.clone());
             self.local_token_balance(nft_type.clone())
-                .set(&new_token_balance);
+                .update(|bl| *bl = (bl.clone().sub(auction.current_bid.clone())));
         }
 
         // update auction bid and winner
+        auction.payment_token.nonce = payment_token_nonce;
         auction.current_bid = payment_amount;
         auction.current_winner = caller;
         self.auction_by_id(auction_id).set(&auction);
         self.listings_bids(auction.current_winner.clone())
             .insert(auction_id);
-        let balance_tmp =
-            self.local_token_balance(nft_type.clone()).get() + auction.current_bid.clone();
-        self.local_token_balance(nft_type.clone()).set(&balance_tmp);
+        self.local_token_balance(nft_type.clone())
+            .update(|bl| *bl = (bl.clone().add(auction.current_bid.clone())));
         if let Some(max_bid) = &auction.max_bid {
             if (&auction.current_bid == max_bid) {
                 self.end_auction(auction_id);
@@ -337,18 +327,17 @@ pub trait EsdtNftMarketplace:
         let auction = self.try_get_auction(auction_id)?;
         let current_time = self.blockchain().get_block_timestamp();
 
+        require!(
+            auction.auction_type == AuctionType::SftAll
+                || auction.auction_type == AuctionType::NftBid,
+            "Cannot end this type of auction!"
+        );
         let deadline_reached = current_time > auction.deadline;
         let max_bid_reached = if let Some(max_bid) = &auction.max_bid {
             &auction.current_bid == max_bid
         } else {
             false
         };
-
-        require!(
-            auction.auction_type == AuctionType::SftAll
-                || auction.auction_type == AuctionType::NftBid,
-            "Cannot end this type of auction!"
-        );
 
         require!(
             deadline_reached || max_bid_reached,
@@ -389,7 +378,15 @@ pub trait EsdtNftMarketplace:
         let mut auction = self.try_get_auction(auction_id)?;
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
+        if (payment_token_nonce > 0) {
+            let payment_token_info = self.get_nft_info(&payment_token, payment_token_nonce);
 
+            require!(
+                payment_token_info.token_type == EsdtTokenType::Fungible
+                    || payment_token_info.token_type == EsdtTokenType::Meta,
+                "The payment token is invalid!"
+            );
+        }
         let buy_amount = match opt_sft_buy_amount {
             OptionalArg::Some(amt) => amt,
             OptionalArg::None => BigUint::from(NFT_AMOUNT),
@@ -416,8 +413,7 @@ pub trait EsdtNftMarketplace:
             "Not enough quantity available!"
         );
         require!(
-            payment_token == auction.payment_token.token_type
-                && payment_token_nonce == auction.payment_token.nonce,
+            payment_token == auction.payment_token.token_type,
             "Wrong token used as payment"
         );
         require!(
@@ -437,7 +433,7 @@ pub trait EsdtNftMarketplace:
 
         auction.current_winner = caller;
         auction.current_bid = payment_amount;
-
+        auction.payment_token.nonce = payment_token_nonce;
         self.distribute_tokens(&auction, Some(&buy_amount));
         auction.nr_auctioned_tokens -= &buy_amount;
         if auction.nr_auctioned_tokens == 0 {
@@ -473,7 +469,7 @@ pub trait EsdtNftMarketplace:
             "Cannot withdraw, the auction already has bids!"
         );
 
-        self.distribute_tokens(&auction, Option::None);
+        self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens));
 
         self.token_auction_ids(
             auction.auctioned_token.token_type.clone(),
@@ -590,15 +586,17 @@ pub trait EsdtNftMarketplace:
             );
         } else {
             // return to original owner
+
+            self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
+                .update(|qt| *qt -= &auction.nr_auctioned_tokens);
             let quantity_token = self
                 .token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
-                .get()
-                - &auction.nr_auctioned_tokens;
-            self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
-                .set(&quantity_token);
+                .get();
             if (quantity_token.eq(&BigUint::from(0u32))) {
                 self.token_items_for_sale(nft_type.clone())
                     .remove(&nft_nonce);
+                self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
+                    .clear();
             }
             self.transfer_esdt(
                 &auction.original_owner,
