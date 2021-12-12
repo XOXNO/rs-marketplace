@@ -187,17 +187,15 @@ pub trait EsdtNftMarketplace:
             );
         }
         let auction = Auction {
-            auctioned_token: EsdtToken {
-                token_type: nft_type.clone(),
-                nonce: nft_nonce,
-            },
+            auctioned_token_type: nft_type.clone(),
+            auctioned_token_nonce: nft_nonce,
+
             nr_auctioned_tokens: nft_amount.clone(),
             auction_type,
 
-            payment_token: EsdtToken {
-                token_type: accepted_payment_token,
-                nonce: accepted_payment_nft_nonce,
-            },
+            payment_token_type: accepted_payment_token,
+            payment_token_nonce: accepted_payment_nft_nonce,
+
             min_bid,
             max_bid: opt_max_bid,
             start_time,
@@ -211,6 +209,7 @@ pub trait EsdtNftMarketplace:
         };
         // Map ID with Auction Struct
         self.auction_by_id(auction_id).set(&auction);
+        self.collections_listed().insert(nft_type.clone());
         self.listings().insert(auction_id); // Push ID to the auctions list
                                             // Add to the owner wallet the new Auction ID
         self.listings_by_wallet(auction.original_owner.clone())
@@ -253,8 +252,7 @@ pub trait EsdtNftMarketplace:
             "Cannot bid on this type of auction!"
         );
         require!(
-            auction.auctioned_token.token_type == nft_type
-                && auction.auctioned_token.nonce == nft_nonce,
+            auction.auctioned_token_type == nft_type && auction.auctioned_token_nonce == nft_nonce,
             "Auction ID does not match the token!"
         );
         require!(
@@ -267,7 +265,7 @@ pub trait EsdtNftMarketplace:
         );
         require!(current_time < auction.deadline, "Auction ended already!");
         require!(
-            payment_token == auction.payment_token.token_type,
+            payment_token == auction.payment_token_type,
             "Wrong token used as payment!"
         );
         require!(auction.current_winner != caller, "Can't outbid yourself!");
@@ -291,8 +289,8 @@ pub trait EsdtNftMarketplace:
         if auction.current_winner != ManagedAddress::zero() {
             self.transfer_esdt(
                 &auction.current_winner,
-                &auction.payment_token.token_type,
-                auction.payment_token.nonce,
+                &auction.payment_token_type,
+                auction.payment_token_nonce,
                 &auction.current_bid,
                 b"Trust Market refunded your bid!",
             );
@@ -303,7 +301,7 @@ pub trait EsdtNftMarketplace:
         }
 
         // update auction bid and winner
-        auction.payment_token.nonce = payment_token_nonce;
+        auction.payment_token_nonce = payment_token_nonce;
         auction.current_bid = payment_amount;
         auction.current_winner = caller;
         self.auction_by_id(auction_id).set(&auction);
@@ -350,8 +348,8 @@ pub trait EsdtNftMarketplace:
         self.listings_bids(auction.current_winner.clone())
             .remove(&auction_id);
         self.token_auction_ids(
-            auction.auctioned_token.token_type.clone(),
-            auction.auctioned_token.nonce.clone(),
+            auction.auctioned_token_type.clone(),
+            auction.auctioned_token_nonce.clone(),
         )
         .remove(&auction_id);
         self.listings().remove(&auction_id);
@@ -382,9 +380,8 @@ pub trait EsdtNftMarketplace:
             let payment_token_info = self.get_nft_info(&payment_token, payment_token_nonce);
 
             require!(
-                payment_token_info.token_type == EsdtTokenType::Fungible
-                    || payment_token_info.token_type == EsdtTokenType::Meta,
-                "The payment token is invalid!"
+                payment_token_info.token_type == EsdtTokenType::Meta,
+                "The payment token type is invalid!"
             );
         }
         let buy_amount = match opt_sft_buy_amount {
@@ -400,8 +397,7 @@ pub trait EsdtNftMarketplace:
             "Cannot buy for this type of auction!"
         );
         require!(
-            auction.auctioned_token.token_type == nft_type
-                && auction.auctioned_token.nonce == nft_nonce,
+            auction.auctioned_token_type == nft_type && auction.auctioned_token_nonce == nft_nonce,
             "Auction ID does not match the token!"
         );
         require!(
@@ -413,7 +409,7 @@ pub trait EsdtNftMarketplace:
             "Not enough quantity available!"
         );
         require!(
-            payment_token == auction.payment_token.token_type,
+            payment_token == auction.payment_token_type,
             "Wrong token used as payment"
         );
         require!(
@@ -433,7 +429,7 @@ pub trait EsdtNftMarketplace:
 
         auction.current_winner = caller;
         auction.current_bid = payment_amount;
-        auction.payment_token.nonce = payment_token_nonce;
+        auction.payment_token_nonce = payment_token_nonce;
         self.distribute_tokens(&auction, Some(&buy_amount));
         auction.nr_auctioned_tokens -= &buy_amount;
         if auction.nr_auctioned_tokens == 0 {
@@ -472,8 +468,8 @@ pub trait EsdtNftMarketplace:
         self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens));
 
         self.token_auction_ids(
-            auction.auctioned_token.token_type.clone(),
-            auction.auctioned_token.nonce.clone(),
+            auction.auctioned_token_type.clone(),
+            auction.auctioned_token_nonce.clone(),
         )
         .remove(&auction_id);
         self.listings_by_wallet(auction.original_owner.clone())
@@ -519,12 +515,12 @@ pub trait EsdtNftMarketplace:
     }
 
     fn distribute_tokens(&self, auction: &Auction<Self::Api>, opt_sft_amount: Option<&BigUint>) {
-        let nft_type = &auction.auctioned_token.token_type;
-        let nft_nonce = auction.auctioned_token.nonce;
+        let nft_type = &auction.auctioned_token_type;
+        let nft_nonce = auction.auctioned_token_nonce;
         if !auction.current_winner.is_zero() {
             let nft_info = self.get_nft_info(nft_type, nft_nonce);
-            let token_id = &auction.payment_token.token_type;
-            let nonce = auction.payment_token.nonce;
+            let token_id = &auction.payment_token_type;
+            let nonce = auction.payment_token_nonce;
             let bid_split_amounts = self.calculate_winning_bid_split(auction);
 
             // send part as cut for contract owner
@@ -577,6 +573,9 @@ pub trait EsdtNftMarketplace:
                 self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
                     .clear();
             }
+            if (self.token_items_for_sale(nft_type.clone()).len() == 0) {
+                self.collections_listed().remove(nft_type.clone());
+            }
             self.transfer_esdt(
                 &auction.current_winner,
                 nft_type,
@@ -598,6 +597,11 @@ pub trait EsdtNftMarketplace:
                 self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
                     .clear();
             }
+
+            if (self.token_items_for_sale(nft_type.clone()).len() == 0) {
+                self.collections_listed().remove(nft_type.clone());
+            }
+
             self.transfer_esdt(
                 &auction.original_owner,
                 nft_type,

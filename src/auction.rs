@@ -1,13 +1,15 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
-#[derive(TopEncode, TopDecode, TypeAbi)]
+#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct Auction<M: ManagedTypeApi> {
-    pub auctioned_token: EsdtToken<M>,
+    pub auctioned_token_type: TokenIdentifier<M>,
+    pub auctioned_token_nonce: u64,
     pub nr_auctioned_tokens: BigUint<M>,
     pub auction_type: AuctionType,
 
-    pub payment_token: EsdtToken<M>,
+    pub payment_token_type: TokenIdentifier<M>,
+    pub payment_token_nonce: u64,
     pub min_bid: BigUint<M>,
     pub max_bid: Option<BigUint<M>>,
     pub start_time: u64,

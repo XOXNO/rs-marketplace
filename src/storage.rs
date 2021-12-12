@@ -40,6 +40,11 @@ pub trait StorageModule {
     #[storage_mapper("acceptedTokens")]
     fn accepted_tokens(&self) -> SetMapper<TokenIdentifier>;
 
+
+    #[view(getCollectionsListed)]
+    #[storage_mapper("collectionsListed")]
+    fn collections_listed(&self) -> SetMapper<TokenIdentifier>;
+
     #[view(getListings)]
     #[storage_mapper("listings")]
     fn listings(&self) -> SetMapper<u64>;

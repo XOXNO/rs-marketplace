@@ -9,6 +9,12 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.listings().len()
     }
 
+    #[view(getCollectionsCount)]
+    fn get_collections_count(&self) -> usize {
+        self.collections_listed().len()
+    }
+
+
     #[view(getAcceptedTokensCount)]
     fn get_accepted_tokens_count(&self) -> usize {
         self.accepted_tokens().len()
@@ -52,8 +58,8 @@ pub trait ViewsModule: crate::storage::StorageModule {
 
             OptionalResult::Some(
                 (
-                    auction.auctioned_token.token_type,
-                    auction.auctioned_token.nonce,
+                    auction.auctioned_token_type,
+                    auction.auctioned_token_nonce,
                     auction.nr_auctioned_tokens,
                 )
                     .into(),
@@ -78,9 +84,15 @@ pub trait ViewsModule: crate::storage::StorageModule {
         auction_id: u64,
     ) -> OptionalResult<MultiResult2<TokenIdentifier, u64>> {
         if self.does_auction_exist(auction_id) {
-            let esdt_token = self.auction_by_id(auction_id).get().payment_token;
+            let esdt_token = self.auction_by_id(auction_id).get();
 
-            OptionalResult::Some((esdt_token.token_type, esdt_token.nonce).into())
+            OptionalResult::Some(
+                (
+                    esdt_token.payment_token_type,
+                    esdt_token.payment_token_nonce,
+                )
+                    .into(),
+            )
         } else {
             OptionalResult::None
         }

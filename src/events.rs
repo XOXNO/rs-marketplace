@@ -8,8 +8,8 @@ use super::auction::{Auction, AuctionType};
 pub trait EventsModule {
     fn emit_auction_token_event(self, auction_id: u64, auction: Auction<Self::Api>) {
         self.auction_token_event(
-            &auction.auctioned_token.token_type,
-            auction.auctioned_token.nonce,
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
             auction_id,
             &auction.nr_auctioned_tokens,
             &auction.original_owner,
@@ -17,8 +17,8 @@ pub trait EventsModule {
             &auction.max_bid.unwrap_or_else(|| BigUint::zero()),
             auction.start_time,
             auction.deadline,
-            auction.payment_token.token_type,
-            auction.payment_token.nonce,
+            auction.payment_token_type,
+            auction.payment_token_nonce,
             auction.auction_type,
             auction.creator_royalties_percentage,
         )
@@ -26,8 +26,8 @@ pub trait EventsModule {
 
     fn emit_bid_event(self, auction_id: u64, auction: Auction<Self::Api>) {
         self.bid_event(
-            &auction.auctioned_token.token_type,
-            auction.auctioned_token.nonce,
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
             auction_id,
             &auction.nr_auctioned_tokens,
             &auction.current_winner,
@@ -37,8 +37,8 @@ pub trait EventsModule {
 
     fn emit_end_auction_event(self, auction_id: u64, auction: Auction<Self::Api>) {
         self.end_auction_event(
-            &auction.auctioned_token.token_type,
-            auction.auctioned_token.nonce,
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
             auction_id,
             &auction.nr_auctioned_tokens,
             &auction.current_winner,
@@ -53,8 +53,8 @@ pub trait EventsModule {
         nr_bought_tokens: BigUint,
     ) {
         self.buy_event(
-            &auction.auctioned_token.token_type,
-            auction.auctioned_token.nonce,
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
             auction_id,
             &nr_bought_tokens,
             &auction.current_winner,
@@ -64,8 +64,8 @@ pub trait EventsModule {
 
     fn emit_withdraw_event(self, auction_id: u64, auction: Auction<Self::Api>) {
         self.withdraw_event(
-            &auction.auctioned_token.token_type,
-            auction.auctioned_token.nonce,
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
             auction_id,
             &auction.nr_auctioned_tokens,
             &auction.original_owner,
