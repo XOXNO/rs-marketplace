@@ -574,7 +574,7 @@ pub trait EsdtNftMarketplace:
                     .clear();
             }
             if (self.token_items_for_sale(nft_type.clone()).len() == 0) {
-                self.collections_listed().remove(nft_type.clone());
+                self.collections_listed().remove(&nft_type);
             }
             self.transfer_esdt(
                 &auction.current_winner,
@@ -599,7 +599,7 @@ pub trait EsdtNftMarketplace:
             }
 
             if (self.token_items_for_sale(nft_type.clone()).len() == 0) {
-                self.collections_listed().remove(nft_type.clone());
+                self.collections_listed().remove(&nft_type);
             }
 
             self.transfer_esdt(

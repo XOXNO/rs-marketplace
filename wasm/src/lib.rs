@@ -17,6 +17,8 @@ elrond_wasm_node::wasm_endpoints! {
         getActiveListingsBids
         getAuctionType
         getAuctionedToken
+        getCollectionsCount
+        getCollectionsListed
         getCurrentWinner
         getCurrentWinningBid
         getDeadline
