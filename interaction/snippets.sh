@@ -13,7 +13,7 @@ EVE="${USERS}/eve.pem"
 EVEWALLET=erd18tudnj2z8vjh0339yu3vrkgzz2jpz8mjq0uhgnmklnap6z33qqeszq2yn4
 EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
-EGLD=0x45474c442d383763343932 #45474c44 2d633365323066
+EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
 ADDRESS=$(erdpy data load --key=address-testnet)
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-testnet)
 PROXY=https://devnet-api.elrond.com
@@ -50,10 +50,10 @@ setStatusOff() {
 }
 
 setAcceptedTokens() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="setAcceptedTokens" --arguments ${EGLD} --send --proxy=${PROXY} --chain=D
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="setAcceptedTokens" --arguments 0x4c4b4d45582d383035653831 --send --proxy=${PROXY} --chain=D
 }
 removeAcceptedTokens() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments ${EGLD} --send --proxy=${PROXY} --chain=D
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=D
 }
 withdraw() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${CAROL} --gas-limit=35000000 --function="withdraw" --arguments 0x05 --send --proxy=${PROXY} --chain=D
@@ -151,7 +151,7 @@ getActiveListingsBids() {
 }
 
 getTokenBalanceDifference() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenBalanceDifference" --arguments 0x45474c442d633365323066 0x00 --proxy=${PROXY}
+    erdpy --verbose contract query ${ADDRESS} --function="getTokenBalanceDifference" --arguments 0x45474c44 0x00 --proxy=${PROXY}
 }
 
 getTokenItemsForSale() {

@@ -200,7 +200,6 @@ pub trait EsdtNftMarketplace:
             max_bid: opt_max_bid,
             start_time,
             deadline,
-
             original_owner: self.blockchain().get_caller(),
             current_bid: BigUint::zero(),
             current_winner: ManagedAddress::zero(),
@@ -359,7 +358,6 @@ pub trait EsdtNftMarketplace:
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[payable("*")]
     #[endpoint(buy)]
     fn buy(
@@ -376,18 +374,12 @@ pub trait EsdtNftMarketplace:
         let mut auction = self.try_get_auction(auction_id)?;
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
-        if (payment_token_nonce > 0) {
-            let payment_token_info = self.get_nft_info(&payment_token, payment_token_nonce);
 
-            require!(
-                payment_token_info.token_type == EsdtTokenType::Meta,
-                "The payment token type is invalid!"
-            );
-        }
         let buy_amount = match opt_sft_buy_amount {
             OptionalArg::Some(amt) => amt,
             OptionalArg::None => BigUint::from(NFT_AMOUNT),
         };
+
         let total_value = &buy_amount * &auction.min_bid;
 
         require!(buy_amount > 0, "The amount must be more than 0!");
@@ -532,7 +524,7 @@ pub trait EsdtNftMarketplace:
                 &bid_split_amounts.marketplace,
                 b"Trust Market fees revenue!",
             );
-            // send part as royalties to creator
+
             self.transfer_esdt(
                 &nft_info.creator,
                 token_id,
@@ -540,6 +532,7 @@ pub trait EsdtNftMarketplace:
                 &bid_split_amounts.creator,
                 b"Trust Market royalties for your token!",
             );
+
             // send rest of the bid to original owner
             self.transfer_esdt(
                 &auction.original_owner,
@@ -576,6 +569,7 @@ pub trait EsdtNftMarketplace:
             if (self.token_items_for_sale(nft_type.clone()).len() == 0) {
                 self.collections_listed().remove(&nft_type);
             }
+
             self.transfer_esdt(
                 &auction.current_winner,
                 nft_type,

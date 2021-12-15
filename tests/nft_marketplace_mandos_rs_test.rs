@@ -1300,11 +1300,11 @@ fn buy_list_nft_esdt_meta_pass() {
             nft_nonce,
             OptionalArg::None,
         );
-        assert_eq!(res.is_err(), false);
-        // assert_eq!(
-        //     res.err().unwrap(),
-        //     StaticSCError::from("The payment token is invalid!")
-        // );
+        assert_eq!(res.is_err(), true);
+        assert_eq!(
+            res.err().unwrap(),
+            StaticSCError::from("The payment token is invalid!")
+        );
         StateChange::Commit
     });
     wrapper.check_nft_balance(
