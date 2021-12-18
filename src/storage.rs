@@ -41,6 +41,19 @@ pub trait StorageModule {
     fn accepted_tokens(&self) -> SetMapper<TokenIdentifier>;
 
 
+    #[view(whitelistedContracts)]
+    #[storage_mapper("whitelistedContracts")]
+    fn whitelisted_contracts(&self) -> SetMapper<ManagedAddress>;
+
+    #[view(getClaimableAmount)]
+    #[storage_mapper("claimableAmount")]
+    fn claimable_amount(
+        &self,
+        address: &ManagedAddress,
+        token_id: &TokenIdentifier,
+        token_nonce: u64,
+    ) -> SingleValueMapper<BigUint>;
+
     #[view(getCollectionsListed)]
     #[storage_mapper("collectionsListed")]
     fn collections_listed(&self) -> SetMapper<TokenIdentifier>;

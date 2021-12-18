@@ -8,8 +8,10 @@ elrond_wasm_node::wasm_endpoints! {
     esdt_nft_marketplace
     (
         init
+        addWitelistedSC
         bid
         buy
+        claimTokens
         doesAuctionExist
         endAuction
         getAcceptedTokens
@@ -17,12 +19,12 @@ elrond_wasm_node::wasm_endpoints! {
         getActiveListingsBids
         getAuctionType
         getAuctionedToken
+        getClaimableAmount
         getCollectionsCount
         getCollectionsListed
         getCurrentWinner
         getCurrentWinningBid
         getDeadline
-        getDustAmountLeft
         getFullAuctionData
         getLastValidAuctionId
         getListings
@@ -45,6 +47,7 @@ elrond_wasm_node::wasm_endpoints! {
         setAcceptedTokens
         setCutPercentage
         setStatus
+        whitelistedContracts
         withdraw
     )
 }
