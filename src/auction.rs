@@ -21,6 +21,12 @@ pub struct Auction<M: ManagedTypeApi> {
     pub creator_royalties_percentage: BigUint<M>,
 }
 
+#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+pub struct TokensOnSale<M: ManagedTypeApi> {
+    pub auction: Auction<M>,
+    pub auction_id: u64,
+}
+
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
 pub enum AuctionType {
     None,

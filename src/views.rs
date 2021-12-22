@@ -25,6 +25,29 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.token_items_for_sale(token).len()
     }
 
+
+    #[allow(clippy::too_many_arguments)]
+    #[view(getOnSaleTokensForTicker)]
+    fn get_on_sale_tokens_for_ticker(&self, token: TokenIdentifier,  #[var_args] nonces: MultiArgVec<u64>) -> Vec<TokensOnSale<Self::Api>> {
+        let mut results = Vec::new();
+        if (self.token_items_for_sale(token.clone()).is_empty()) {
+            return results;
+        }
+        // let nonces = self.token_items_for_sale(token.clone());
+        for nonce in nonces.iter() {
+            let auctions = self.token_auction_ids(token.clone(), *nonce);
+            for auction in auctions.iter() {
+                let auction_info = self.auction_by_id(auction).get();
+                let result = TokensOnSale {
+                    auction_id: auction,
+                    auction: auction_info,
+                };
+                results.push(result);
+            }
+        }
+        return results;
+    }
+
     #[view(getTokenBalanceDifference)]
     fn get_token_balance_difference(&self, token: TokenIdentifier, nonce: u64) -> BigUint {
         let local_balance = self.local_token_balance(token.clone()).get();

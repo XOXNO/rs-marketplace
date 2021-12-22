@@ -14,19 +14,19 @@ EVEWALLET=erd18tudnj2z8vjh0339yu3vrkgzz2jpz8mjq0uhgnmklnap6z33qqeszq2yn4
 EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
-ADDRESS=$(erdpy data load --key=address-testnet)
-DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-testnet)
+ADDRESS=$(erdpy data load --key=address-devnet)
+DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-devnet)
 PROXY=https://devnet-api.elrond.com
 
 deploy() {
     echo ${PROJECT}
-    erdpy --verbose contract deploy --project=${PROJECT} --metadata-payable --recall-nonce --pem=${ALICE} --gas-limit=125000000 --arguments 0xFA --send --outfile="deploy-testnet.interaction.json" --proxy=${PROXY} --chain=D || return
+    erdpy --verbose contract deploy --project=${PROJECT} --metadata-payable --recall-nonce --pem=${ALICE} --gas-limit=125000000 --arguments 0xFA --send --outfile="deploy-devnet.interaction.json" --proxy=${PROXY} --chain=D || return
 
-    TRANSACTION=$(erdpy data parse --file="deploy-testnet.interaction.json" --expression="data['emitted_tx']['hash']")
-    ADDRESS=$(erdpy data parse --file="deploy-testnet.interaction.json" --expression="data['emitted_tx']['address']")
+    TRANSACTION=$(erdpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['hash']")
+    ADDRESS=$(erdpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['address']")
 
-    erdpy data store --key=address-testnet --value=${ADDRESS}
-    erdpy data store --key=deployTransaction-testnet --value=${TRANSACTION}
+    erdpy data store --key=address-devnet --value=${ADDRESS}
+    erdpy data store --key=deployTransaction-devnet --value=${TRANSACTION}
 
     echo ""
     echo "Smart contract address: ${ADDRESS}"

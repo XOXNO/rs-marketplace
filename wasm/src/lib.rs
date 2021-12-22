@@ -33,6 +33,7 @@ elrond_wasm_node::wasm_endpoints! {
         getLocalBalance
         getMarketplaceCutPercentage
         getMinMaxBid
+        getOnSaleTokensForTicker
         getOriginalOwner
         getPaymentTokenForAuction
         getStartTime
