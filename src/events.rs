@@ -32,6 +32,7 @@ pub trait EventsModule {
             &auction.nr_auctioned_tokens,
             &auction.current_winner,
             &auction.current_bid,
+            &auction.original_owner,
         );
     }
 
@@ -43,6 +44,7 @@ pub trait EventsModule {
             &auction.nr_auctioned_tokens,
             &auction.current_winner,
             &auction.current_bid,
+            &auction.original_owner,
         );
     }
 
@@ -59,6 +61,7 @@ pub trait EventsModule {
             &nr_bought_tokens,
             &auction.current_winner,
             &auction.min_bid,
+            &auction.original_owner,
         );
     }
 
@@ -99,6 +102,7 @@ pub trait EventsModule {
         #[indexed] nr_auctioned_tokens: &BigUint,
         #[indexed] bidder: &ManagedAddress,
         #[indexed] bid_amount: &BigUint,
+        #[indexed] seller: &ManagedAddress,
     );
 
     #[event("end_auction_event")]
@@ -110,6 +114,7 @@ pub trait EventsModule {
         #[indexed] nr_auctioned_tokens: &BigUint,
         #[indexed] auction_winner: &ManagedAddress,
         #[indexed] winning_bid_amount: &BigUint,
+        #[indexed] auction_seller: &ManagedAddress,
     );
 
     #[event("buy_event")]
@@ -121,6 +126,7 @@ pub trait EventsModule {
         #[indexed] nr_bought_tokens: &BigUint,
         #[indexed] buyer: &ManagedAddress,
         #[indexed] bid_sft_amount: &BigUint,
+        #[indexed] seller: &ManagedAddress,
     );
 
     #[event("withdraw_event")]

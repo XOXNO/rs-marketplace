@@ -48,6 +48,7 @@ elrond_wasm_node::wasm_endpoints! {
         setAcceptedTokens
         setCutPercentage
         setStatus
+        viewCollectionOwner
         whitelistedContracts
         withdraw
     )

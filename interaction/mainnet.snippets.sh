@@ -38,15 +38,9 @@ upgrade() {
     --gas-limit=125000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
-getDustAmountLeft() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="getDustAmountLeft" --arguments 0x45474c442d633365323066 0x00 --send --proxy=${PROXY} --chain=D
-}
-
-
 addWitelistedSC() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="addWitelistedSC" --arguments 0x00000000000000000500a536e203953414ff92e0a2fdb9b9c0d987fac3942429 --send --proxy=${PROXY} --chain=1
 }
-
 
 setStatusOn() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=1

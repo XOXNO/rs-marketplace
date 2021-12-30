@@ -583,6 +583,7 @@ pub trait EsdtNftMarketplace:
             );
         }
     }
+    
     #[endpoint(claimTokens)]
     fn claim_tokens(
         &self,
@@ -632,7 +633,17 @@ pub trait EsdtNftMarketplace:
             nft_nonce,
         )
     }
-
+    
+    #[view(viewCollectionOwner)]
+    fn view_collection_owner(&self, token: TokenIdentifier) -> ManagedAddress {
+        let info = self.blockchain().get_esdt_token_data(
+            &self.blockchain().get_sc_address(),
+            &token,
+            0,
+        );
+        return info.creator;
+    }
+    
     fn try_set_bid_cut_percentage(&self, new_cut_percentage: u64) -> SCResult<()> {
         require!(
             new_cut_percentage > 0 && new_cut_percentage < PERCENTAGE_TOTAL,
@@ -644,6 +655,4 @@ pub trait EsdtNftMarketplace:
 
         Ok(())
     }
-
-    // storage
 }
