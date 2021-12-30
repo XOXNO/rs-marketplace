@@ -20,6 +20,7 @@ elrond_wasm_node::wasm_endpoints! {
         getAuctionType
         getAuctionedToken
         getClaimableAmount
+        getCollectionKeybase
         getCollectionsCount
         getCollectionsListed
         getCurrentWinner
@@ -47,8 +48,8 @@ elrond_wasm_node::wasm_endpoints! {
         removeAcceptedTokens
         setAcceptedTokens
         setCutPercentage
+        setKeybase
         setStatus
-        viewCollectionOwner
         whitelistedContracts
         withdraw
     )

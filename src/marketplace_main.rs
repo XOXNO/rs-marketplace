@@ -583,7 +583,7 @@ pub trait EsdtNftMarketplace:
             );
         }
     }
-    
+
     #[endpoint(claimTokens)]
     fn claim_tokens(
         &self,
@@ -614,7 +614,13 @@ pub trait EsdtNftMarketplace:
             self.claimable_amount(to, token_id, nonce)
                 .update(|amt| *amt += amount);
         } else {
-            self.send().direct(to, token_id, nonce, amount, self.data_or_empty_if_sc(to, data));
+            self.send().direct(
+                to,
+                token_id,
+                nonce,
+                amount,
+                self.data_or_empty_if_sc(to, data),
+            );
         }
     }
 
@@ -633,17 +639,25 @@ pub trait EsdtNftMarketplace:
             nft_nonce,
         )
     }
-    
-    #[view(viewCollectionOwner)]
-    fn view_collection_owner(&self, token: TokenIdentifier) -> ManagedAddress {
-        let info = self.blockchain().get_esdt_token_data(
-            &self.blockchain().get_sc_address(),
-            &token,
-            0,
+
+    #[endpoint(setKeybase)]
+    fn set_keybase(&self, token: TokenIdentifier, keybase: ManagedBuffer) -> SCResult<ManagedAddress> {
+        require!(
+            self.token_items_for_sale(token.clone()).len() > 0,
+            "The token is not listed on the marketplace!"
         );
-        return info.creator;
+        let nonces = self.token_items_for_sale(token.clone());
+        let mut iters = nonces.iter();
+        let first_nonce = iters.next();
+        let info = self.get_nft_info(&token.clone(), first_nonce.unwrap().clone());
+        require!(
+            info.creator == self.blockchain().get_caller(),
+            "You are not the owner of the collection!"
+        );
+        self.collecton_keybase(token).set(&keybase);
+        Ok(info.creator)
     }
-    
+
     fn try_set_bid_cut_percentage(&self, new_cut_percentage: u64) -> SCResult<()> {
         require!(
             new_cut_percentage > 0 && new_cut_percentage < PERCENTAGE_TOTAL,

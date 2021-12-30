@@ -72,4 +72,9 @@ pub trait StorageModule {
     #[view(getLastValidAuctionId)]
     #[storage_mapper("lastValidAuctionId")]
     fn last_valid_auction_id(&self) -> SingleValueMapper<u64>;
+
+
+    #[view(getCollectionKeybase)]
+    #[storage_mapper("collectionKeyBase")]
+    fn collecton_keybase(&self, token: TokenIdentifier) -> SingleValueMapper<ManagedBuffer>;
 }
