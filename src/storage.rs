@@ -77,6 +77,7 @@ pub trait StorageModule {
     #[storage_mapper("auctionById")]
     fn auction_by_id(&self, auction_id: u64) -> SingleValueMapper<Auction<Self::Api>>;
 
+    #[view(offerById)]
     #[storage_mapper("offerById")]
     fn offer_by_id(&self, offer_id: u64) -> SingleValueMapper<Offer<Self::Api>>;
 
