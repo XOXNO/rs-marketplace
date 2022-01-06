@@ -535,7 +535,7 @@ pub trait EsdtNftMarketplace:
             );
             let mut iter = token_auction_ids_instance.iter();
             let auction_id = iter.next().unwrap();
-            let mut auction = self.try_get_auction(auction_id)?;
+            let auction = self.try_get_auction(auction_id)?;
             require!(
                 auction.auction_type == AuctionType::Nft,
                 "Cannot accept offers for auctions, just for listings with a fixed price!"
