@@ -8,6 +8,10 @@ pub trait StorageModule {
     #[storage_mapper("bidCutPercentage")]
     fn bid_cut_percentage(&self) -> SingleValueMapper<BigUint>;
 
+    #[view(getOffersByWallet)]
+    #[storage_mapper("offersByWallet")]
+    fn offers_by_wallet(&self, address: ManagedAddress) -> SetMapper<u64>;
+
     #[view(getListingsByWallet)]
     #[storage_mapper("listingsByWallet")]
     fn listings_by_wallet(&self, address: ManagedAddress) -> SetMapper<u64>;
@@ -24,6 +28,10 @@ pub trait StorageModule {
     #[storage_mapper("tokenAuctionIDs")]
     fn token_auction_ids(&self, token: TokenIdentifier, nonce: u64) -> SetMapper<u64>;
 
+    #[view(getTokenOffersIds)]
+    #[storage_mapper("tokenOffersIDs")]
+    fn token_offers_ids(&self, token: TokenIdentifier, nonce: u64) -> SetMapper<u64>;
+
     #[view(getTokenItemsQuantityForSale)]
     #[storage_mapper("tokenItemsQuantityForSale")]
     fn token_items_quantity_for_sale(
@@ -31,10 +39,6 @@ pub trait StorageModule {
         token: TokenIdentifier,
         nonce: u64,
     ) -> SingleValueMapper<BigUint>;
-
-    #[view(getLocalBalance)]
-    #[storage_mapper("localTokenBalance")]
-    fn local_token_balance(&self, token: TokenIdentifier) -> SingleValueMapper<BigUint>;
 
     #[view(getAcceptedTokens)]
     #[storage_mapper("acceptedTokens")]
@@ -62,6 +66,10 @@ pub trait StorageModule {
     #[storage_mapper("listings")]
     fn listings(&self) -> SetMapper<u64>;
 
+    #[view(getOffers)]
+    #[storage_mapper("offers")]
+    fn offers(&self) -> SetMapper<u64>;
+
     #[view(getStatus)]
     #[storage_mapper("status")]
     fn status(&self) -> SingleValueMapper<bool>;
@@ -69,12 +77,14 @@ pub trait StorageModule {
     #[storage_mapper("auctionById")]
     fn auction_by_id(&self, auction_id: u64) -> SingleValueMapper<Auction<Self::Api>>;
 
+    #[storage_mapper("offerById")]
+    fn offer_by_id(&self, offer_id: u64) -> SingleValueMapper<Offer<Self::Api>>;
+
     #[view(getLastValidAuctionId)]
     #[storage_mapper("lastValidAuctionId")]
     fn last_valid_auction_id(&self) -> SingleValueMapper<u64>;
 
-
-    #[view(getCollectionKeybase)]
-    #[storage_mapper("collectionKeyBase")]
-    fn collecton_keybase(&self, token: TokenIdentifier) -> SingleValueMapper<ManagedBuffer>;
+    #[view(getLastValidOfferId)]
+    #[storage_mapper("lastValidOfferId")]
+    fn last_valid_offer_id(&self) -> SingleValueMapper<u64>;
 }

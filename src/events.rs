@@ -1,7 +1,7 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
-use super::auction::{Auction, AuctionType};
+use super::auction::{Auction, AuctionType, OfferStatus, Offer};
 
 #[allow(clippy::too_many_arguments)]
 #[elrond_wasm::module]
@@ -21,6 +21,57 @@ pub trait EventsModule {
             auction.payment_token_nonce,
             auction.auction_type,
             auction.creator_royalties_percentage,
+        )
+    }
+    fn emit_offer_token_event(self, offer_id: u64, offer: Offer<Self::Api>) {
+        self.offer_token_event(
+            &offer.token_type,
+            offer.token_nonce,
+            &offer.quantity,
+            offer.status,
+            &offer.payment_token_type,
+            offer.payment_token_nonce,
+            &offer.price,
+            offer.deadline,
+            offer.timestamp,
+            &offer.offer_owner,
+            &offer.marketplace_cut_percentage,
+            offer_id
+        )
+    }
+
+    fn emit_withdraw_offer_event(self, offer_id: u64, offer: Offer<Self::Api>) {
+        self.withdraw_offer_token_event(
+            &offer.token_type,
+            offer.token_nonce,
+            &offer.quantity,
+            offer.status,
+            &offer.payment_token_type,
+            offer.payment_token_nonce,
+            &offer.price,
+            offer.deadline,
+            offer.timestamp,
+            &offer.offer_owner,
+            &offer.marketplace_cut_percentage,
+            offer_id
+        )
+    }
+
+    fn emit_accept_offer_event(self, offer_id: u64, offer: Offer<Self::Api>, seller: &ManagedAddress) {
+        self.accept_offer_token_event(
+            &offer.token_type,
+            offer.token_nonce,
+            &offer.quantity,
+            offer.status,
+            &offer.payment_token_type,
+            offer.payment_token_nonce,
+            &offer.price,
+            offer.deadline,
+            offer.timestamp,
+            &offer.offer_owner,
+            &offer.marketplace_cut_percentage,
+            offer_id,
+            seller,
         )
     }
 
@@ -91,6 +142,58 @@ pub trait EventsModule {
         #[indexed] accepted_payment_token_nonce: u64,
         #[indexed] auction_type: AuctionType,
         creator_royalties_percentage: BigUint, // between 0 and 10,000
+    );
+
+    #[event("offer_token_event")]
+    fn offer_token_event(
+        &self,
+        #[indexed] token_type: &TokenIdentifier,
+        #[indexed] token_nonce: u64,
+        #[indexed] quantity: &BigUint,
+        #[indexed] status: OfferStatus,
+        #[indexed] payment_token_type: &TokenIdentifier,
+        #[indexed] payment_token_nonce: u64,
+        #[indexed] price: &BigUint,
+        #[indexed] deadline: u64,
+        #[indexed] timestamp: u64,
+        #[indexed] offer_owner: &ManagedAddress,
+        #[indexed] marketplace_cut_percentage: &BigUint,
+        #[indexed] offer_id: u64,
+    );
+
+    #[event("withdraw_offer_token_event")]
+    fn withdraw_offer_token_event(
+        &self,
+        #[indexed] token_type: &TokenIdentifier,
+        #[indexed] token_nonce: u64,
+        #[indexed] quantity: &BigUint,
+        #[indexed] status: OfferStatus,
+        #[indexed] payment_token_type: &TokenIdentifier,
+        #[indexed] payment_token_nonce: u64,
+        #[indexed] price: &BigUint,
+        #[indexed] deadline: u64,
+        #[indexed] timestamp: u64,
+        #[indexed] offer_owner: &ManagedAddress,
+        #[indexed] marketplace_cut_percentage: &BigUint,
+        #[indexed] offer_id: u64,
+    );
+
+    #[event("accept_offer_token_event")]
+    fn accept_offer_token_event(
+        &self,
+        #[indexed] token_type: &TokenIdentifier,
+        #[indexed] token_nonce: u64,
+        #[indexed] quantity: &BigUint,
+        #[indexed] status: OfferStatus,
+        #[indexed] payment_token_type: &TokenIdentifier,
+        #[indexed] payment_token_nonce: u64,
+        #[indexed] price: &BigUint,
+        #[indexed] deadline: u64,
+        #[indexed] timestamp: u64,
+        #[indexed] offer_owner: &ManagedAddress,
+        #[indexed] marketplace_cut_percentage: &BigUint,
+        #[indexed] offer_id: u64,
+        #[indexed] seller: &ManagedAddress,
     );
 
     #[event("bid_event")]

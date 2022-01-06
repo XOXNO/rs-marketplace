@@ -15,9 +15,9 @@ EVEWALLET=erd18tudnj2z8vjh0339yu3vrkgzz2jpz8mjq0uhgnmklnap6z33qqeszq2yn4
 EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
-ADDRESS=$(erdpy data load --key=address-mainnet)
+ADDRESS=erd1qqqqqqqqqqqqqpgq6wegs2xkypfpync8mn2sa5cmpqjlvrhwz5nqgepyg8
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-mainnet)
-PROXY=https://api.elrond.com
+PROXY=https://gateway.elrond.com
 
 deploy() {
     echo ${PROJECT}
@@ -30,10 +30,10 @@ deploy() {
     erdpy data store --key=deployTransaction-mainnet --value=${TRANSACTION}
 
     echo ""
-    echo "Smart contract address: ${ADDRESS}"
 }
 
 upgrade() {
+    echo "Smart contract address: ${ADDRESS}"
     erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable --arguments 0xFA --project=${PROJECT} --recall-nonce --pem=${OWNER} \
     --gas-limit=125000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }

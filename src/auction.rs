@@ -21,6 +21,22 @@ pub struct Auction<M: ManagedTypeApi> {
     pub creator_royalties_percentage: BigUint<M>,
 }
 
+
+#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+pub struct Offer<M: ManagedTypeApi> {
+    pub token_type: TokenIdentifier<M>,
+    pub token_nonce: u64,
+    pub quantity: BigUint<M>,
+    pub status: OfferStatus,
+    pub payment_token_type: TokenIdentifier<M>,
+    pub payment_token_nonce: u64,
+    pub price: BigUint<M>,
+    pub deadline: u64,
+    pub timestamp: u64,
+    pub offer_owner: ManagedAddress<M>,
+    pub marketplace_cut_percentage: BigUint<M>,
+}
+
 #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct TokensOnSale<M: ManagedTypeApi> {
     pub auction: Auction<M>,
@@ -34,6 +50,14 @@ pub enum AuctionType {
     Nft,
     SftAll,
     SftOnePerPayment,
+}
+
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
+pub enum OfferStatus {
+    Pending,
+    Accepted,
+    Declined,
+    Withdraw,
 }
 
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]

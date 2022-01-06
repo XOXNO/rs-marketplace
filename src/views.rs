@@ -48,27 +48,14 @@ pub trait ViewsModule: crate::storage::StorageModule {
         return results;
     }
 
-    #[view(getTokenBalanceDifference)]
-    fn get_token_balance_difference(&self, token: TokenIdentifier, nonce: u64) -> BigUint {
-        let local_balance = self.local_token_balance(token.clone()).get();
-        let mut sc_balance = BigUint::zero();
-        if (token.is_egld()) {
-            sc_balance = self
-                .blockchain()
-                .get_balance(&self.blockchain().get_sc_address());
-        } else if (token.is_valid_esdt_identifier() && token.is_esdt()) {
-            sc_balance = self.blockchain().get_esdt_balance(
-                &self.blockchain().get_sc_address(),
-                &token,
-                nonce,
-            );
-        }
-        return sc_balance - local_balance;
-    }
-
     #[view(doesAuctionExist)]
     fn does_auction_exist(&self, auction_id: u64) -> bool {
         !self.auction_by_id(auction_id).is_empty()
+    }
+
+    #[view(doesOfferExist)]
+    fn does_offer_exist(&self, offer_id: u64) -> bool {
+        !self.offer_by_id(offer_id).is_empty()
     }
 
     #[view(getAuctionedToken)]
