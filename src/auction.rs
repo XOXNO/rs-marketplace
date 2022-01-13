@@ -43,6 +43,12 @@ pub struct TokensOnSale<M: ManagedTypeApi> {
     pub auction_id: u64,
 }
 
+#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+pub struct BulkOffers<M: ManagedTypeApi> {
+    pub offer: Offer<M>,
+    pub offer_id: u64,
+}
+
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
 pub enum AuctionType {
     None,

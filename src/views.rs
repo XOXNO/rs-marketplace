@@ -14,7 +14,6 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.collections_listed().len()
     }
 
-
     #[view(getAcceptedTokensCount)]
     fn get_accepted_tokens_count(&self) -> usize {
         self.accepted_tokens().len()
@@ -25,7 +24,6 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.token_items_for_sale(token).len()
     }
 
-
     #[allow(clippy::too_many_arguments)]
     #[view(getOnSaleTokensForTicker)]
     fn get_on_sale_tokens_for_ticker(&self, token: TokenIdentifier,  #[var_args] nonces: MultiArgVec<u64>) -> Vec<TokensOnSale<Self::Api>> {
@@ -33,7 +31,6 @@ pub trait ViewsModule: crate::storage::StorageModule {
         if (self.token_items_for_sale(token.clone()).is_empty()) {
             return results;
         }
-        // let nonces = self.token_items_for_sale(token.clone());
         for nonce in nonces.iter() {
             let auctions = self.token_auction_ids(token.clone(), *nonce);
             for auction in auctions.iter() {
@@ -41,6 +38,40 @@ pub trait ViewsModule: crate::storage::StorageModule {
                 let result = TokensOnSale {
                     auction_id: auction,
                     auction: auction_info,
+                };
+                results.push(result);
+            }
+        }
+        return results;
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[view(getBulkOffers)]
+    fn get_bulk_offers(&self, #[var_args] offers: MultiArgVec<u64>) -> Vec<BulkOffers<Self::Api>> {        
+        let mut results = Vec::new();
+        for offer_id in offers.iter() {
+            if (!self.offer_by_id(*offer_id).is_empty()) {
+                let offer = self.offer_by_id(*offer_id).get();
+                let result = BulkOffers {
+                    offer_id: *offer_id,
+                    offer,
+                };
+                results.push(result);
+            }
+        }
+        return results;
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[view(getBulkListings)]
+    fn get_bulk_listings(&self, #[var_args] auction_ids: MultiArgVec<u64>) -> Vec<TokensOnSale<Self::Api>> {        
+        let mut results = Vec::new();
+        for auction_id in auction_ids.iter() {
+            if (!self.auction_by_id(*auction_id).is_empty()) {
+                let auction = self.auction_by_id(*auction_id).get();
+                let result = TokensOnSale {
+                    auction_id: *auction_id,
+                    auction,
                 };
                 results.push(result);
             }

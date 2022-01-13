@@ -21,6 +21,8 @@ elrond_wasm_node::wasm_endpoints! {
         getActiveListingsBids
         getAuctionType
         getAuctionedToken
+        getBulkListings
+        getBulkOffers
         getClaimableAmount
         getCollectionsCount
         getCollectionsListed
@@ -48,6 +50,7 @@ elrond_wasm_node::wasm_endpoints! {
         getTokenItemsQuantityForSale
         getTokenOffersIds
         listing
+        offerById
         removeAcceptedTokens
         sendOffer
         setAcceptedTokens

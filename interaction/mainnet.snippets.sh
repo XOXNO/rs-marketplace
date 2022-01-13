@@ -35,11 +35,11 @@ deploy() {
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
     erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable --arguments 0xFA --project=${PROJECT} --recall-nonce --pem=${OWNER} \
-    --gas-limit=125000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
+    --gas-limit=150000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="addWitelistedSC" --arguments 0x00000000000000000500a536e203953414ff92e0a2fdb9b9c0d987fac3942429 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addWitelistedSC" --arguments 0x000000000000000005004153d7b76199d3c8a67fce413a09671fcfb682562429 --send --proxy=${PROXY} --chain=1
 }
 
 setStatusOn() {
