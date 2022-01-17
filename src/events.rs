@@ -6,7 +6,26 @@ use super::auction::{Auction, AuctionType, OfferStatus, Offer};
 #[allow(clippy::too_many_arguments)]
 #[elrond_wasm::module]
 pub trait EventsModule {
+    fn emit_out_bid_event(self, auction_id: u64, auction: &Auction<Self::Api>, 
+            bidder: ManagedAddress,
+            new_amount: BigUint, 
+            current_time: u64) {
+        self.out_bid_event(
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
+            auction_id,
+            &auction.current_winner,
+            &bidder,
+            &auction.current_bid,
+            &new_amount,
+            &auction.payment_token_type,
+            auction.payment_token_nonce,
+            current_time,
+        )
+    }
+
     fn emit_auction_token_event(self, auction_id: u64, auction: Auction<Self::Api>) {
+        let current_time = self.blockchain().get_block_timestamp();
         self.auction_token_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -21,6 +40,7 @@ pub trait EventsModule {
             auction.payment_token_nonce,
             auction.auction_type,
             auction.creator_royalties_percentage,
+            current_time,
         )
     }
     fn emit_offer_token_event(self, offer_id: u64, offer: Offer<Self::Api>) {
@@ -75,7 +95,7 @@ pub trait EventsModule {
         )
     }
 
-    fn emit_bid_event(self, auction_id: u64, auction: Auction<Self::Api>) {
+    fn emit_bid_event(self, auction_id: u64, auction: Auction<Self::Api>, current_time: u64) {
         self.bid_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -84,10 +104,13 @@ pub trait EventsModule {
             &auction.current_winner,
             &auction.current_bid,
             &auction.original_owner,
+            &auction.payment_token_type,
+            auction.payment_token_nonce,
+            current_time,
         );
     }
 
-    fn emit_end_auction_event(self, auction_id: u64, auction: Auction<Self::Api>) {
+    fn emit_end_auction_event(self, auction_id: u64, auction: Auction<Self::Api>, current_time: u64) {
         self.end_auction_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -96,6 +119,9 @@ pub trait EventsModule {
             &auction.current_winner,
             &auction.current_bid,
             &auction.original_owner,
+            &auction.payment_token_type,
+            auction.payment_token_nonce,
+            current_time,
         );
     }
 
@@ -104,6 +130,7 @@ pub trait EventsModule {
         auction_id: u64,
         auction: Auction<Self::Api>,
         nr_bought_tokens: BigUint,
+        current_time: u64,
     ) {
         self.buy_event(
             &auction.auctioned_token_type,
@@ -113,16 +140,21 @@ pub trait EventsModule {
             &auction.current_winner,
             &auction.min_bid,
             &auction.original_owner,
-        );
+            auction.payment_token_type,
+            auction.payment_token_nonce,
+            current_time,
+        )
     }
 
     fn emit_withdraw_event(self, auction_id: u64, auction: Auction<Self::Api>) {
+        let current_time = self.blockchain().get_block_timestamp();
         self.withdraw_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
             auction_id,
             &auction.nr_auctioned_tokens,
             &auction.original_owner,
+            current_time
         );
     }
 
@@ -142,6 +174,7 @@ pub trait EventsModule {
         #[indexed] accepted_payment_token_nonce: u64,
         #[indexed] auction_type: AuctionType,
         creator_royalties_percentage: BigUint, // between 0 and 10,000
+        #[indexed] timestamp: u64,
     );
 
     #[event("offer_token_event")]
@@ -206,6 +239,9 @@ pub trait EventsModule {
         #[indexed] bidder: &ManagedAddress,
         #[indexed] bid_amount: &BigUint,
         #[indexed] seller: &ManagedAddress,
+        #[indexed] token_payment_type: &TokenIdentifier,
+        #[indexed] token_payment_nonce: u64,
+        #[indexed] timestamp: u64,
     );
 
     #[event("end_auction_event")]
@@ -218,6 +254,24 @@ pub trait EventsModule {
         #[indexed] auction_winner: &ManagedAddress,
         #[indexed] winning_bid_amount: &BigUint,
         #[indexed] auction_seller: &ManagedAddress,
+        #[indexed] token_payment_type: &TokenIdentifier,
+        #[indexed] token_payment_nonce: u64,
+        #[indexed] timestamp: u64,
+    );
+
+    #[event("out_bid_event")]
+    fn out_bid_event(
+        &self,
+        #[indexed] auction_token_id: &TokenIdentifier,
+        #[indexed] auctioned_token_nonce: u64,
+        #[indexed] auction_id: u64,
+        #[indexed] old_bidder: &ManagedAddress,
+        #[indexed] new_bidder: &ManagedAddress,
+        #[indexed] refund_amount: &BigUint,
+        #[indexed] new_amount: &BigUint,
+        #[indexed] refund_payment_type: &TokenIdentifier,
+        #[indexed] refund_payment_nonce: u64,
+        #[indexed] timestamp: u64,
     );
 
     #[event("buy_event")]
@@ -230,6 +284,9 @@ pub trait EventsModule {
         #[indexed] buyer: &ManagedAddress,
         #[indexed] bid_sft_amount: &BigUint,
         #[indexed] seller: &ManagedAddress,
+        #[indexed] accepted_payment_token: TokenIdentifier,
+        #[indexed] accepted_payment_token_nonce: u64,
+        #[indexed] timestamp: u64,
     );
 
     #[event("withdraw_event")]
@@ -240,5 +297,6 @@ pub trait EventsModule {
         #[indexed] auction_id: u64,
         #[indexed] nr_auctioned_tokens: &BigUint,
         #[indexed] seller: &ManagedAddress,
+        #[indexed] timestamp: u64,
     );
 }

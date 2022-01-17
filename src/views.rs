@@ -54,7 +54,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
                 let offer = self.offer_by_id(*offer_id).get();
                 let result = BulkOffers {
                     offer_id: *offer_id,
-                    offer,
+                    offer: offer,
                 };
                 results.push(result);
             }

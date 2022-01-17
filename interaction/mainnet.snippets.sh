@@ -21,7 +21,7 @@ PROXY=https://gateway.elrond.com
 
 deploy() {
     echo ${PROJECT}
-    erdpy --verbose contract deploy --project=${PROJECT} --metadata-payable --recall-nonce --pem=${OWNER} --gas-limit=125000000 --arguments 0xFA --send --outfile="deploy-mainnet.interaction.json" --proxy=${PROXY} --chain=1 || return
+    erdpy --verbose contract deploy --project=${PROJECT} --metadata-payable --recall-nonce --pem=${OWNER} --gas-limit=125000000 --arguments 0x64 --send --outfile="deploy-mainnet.interaction.json" --proxy=${PROXY} --chain=1 || return
 
     TRANSACTION=$(erdpy data parse --file="deploy-mainnet.interaction.json" --expression="data['emitted_tx']['hash']")
     ADDRESS=$(erdpy data parse --file="deploy-mainnet.interaction.json" --expression="data['emitted_tx']['address']")
@@ -34,16 +34,20 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable --arguments 0xFA --project=${PROJECT} --recall-nonce --pem=${OWNER} \
+    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable --arguments 0x64 --project=${PROJECT} --recall-nonce --pem=${OWNER} \
     --gas-limit=150000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addWitelistedSC" --arguments 0x000000000000000005004153d7b76199d3c8a67fce413a09671fcfb682562429 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addWitelistedSC" --arguments 0x00000000000000000500f237daf1b2cde3b77015feede76308bbd7999b9a2328 --send --proxy=${PROXY} --chain=1
 }
 
 setStatusOn() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=1
+}
+
+setCutPercentage() {
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setCutPercentage" --arguments 0x64 --send --proxy=${PROXY} --chain=1
 }
 
 setStatusOff() {

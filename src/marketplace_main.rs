@@ -340,7 +340,8 @@ pub trait EsdtNftMarketplace:
                 "Bid must be less than or equal to the max bid!"
             );
         }
-
+        let current_time = self.blockchain().get_block_timestamp();
+            
         // refund losing bid
         if auction.current_winner != ManagedAddress::zero() {
             self.transfer_or_save_payment(
@@ -352,6 +353,7 @@ pub trait EsdtNftMarketplace:
             );
             self.listings_bids(auction.current_winner.clone())
                 .remove(&auction_id);
+            self.emit_out_bid_event(auction_id, &auction, caller.clone(), payment_amount.clone(), current_time);
         }
 
         // update auction bid and winner
@@ -366,8 +368,7 @@ pub trait EsdtNftMarketplace:
                 self.end_auction(auction_id);
             }
         }
-
-        self.emit_bid_event(auction_id, auction);
+        self.emit_bid_event(auction_id, auction, current_time);
         Ok(())
     }
 
@@ -394,6 +395,7 @@ pub trait EsdtNftMarketplace:
             "Auction deadline has not passed or the current bid is not equal to the max bid!"
         );
 
+        let current_time = self.blockchain().get_block_timestamp();
         self.distribute_tokens(&auction, None);
         self.listings_by_wallet(auction.original_owner.clone())
             .remove(&auction_id);
@@ -406,7 +408,7 @@ pub trait EsdtNftMarketplace:
         .remove(&auction_id);
         self.listings().remove(&auction_id);
         self.auction_by_id(auction_id).clear();
-        self.emit_end_auction_event(auction_id, auction);
+        self.emit_end_auction_event(auction_id, auction, current_time);
 
         Ok(())
     }
@@ -488,7 +490,8 @@ pub trait EsdtNftMarketplace:
             self.auction_by_id(auction_id).set(&auction);
         }
 
-        self.emit_buy_event(auction_id, auction, buy_amount);
+        let current_time = self.blockchain().get_block_timestamp();
+        self.emit_buy_event(auction_id, auction, buy_amount, current_time);
 
         Ok(())
     }
@@ -728,7 +731,7 @@ pub trait EsdtNftMarketplace:
 
     fn try_get_offer(&self, offer_id: u64) -> SCResult<Offer<Self::Api>> {
         require!(
-            self.does_auction_exist(offer_id),
+            self.does_offer_exist(offer_id),
             "Offer does not exist!"
         );
         Ok(self.offer_by_id(offer_id).get())
