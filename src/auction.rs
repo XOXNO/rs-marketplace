@@ -1,6 +1,7 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
+
 #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct Auction<M: ManagedTypeApi> {
     pub auctioned_token_type: TokenIdentifier<M>,
@@ -22,7 +23,8 @@ pub struct Auction<M: ManagedTypeApi> {
 }
 
 
-#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct Offer<M: ManagedTypeApi> {
     pub token_type: TokenIdentifier<M>,
     pub token_nonce: u64,
@@ -43,10 +45,11 @@ pub struct TokensOnSale<M: ManagedTypeApi> {
     pub auction_id: u64,
 }
 
-#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct BulkOffers<M: ManagedTypeApi> {
     pub offer: Offer<M>,
     pub offer_id: u64,
+    pub nonce: u64,
 }
 
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
@@ -58,7 +61,7 @@ pub enum AuctionType {
     SftOnePerPayment,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug, Clone)]
 pub enum OfferStatus {
     Pending,
     Accepted,

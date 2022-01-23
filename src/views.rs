@@ -46,6 +46,26 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[view(checkTokenOffers)] 
+    fn check_token_offers(&self, token: TokenIdentifier,  #[var_args] nonces: MultiArgVec<u64>) -> Vec<BulkOffers<Self::Api>> {
+        let mut results = Vec::new();
+        for nonce in nonces.iter() {
+            let offers = self.token_offers_ids(token.clone(), *nonce);
+            if (!offers.is_empty()) {
+                for offer_id in offers.iter() {
+                    let offer_info = self.offer_by_id(offer_id).get();
+                    let result = BulkOffers {
+                        offer_id: offer_id,
+                        offer: offer_info,
+                        nonce: *nonce,
+                    };
+                    results.push(result);
+                }
+            }
+        }
+        return results;
+    }
+    #[allow(clippy::too_many_arguments)]
     #[view(getBulkOffers)]
     fn get_bulk_offers(&self, #[var_args] offers: MultiArgVec<u64>) -> Vec<BulkOffers<Self::Api>> {        
         let mut results = Vec::new();
@@ -54,6 +74,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
                 let offer = self.offer_by_id(*offer_id).get();
                 let result = BulkOffers {
                     offer_id: *offer_id,
+                    nonce: offer.token_nonce.clone(),
                     offer: offer,
                 };
                 results.push(result);

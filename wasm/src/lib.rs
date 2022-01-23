@@ -12,6 +12,7 @@ elrond_wasm_node::wasm_endpoints! {
         addWitelistedSC
         bid
         buy
+        checkTokenOffers
         claimTokens
         doesAuctionExist
         doesOfferExist
