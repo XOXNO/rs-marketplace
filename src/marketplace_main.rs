@@ -235,7 +235,11 @@ pub trait EsdtNftMarketplace:
         );
 
         let current_time = self.blockchain().get_block_timestamp();
-
+        let caller = self.blockchain().get_caller();
+        require!(
+            !self.check_offer_sent(caller.clone(), nft_type.clone(), nft_nonce, payment_token.clone()).get(),
+            "You already sent an offer for this NFT with the same token!"
+        );
         if (!payment_token.is_egld()) {
             require!(
                 payment_token.is_valid_esdt_identifier(),
@@ -262,23 +266,23 @@ pub trait EsdtNftMarketplace:
             token_type: nft_type.clone(),
             token_nonce: nft_nonce.clone(),
             quantity: nft_amount.clone(),
-            payment_token_type: payment_token,
+            payment_token_type: payment_token.clone(),
             payment_token_nonce,
             status: OfferStatus::Pending,
             price: payment_amount,
             deadline,
             timestamp: current_time,
-            offer_owner: self.blockchain().get_caller(),
+            offer_owner: caller.clone(),
             marketplace_cut_percentage,
         };
         // Map ID with Offer Struct
         self.offer_by_id(offer_id).set(&offer);
-        self.token_offers_ids(nft_type, nft_nonce).insert(offer_id);
+        self.token_offers_ids(nft_type.clone(), nft_nonce).insert(offer_id);
         self.offers().insert(offer_id); // Push ID to the offers list
         // Add to the owner wallet the new Offer ID
         self.offers_by_wallet(offer.offer_owner.clone())
             .insert(offer_id.clone());
-
+        self.check_offer_sent(caller.clone(), nft_type.clone(), nft_nonce, payment_token.clone()).set(&true);
         // Emit event for new offer 
         self.emit_offer_token_event(offer_id, offer);
 
@@ -639,7 +643,7 @@ pub trait EsdtNftMarketplace:
             &bid_split_amounts.seller,
             b"Trust Market income!",
         );
-
+        self.check_offer_sent(offer.offer_owner.clone(), offer.token_type.clone(), offer.token_nonce.clone(), offer.payment_token_type.clone()).clear();
         self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
         .remove(&offer_id);
         self.offers_by_wallet(offer.offer_owner.clone())
@@ -709,6 +713,7 @@ pub trait EsdtNftMarketplace:
             offer.token_nonce.clone(),
         )
         .remove(&offer_id);
+        self.check_offer_sent(offer.offer_owner.clone(), offer.token_type.clone(), offer.token_nonce.clone(), offer.payment_token_type.clone()).clear();
         self.offers_by_wallet(offer.offer_owner.clone())
             .remove(&offer_id);
         self.offers().remove(&offer_id);

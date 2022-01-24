@@ -12,6 +12,10 @@ pub trait StorageModule {
     #[storage_mapper("offersByWallet")]
     fn offers_by_wallet(&self, address: ManagedAddress) -> SetMapper<u64>;
 
+    #[view(checkOfferSent)]
+    #[storage_mapper("checkOfferSent")]
+    fn check_offer_sent(&self, address: ManagedAddress, nft: TokenIdentifier, nonce: u64, payment_token: TokenIdentifier) -> SingleValueMapper<bool>;
+
     #[view(getListingsByWallet)]
     #[storage_mapper("listingsByWallet")]
     fn listings_by_wallet(&self, address: ManagedAddress) -> SetMapper<u64>;
