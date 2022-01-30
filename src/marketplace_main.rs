@@ -19,8 +19,7 @@ pub trait EsdtNftMarketplace:
 {
     #[init]
     fn init(&self, bid_cut_percentage: u64) -> SCResult<()> {
-        self.try_set_bid_cut_percentage(bid_cut_percentage);
-        Ok(())
+        self.try_set_bid_cut_percentage(bid_cut_percentage)
     }
 
     // endpoints - owner-only
@@ -102,7 +101,7 @@ pub trait EsdtNftMarketplace:
                 "Price must be fixed for this type of auction (min bid equal to max bid)"
             );
         }
-        if (!accepted_payment_token.is_egld()) {
+        if !accepted_payment_token.is_egld() {
             require!(
                 accepted_payment_token.is_valid_esdt_identifier(),
                 "The payment token is not valid!"
@@ -126,7 +125,7 @@ pub trait EsdtNftMarketplace:
             deadline > current_time || deadline == 0,
             "Deadline can't be in the past"
         );
-        if (deadline != 0) {
+        if deadline != 0 {
             require!(
                 start_time >= current_time && start_time < deadline,
                 "Invalid start time"
@@ -158,7 +157,7 @@ pub trait EsdtNftMarketplace:
             }
         };
 
-        if (deadline == 0) {
+        if deadline == 0 {
             require!(
                 auction_type == AuctionType::Nft || auction_type == AuctionType::SftOnePerPayment,
                 "Deadline is mandatory for this auction type!"
@@ -240,7 +239,7 @@ pub trait EsdtNftMarketplace:
             !self.check_offer_sent(caller.clone(), nft_type.clone(), nft_nonce, payment_token.clone()).get(),
             "You already sent an offer for this NFT with the same token!"
         );
-        if (!payment_token.is_egld()) {
+        if !payment_token.is_egld() {
             require!(
                 payment_token.is_valid_esdt_identifier(),
                 "The payment token is not valid!"
@@ -289,6 +288,31 @@ pub trait EsdtNftMarketplace:
         Ok(offer_id)
     }
 
+    #[only_owner]
+    #[endpoint(deleteOffersByWallet)]
+    fn delete_user_offers(
+        &self,
+        user: ManagedAddress,
+    ) {
+        let offers_root = self.offers_by_wallet(user.clone());
+        if offers_root.len() > 0 {
+            for offer in offers_root.iter() {
+                let offer_info = self.offer_by_id(offer).get();
+                self.token_offers_ids(offer_info.token_type.clone(), offer_info.token_nonce).remove(&offer);
+                self.check_offer_sent(offer_info.offer_owner.clone(), offer_info.token_type.clone(), offer_info.token_nonce, offer_info.payment_token_type.clone()).clear();
+                self.offers().remove(&offer);
+                self.transfer_or_save_payment(
+                    &offer_info.offer_owner,
+                    &offer_info.payment_token_type.clone(),
+                    offer_info.payment_token_nonce,
+                    &offer_info.price,
+                    b"Trust Market refunded your offer!",
+                );
+                self.offer_by_id(offer).clear();
+            }
+            self.offers_by_wallet(user.clone()).clear();
+        }
+    }
 
     #[payable("*")]
     #[endpoint]
@@ -368,7 +392,7 @@ pub trait EsdtNftMarketplace:
         self.listings_bids(auction.current_winner.clone())
             .insert(auction_id);
         if let Some(max_bid) = &auction.max_bid {
-            if (&auction.current_bid == max_bid) {
+            if &auction.current_bid == max_bid {
                 self.end_auction(auction_id);
             }
         }
@@ -471,7 +495,7 @@ pub trait EsdtNftMarketplace:
             current_time >= auction.start_time,
             "Cannot buy before start time!"
         );
-        if (auction.deadline != 0) {
+        if auction.deadline != 0 {
             require!(
                 current_time <= auction.deadline,
                 "Cannot buy after deadline!"
@@ -518,7 +542,7 @@ pub trait EsdtNftMarketplace:
         );
         let seller = self.blockchain().get_caller();
         let token_auction_ids_instance = self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
-        if (token_auction_ids_instance.is_empty()) {
+        if token_auction_ids_instance.is_empty() {
             require!(
                 offer.offer_owner != seller,
                 "Cannot accept your own offer!"
@@ -585,17 +609,17 @@ pub trait EsdtNftMarketplace:
             self.token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
             .update(|qt| *qt -= nft_amount.clone());
 
-            if (self
+            if self
                 .token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
                 .get()
-                == BigUint::from(0u32))
+                == BigUint::from(0u32)
             {
                 self.token_items_for_sale(offer.token_type.clone())
                     .remove(&offer.token_nonce);
                 self.token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
                     .clear();
             }
-            if (self.token_items_for_sale(offer.token_type.clone()).len() == 0) {
+            if self.token_items_for_sale(offer.token_type.clone()).len() == 0 {
                 self.collections_listed().remove(&offer.token_type.clone());
             }
         }        
@@ -835,17 +859,17 @@ pub trait EsdtNftMarketplace:
             self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
                 .update(|qt| *qt -= nft_amount_to_send.clone());
 
-            if (self
+            if self
                 .token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
                 .get()
-                == BigUint::from(0u32))
+                == BigUint::from(0u32)
             {
                 self.token_items_for_sale(nft_type.clone())
                     .remove(&nft_nonce);
                 self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
                     .clear();
             }
-            if (self.token_items_for_sale(nft_type.clone()).len() == 0) {
+            if self.token_items_for_sale(nft_type.clone()).len() == 0 {
                 self.collections_listed().remove(&nft_type);
             }
 
@@ -864,14 +888,14 @@ pub trait EsdtNftMarketplace:
             let quantity_token = self
                 .token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
                 .get();
-            if (quantity_token.eq(&BigUint::from(0u32))) {
+            if quantity_token.eq(&BigUint::from(0u32)) {
                 self.token_items_for_sale(nft_type.clone())
                     .remove(&nft_nonce);
                 self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
                     .clear();
             }
 
-            if (self.token_items_for_sale(nft_type.clone()).len() == 0) {
+            if self.token_items_for_sale(nft_type.clone()).len() == 0 {
                 self.collections_listed().remove(&nft_type);
             }
 

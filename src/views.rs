@@ -28,7 +28,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
     #[view(getOnSaleTokensForTicker)]
     fn get_on_sale_tokens_for_ticker(&self, token: TokenIdentifier,  #[var_args] nonces: MultiArgVec<u64>) -> Vec<TokensOnSale<Self::Api>> {
         let mut results = Vec::new();
-        if (self.token_items_for_sale(token.clone()).is_empty()) {
+        if self.token_items_for_sale(token.clone()).is_empty() {
             return results;
         }
         for nonce in nonces.iter() {
@@ -51,7 +51,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
         let mut results = Vec::new();
         for nonce in nonces.iter() {
             let offers = self.token_offers_ids(token.clone(), *nonce);
-            if (!offers.is_empty()) {
+            if !offers.is_empty() {
                 for offer_id in offers.iter() {
                     let offer_info = self.offer_by_id(offer_id).get();
                     let result = BulkOffers {
@@ -70,7 +70,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
     fn get_bulk_offers(&self, #[var_args] offers: MultiArgVec<u64>) -> Vec<BulkOffers<Self::Api>> {        
         let mut results = Vec::new();
         for offer_id in offers.iter() {
-            if (!self.offer_by_id(*offer_id).is_empty()) {
+            if !self.offer_by_id(*offer_id).is_empty() {
                 let offer = self.offer_by_id(*offer_id).get();
                 let result = BulkOffers {
                     offer_id: *offer_id,
@@ -88,7 +88,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
     fn get_bulk_listings(&self, #[var_args] auction_ids: MultiArgVec<u64>) -> Vec<TokensOnSale<Self::Api>> {        
         let mut results = Vec::new();
         for auction_id in auction_ids.iter() {
-            if (!self.auction_by_id(*auction_id).is_empty()) {
+            if !self.auction_by_id(*auction_id).is_empty() {
                 let auction = self.auction_by_id(*auction_id).get();
                 let result = TokensOnSale {
                     auction_id: *auction_id,

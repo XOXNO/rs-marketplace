@@ -7,7 +7,6 @@
 elrond_wasm_node::wasm_endpoints! {
     esdt_nft_marketplace
     (
-        init
         acceptOffer
         addWitelistedSC
         bid
@@ -15,6 +14,7 @@ elrond_wasm_node::wasm_endpoints! {
         checkOfferSent
         checkTokenOffers
         claimTokens
+        deleteOffersByWallet
         doesAuctionExist
         doesOfferExist
         endAuction
