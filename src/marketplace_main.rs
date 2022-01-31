@@ -31,6 +31,13 @@ pub trait EsdtNftMarketplace:
 
     // endpoints - owner-only
     #[only_owner]
+    #[endpoint(addBlackListWallet)]
+    fn add_blacklist(&self, wallet: ManagedAddress) -> bool {
+        self.blacklist_wallets().insert(wallet)
+    }
+
+    // endpoints - owner-only
+    #[only_owner]
     #[endpoint(setAcceptedTokens)]
     fn set_accepted_tokens(&self, token: TokenIdentifier) -> SCResult<()> {
         self.accepted_tokens().insert(token);
@@ -236,6 +243,10 @@ pub trait EsdtNftMarketplace:
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
         require!(
+            !self.blacklist_wallets().contains(&caller),
+            "Your address was blacklisted, all your SCAM offers are lost!"
+        );
+        require!(
             !self.check_offer_sent(caller.clone(), nft_type.clone(), nft_nonce, payment_token.clone()).get(),
             "You already sent an offer for this NFT with the same token!"
         );
@@ -296,7 +307,7 @@ pub trait EsdtNftMarketplace:
     ) {
         let offers_root = self.offers_by_wallet(user.clone());
         if offers_root.len() > 0 {
-            for offer in offers_root.iter() {
+            for offer in offers_root.iter().take(80) {
                 let offer_info = self.offer_by_id(offer).get();
                 self.token_offers_ids(offer_info.token_type.clone(), offer_info.token_nonce).remove(&offer);
                 self.check_offer_sent(offer_info.offer_owner.clone(), offer_info.token_type.clone(), offer_info.token_nonce, offer_info.payment_token_type.clone()).clear();
@@ -309,8 +320,8 @@ pub trait EsdtNftMarketplace:
                     b"Trust Market refunded your offer!",
                 );
                 self.offer_by_id(offer).clear();
+                self.offers_by_wallet(user.clone()).remove(&offer);
             }
-            self.offers_by_wallet(user.clone()).clear();
         }
     }
 

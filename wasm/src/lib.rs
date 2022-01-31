@@ -8,8 +8,10 @@ elrond_wasm_node::wasm_endpoints! {
     esdt_nft_marketplace
     (
         acceptOffer
+        addBlackListWallet
         addWitelistedSC
         bid
+        blackListWallets
         buy
         checkOfferSent
         checkTokenOffers

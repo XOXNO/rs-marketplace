@@ -49,6 +49,10 @@ pub trait StorageModule {
     fn accepted_tokens(&self) -> SetMapper<TokenIdentifier>;
 
 
+    #[view(blackListWallets)]
+    #[storage_mapper("blacklistWallets")]
+    fn blacklist_wallets(&self) -> SetMapper<ManagedAddress>;
+
     #[view(whitelistedContracts)]
     #[storage_mapper("whitelistedContracts")]
     fn whitelisted_contracts(&self) -> SetMapper<ManagedAddress>;
