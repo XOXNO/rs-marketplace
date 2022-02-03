@@ -1,5 +1,4 @@
 
-   
 ALICE="${USERS}/alice.pem"  
 ALICEWALET=erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3zpz3hypefsdd8ssycr6th
 ALICEHEX=0x0139472eff6886771a982f3083da5d421f24c29181e63888228dc81ca60d69e1
@@ -14,9 +13,9 @@ EVEWALLET=erd18tudnj2z8vjh0339yu3vrkgzz2jpz8mjq0uhgnmklnap6z33qqeszq2yn4
 EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
-ADDRESS=$(erdpy data load --key=address-devnet)
+ADDRESS=erd1qqqqqqqqqqqqqpgqkl2zt3funy7mfvnzjqpdzfgsvjjyl4tpd8ssd64q6n
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-devnet)
-PROXY=https://devnet-api.elrond.com
+PROXY=https://devnet-gateway.elrond.com
 
 deploy() {
     echo ${PROJECT}
@@ -33,8 +32,9 @@ deploy() {
 }
 
 upgrade() {
-    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable --arguments 0xFA --project=${PROJECT} --recall-nonce --pem=${ALICE} \
-    --gas-limit=125000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=D || return
+    echo "Smart contract address: ${ADDRESS}"
+    erdpy --verbose contract upgrade ${ADDRESS} --arguments 0x64 --project=${PROJECT} --recall-nonce --pem=${ALICE} \
+    --gas-limit=160000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 
 getDustAmountLeft() {
