@@ -93,6 +93,22 @@ pub trait StorageModule {
     #[storage_mapper("lastValidAuctionId")]
     fn last_valid_auction_id(&self) -> SingleValueMapper<u64>;
 
+    #[view(getRewardBalance)]
+    #[storage_mapper("getRewardBalance")]
+    fn reward_balance(&self) -> SingleValueMapper<BigUint>;
+
+    #[view(getRewardTicker)]
+    #[storage_mapper("getRewardTicker")]
+    fn reward_ticker(&self) -> SingleValueMapper<TokenIdentifier>;
+
+    #[view(specialRewardAmount)]
+    #[storage_mapper("specialRewardAmount")]
+    fn special_reward_amount(&self, token: TokenIdentifier) -> SingleValueMapper<BigUint>;
+
+    #[view(defaultRewardAmount)]
+    #[storage_mapper("defaultRewardAmount")]
+    fn reward_amount(&self) -> SingleValueMapper<BigUint>;
+
     #[view(getLastValidOfferId)]
     #[storage_mapper("lastValidOfferId")]
     fn last_valid_offer_id(&self) -> SingleValueMapper<u64>;

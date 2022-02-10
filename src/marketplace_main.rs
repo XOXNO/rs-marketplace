@@ -29,6 +29,38 @@ pub trait EsdtNftMarketplace:
         self.try_set_bid_cut_percentage(new_cut_percentage)
     }
 
+    #[payable("*")]
+    #[endpoint(addRewardBalance)]
+    fn add_reward_balance(&self, 
+        #[payment_token] token: TokenIdentifier,
+        #[payment_amount] amount: BigUint) -> SCResult<()> {
+        require!(self.reward_ticker().get() == token, "This token is not used for rewards!");
+        self.reward_balance().update(|qt| *qt += &amount.clone());
+        Ok(())
+    }
+
+    #[only_owner]
+    #[endpoint(setRewardTicker)]
+    fn set_reward_ticker(&self, token: TokenIdentifier) -> SCResult<()> {
+        require!(self.reward_ticker().is_empty(), "The ticker was already set!");
+        self.reward_ticker().set(token);
+        Ok(())
+    }
+
+    #[only_owner]
+    #[endpoint(setSpecialRewardAmount)]
+    fn set_special_reward_amount(&self, token: TokenIdentifier, amount: BigUint) -> SCResult<()> {
+        self.special_reward_amount(token).set(amount);
+        Ok(())
+    }
+
+    #[only_owner]
+    #[endpoint(setDefaultRewardAmount)]
+    fn set_default_reward_amount(&self, amount: BigUint) -> SCResult<()> {
+        self.reward_amount().set(amount);
+        Ok(())
+    }
+
     // endpoints - owner-only
     #[only_owner]
     #[endpoint(addBlackListWallet)]
@@ -642,7 +674,49 @@ pub trait EsdtNftMarketplace:
             &offer.marketplace_cut_percentage + &creator_royalties_percentage < PERCENTAGE_TOTAL,
             "Marketplace cut plus royalties exceeds 100%"
         );
+        if !self.reward_ticker().is_empty() {
+            if self.special_reward_amount(offer.token_type.clone()).is_empty() {
+                if self.reward_balance().get().gt(&(BigUint::from(self.reward_amount().get()).mul(2u32))) {
+                    self.transfer_or_save_payment(
+                        &offer.offer_owner,
+                        &self.reward_ticker().get(),
+                        0u64,
+                        &self.reward_amount().get(),
+                        b"Trust Market rewards!",
+                    );
 
+                    self.transfer_or_save_payment(
+                        &seller,
+                        &self.reward_ticker().get(),
+                        0u64,
+                        &self.reward_amount().get(),
+                        b"Trust Market rewards!",
+                    );
+
+                    self.reward_balance().update(|qt| *qt -= BigUint::from(self.reward_amount().get()).mul(2u32));
+                }
+            } else {
+                if self.reward_balance().get().gt(&(BigUint::from(self.special_reward_amount(offer.token_type.clone()).get()).mul(2u32))) {
+                    self.transfer_or_save_payment(
+                        &offer.offer_owner,
+                        &self.reward_ticker().get(),
+                        0u64,
+                        &self.special_reward_amount(offer.token_type.clone()).get(),
+                        b"Trust Market rewards!",
+                    );
+
+                    self.transfer_or_save_payment(
+                        &seller,
+                        &self.reward_ticker().get(),
+                        0u64,
+                        &self.special_reward_amount(offer.token_type.clone()).get(),
+                        b"Trust Market rewards!",
+                    );
+
+                    self.reward_balance().update(|qt| *qt -= BigUint::from(self.special_reward_amount(offer.token_type.clone()).get()).mul(2u32));
+                }
+            }
+        }
         self.transfer_or_save_payment(
             &offer.offer_owner,
             &offer.token_type,
@@ -855,7 +929,48 @@ pub trait EsdtNftMarketplace:
                 &bid_split_amounts.seller,
                 b"Trust Market income!",
             );
+            if !self.reward_ticker().is_empty() {
+                if self.special_reward_amount(nft_type.clone()).is_empty() {
+                    if self.reward_balance().get().gt(&(BigUint::from(self.reward_amount().get()).mul(2u32))) {
+                        self.transfer_or_save_payment(
+                            &auction.original_owner,
+                            &self.reward_ticker().get(),
+                            0u64,
+                            &self.reward_amount().get(),
+                            b"Trust Market rewards!",
+                        );
 
+                        self.transfer_or_save_payment(
+                            &auction.current_winner,
+                            &self.reward_ticker().get(),
+                            0u64,
+                            &self.reward_amount().get(),
+                            b"Trust Market rewards!",
+                        );
+                        self.reward_balance().update(|qt| *qt -= BigUint::from(self.reward_amount().get()).mul(2u32));
+                    }
+                } else { 
+                    if self.reward_balance().get().gt(&(BigUint::from(self.special_reward_amount(nft_type.clone()).get()).mul(2u32))) {
+                        self.transfer_or_save_payment(
+                            &auction.original_owner,
+                            &self.reward_ticker().get(),
+                            0u64,
+                            &self.special_reward_amount(nft_type.clone()).get(),
+                            b"Trust Market rewards!",
+                        );
+
+                        self.transfer_or_save_payment(
+                            &auction.current_winner,
+                            &self.reward_ticker().get(),
+                            0u64,
+                            &self.special_reward_amount(nft_type.clone()).get(),
+                            b"Trust Market rewards!",
+                        );
+
+                        self.reward_balance().update(|qt| *qt -= BigUint::from(self.special_reward_amount(nft_type.clone()).get()).mul(2u32));
+                    }
+                }
+            }
             // send NFT to auction winner
             let nft_amount = BigUint::from(NFT_AMOUNT);
             let nft_amount_to_send = match auction.auction_type {

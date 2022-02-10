@@ -46,8 +46,20 @@ setStatusOn() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=1
 }
 
+setRewardTicker() {
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setRewardTicker" --arguments 0x57415445522d396564343030 --send --proxy=${PROXY} --chain=1
+}
+
+setDefaultRewardAmount() {
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setDefaultRewardAmount" --arguments 0x8AC7230489E80000 --send --proxy=${PROXY} --chain=1
+}
+
+setSpecialRewardAmount() {
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setSpecialRewardAmount" --arguments 0x5733502d343863633561 0x2B5E3AF16B1880000 --send --proxy=${PROXY} --chain=1
+}
+
 deleteOffersByWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments 0x9798c5830f211dbc8ca028dc349d23303d17fb27c111ae0b165b1e029ad73598 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments 0x3c4007eb0e64506da0e5c9883d94fcd2956d2d7cf9e1de7eb084da3a3cab55d1 --send --proxy=${PROXY} --chain=1
 }
 
 setCutPercentage() {
@@ -67,7 +79,7 @@ removeAcceptedTokens() {
 }
 
 addBlackListWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments 0x9798c5830f211dbc8ca028dc349d23303d17fb27c111ae0b165b1e029ad73598 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments 0x3c4007eb0e64506da0e5c9883d94fcd2956d2d7cf9e1de7eb084da3a3cab55d1 --send --proxy=${PROXY} --chain=1
 }
 
 withdraw() {
@@ -223,4 +235,7 @@ getCurrentWinner() {
 
 getFullAuctionData() {
     erdpy --verbose contract query ${ADDRESS} --function="getFullAuctionData" --arguments 0x05 --proxy=${PROXY}
+}
+getRewardBalance() {
+    erdpy --verbose contract query ${ADDRESS} --function="getRewardBalance" --proxy=${PROXY}
 }

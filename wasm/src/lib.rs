@@ -9,6 +9,7 @@ elrond_wasm_node::wasm_endpoints! {
     (
         acceptOffer
         addBlackListWallet
+        addRewardBalance
         addWitelistedSC
         bid
         blackListWallets
@@ -16,6 +17,7 @@ elrond_wasm_node::wasm_endpoints! {
         checkOfferSent
         checkTokenOffers
         claimTokens
+        defaultRewardAmount
         deleteOffersByWallet
         doesAuctionExist
         doesOfferExist
@@ -46,6 +48,8 @@ elrond_wasm_node::wasm_endpoints! {
         getOnSaleTokensForTicker
         getOriginalOwner
         getPaymentTokenForAuction
+        getRewardBalance
+        getRewardTicker
         getStartTime
         getStatus
         getTokenAuctionIds
@@ -59,7 +63,11 @@ elrond_wasm_node::wasm_endpoints! {
         sendOffer
         setAcceptedTokens
         setCutPercentage
+        setDefaultRewardAmount
+        setRewardTicker
+        setSpecialRewardAmount
         setStatus
+        specialRewardAmount
         whitelistedContracts
         withdraw
         withdrawOffer
