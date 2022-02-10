@@ -55,7 +55,7 @@ setDefaultRewardAmount() {
 }
 
 setSpecialRewardAmount() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setSpecialRewardAmount" --arguments 0x5733502d343863633561 0x2B5E3AF16B1880000 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setSpecialRewardAmount" --arguments 0x57415252494f525a2d326630393836 0x2B5E3AF16B1880000 --send --proxy=${PROXY} --chain=1
 }
 
 deleteOffersByWallet() {
