@@ -66,6 +66,22 @@ pub trait StorageModule {
         token_nonce: u64,
     ) -> SingleValueMapper<BigUint>;
 
+
+    #[view(getClaimableTokens)]
+    #[storage_mapper("claimableTokens")]
+    fn claimable_tokens(
+        &self,
+        address: &ManagedAddress,
+    ) -> SetMapper<TokenIdentifier>;
+
+    #[view(getClaimableTokenNonces)]
+    #[storage_mapper("claimableTokenNonces")]
+    fn claimable_token_nonces(
+        &self,
+        address: &ManagedAddress,
+        token: &TokenIdentifier,
+    ) -> SetMapper<u64>;
+
     #[view(getCollectionsListed)]
     #[storage_mapper("collectionsListed")]
     fn collections_listed(&self) -> SetMapper<TokenIdentifier>;

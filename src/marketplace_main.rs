@@ -987,8 +987,7 @@ pub trait EsdtNftMarketplace:
 
             if self
                 .token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
-                .get()
-                == BigUint::from(0u32)
+                .get().eq(&BigUint::from(0u32))
             {
                 self.token_items_for_sale(nft_type.clone())
                     .remove(&nft_nonce);
@@ -1062,6 +1061,8 @@ pub trait EsdtNftMarketplace:
         data: &'static [u8],
     ) {
         if self.blockchain().is_smart_contract(to) && !self.whitelisted_contracts().contains(&to) {
+            self.claimable_tokens(to).insert(token_id.clone());
+            self.claimable_token_nonces(to, token_id).insert(nonce);
             self.claimable_amount(to, token_id, nonce)
                 .update(|amt| *amt += amount);
         } else {

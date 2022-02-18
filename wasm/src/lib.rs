@@ -30,6 +30,8 @@ elrond_wasm_node::wasm_endpoints! {
         getBulkListings
         getBulkOffers
         getClaimableAmount
+        getClaimableTokenNonces
+        getClaimableTokens
         getCollectionsCount
         getCollectionsListed
         getCurrentWinner
