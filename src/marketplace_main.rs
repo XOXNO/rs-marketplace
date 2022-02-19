@@ -676,7 +676,7 @@ pub trait EsdtNftMarketplace:
         );
         if !self.reward_ticker().is_empty() {
             if self.special_reward_amount(offer.token_type.clone()).is_empty() {
-                if self.reward_balance().get().gt(&(BigUint::from(self.reward_amount().get()).mul(2u32))) {
+                if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.reward_amount().get().mul(2u32)) {
                     self.transfer_or_save_payment(
                         &offer.offer_owner,
                         &self.reward_ticker().get(),
@@ -693,10 +693,10 @@ pub trait EsdtNftMarketplace:
                         b"Trust Market rewards!",
                     );
 
-                    self.reward_balance().update(|qt| *qt -= BigUint::from(self.reward_amount().get()).mul(2u32));
+                    self.reward_balance().update(|qt| *qt -= self.reward_amount().get().mul(2u32));
                 }
             } else {
-                if self.reward_balance().get().gt(&(BigUint::from(self.special_reward_amount(offer.token_type.clone()).get()).mul(2u32))) {
+                if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.special_reward_amount(offer.token_type.clone()).get().mul(2u32)) {
                     self.transfer_or_save_payment(
                         &offer.offer_owner,
                         &self.reward_ticker().get(),
@@ -713,7 +713,7 @@ pub trait EsdtNftMarketplace:
                         b"Trust Market rewards!",
                     );
 
-                    self.reward_balance().update(|qt| *qt -= BigUint::from(self.special_reward_amount(offer.token_type.clone()).get()).mul(2u32));
+                    self.reward_balance().update(|qt| *qt -= self.special_reward_amount(offer.token_type.clone()).get().mul(2u32));
                 }
             }
         }
@@ -931,7 +931,7 @@ pub trait EsdtNftMarketplace:
             );
             if !self.reward_ticker().is_empty() {
                 if self.special_reward_amount(nft_type.clone()).is_empty() {
-                    if self.reward_balance().get().gt(&(BigUint::from(self.reward_amount().get()).mul(2u32))) {
+                    if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.reward_amount().get().mul(2u32)) {
                         self.transfer_or_save_payment(
                             &auction.original_owner,
                             &self.reward_ticker().get(),
@@ -947,10 +947,10 @@ pub trait EsdtNftMarketplace:
                             &self.reward_amount().get(),
                             b"Trust Market rewards!",
                         );
-                        self.reward_balance().update(|qt| *qt -= BigUint::from(self.reward_amount().get()).mul(2u32));
+                        self.reward_balance().update(|qt| *qt -= self.reward_amount().get().mul(2u32));
                     }
                 } else { 
-                    if self.reward_balance().get().gt(&(BigUint::from(self.special_reward_amount(nft_type.clone()).get()).mul(2u32))) {
+                    if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.special_reward_amount(nft_type.clone()).get().mul(2u32)) {
                         self.transfer_or_save_payment(
                             &auction.original_owner,
                             &self.reward_ticker().get(),
@@ -967,7 +967,7 @@ pub trait EsdtNftMarketplace:
                             b"Trust Market rewards!",
                         );
 
-                        self.reward_balance().update(|qt| *qt -= BigUint::from(self.special_reward_amount(nft_type.clone()).get()).mul(2u32));
+                        self.reward_balance().update(|qt| *qt -= self.special_reward_amount(nft_type.clone()).get().mul(2u32));
                     }
                 }
             }

@@ -17,7 +17,7 @@ SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
 ADDRESS=erd1qqqqqqqqqqqqqpgq6wegs2xkypfpync8mn2sa5cmpqjlvrhwz5nqgepyg8
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-mainnet)
-PROXY=https://gateway.elrond.tools
+PROXY=https://gateway.elrond.com
 
 deploy() {
     echo ${PROJECT}
@@ -75,10 +75,10 @@ removeAcceptedTokens() {
 }
 
 deleteOffersByWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments 0xd4ee7e522dcad01cfbf6e806c00b681bcf48e633ed7df504d3b635ff74372e41 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments 0x5a47b30c6a687c99218f670727d1d1c7330ebd98c33c53b444da7ae1bf8923bc --send --proxy=${PROXY} --chain=1
 }
 addBlackListWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments 0xd4ee7e522dcad01cfbf6e806c00b681bcf48e633ed7df504d3b635ff74372e41 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments 0x5a47b30c6a687c99218f670727d1d1c7330ebd98c33c53b444da7ae1bf8923bc --send --proxy=${PROXY} --chain=1
 }
 
 withdraw() {
@@ -237,4 +237,17 @@ getFullAuctionData() {
 }
 getRewardBalance() {
     erdpy --verbose contract query ${ADDRESS} --function="getRewardBalance" --proxy=${PROXY}
+}
+
+specialRewardAmount() {
+    erdpy --verbose contract query ${ADDRESS} --function="specialRewardAmount" --proxy=${PROXY}
+}
+
+defaultRewardAmount() {
+    erdpy --verbose contract query ${ADDRESS} --function="defaultRewardAmount" --proxy=${PROXY}
+}
+
+
+getRewardTicker() {
+    erdpy --verbose contract query ${ADDRESS} --function="getRewardTicker" --proxy=${PROXY}
 }
