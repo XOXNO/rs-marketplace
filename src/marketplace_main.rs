@@ -833,6 +833,33 @@ pub trait EsdtNftMarketplace:
         Ok(())
     }
 
+    #[endpoint(changePrice)]
+    fn change_price(&self, auction_id: u64, new_price: BigUint) -> SCResult<()> {
+        require!(
+            self.does_auction_exist(auction_id),
+            "Auction does not exist!"
+        ); 
+        require!(self.status().get(), "Global operation enabled!");
+        let mut auction = self.try_get_auction(auction_id)?;
+        let caller = self.blockchain().get_caller();
+
+        require!(
+            auction.original_owner == caller,
+            "Only the original owner can change the price!"
+        );
+        require!(
+            auction.auction_type == AuctionType::Nft || 
+            auction.auction_type == AuctionType::SftOnePerPayment,
+            "You can not change the price of bids!"
+        );
+
+        let current_time = self.blockchain().get_block_timestamp();
+        self.emit_change_price_event(auction_id, &auction, new_price.clone(), current_time);
+        auction.max_bid = Some(new_price.clone());
+        auction.min_bid = new_price.clone();
+        self.auction_by_id(auction_id).set(auction);
+        Ok(())
+    }
     // private
 
     fn try_get_auction(&self, auction_id: u64) -> SCResult<Auction<Self::Api>> {

@@ -35,7 +35,7 @@ deploy() {
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
     erdpy --verbose contract upgrade ${ADDRESS} --arguments 0x64 --project=${PROJECT} --recall-nonce --pem=${OWNER} \
-    --gas-limit=160000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
+    --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
 addWitelistedSC() {

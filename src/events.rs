@@ -6,6 +6,21 @@ use super::auction::{Auction, AuctionType, OfferStatus, Offer};
 #[allow(clippy::too_many_arguments)]
 #[elrond_wasm::module]
 pub trait EventsModule {
+    fn emit_change_price_event(self, auction_id: u64, auction: &Auction<Self::Api>,
+            new_amount: BigUint, 
+            current_time: u64) {
+        self.change_price_event(
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
+            auction_id,
+            &auction.original_owner,
+            &auction.min_bid,
+            &new_amount,
+            &auction.payment_token_type,
+            auction.payment_token_nonce,
+            current_time,
+        )
+    }
     fn emit_out_bid_event(self, auction_id: u64, auction: &Auction<Self::Api>, 
             bidder: ManagedAddress,
             new_amount: BigUint, 
@@ -256,6 +271,20 @@ pub trait EventsModule {
         #[indexed] auction_seller: &ManagedAddress,
         #[indexed] token_payment_type: &TokenIdentifier,
         #[indexed] token_payment_nonce: u64,
+        #[indexed] timestamp: u64,
+    );
+
+    #[event("change_price_event")]
+    fn change_price_event(
+        &self,
+        #[indexed] auction_token_id: &TokenIdentifier,
+        #[indexed] auctioned_token_nonce: u64,
+        #[indexed] auction_id: u64,
+        #[indexed] owner: &ManagedAddress,
+        #[indexed] old_price: &BigUint,
+        #[indexed] new_price: &BigUint,
+        #[indexed] payment_type: &TokenIdentifier,
+        #[indexed] payment_nonce: u64,
         #[indexed] timestamp: u64,
     );
 
