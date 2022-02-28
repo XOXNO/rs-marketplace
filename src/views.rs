@@ -26,13 +26,13 @@ pub trait ViewsModule: crate::storage::StorageModule {
 
     #[allow(clippy::too_many_arguments)]
     #[view(getOnSaleTokensForTicker)]
-    fn get_on_sale_tokens_for_ticker(&self, token: TokenIdentifier,  #[var_args] nonces: MultiArgVec<u64>) -> Vec<TokensOnSale<Self::Api>> {
-        let mut results = Vec::new();
+    fn get_on_sale_tokens_for_ticker(&self, token: TokenIdentifier,  #[var_args] nonces: ManagedVarArgs<u64>) -> ManagedVec<TokensOnSale<Self::Api>> {
+        let mut results = ManagedVec::new();
         if self.token_items_for_sale(token.clone()).is_empty() {
             return results;
         }
-        for nonce in nonces.iter() {
-            let auctions = self.token_auction_ids(token.clone(), *nonce);
+        for nonce in nonces.into_iter() {
+            let auctions = self.token_auction_ids(token.clone(), nonce);
             for auction in auctions.iter() {
                 let auction_info = self.auction_by_id(auction).get();
                 let result = TokensOnSale {
@@ -47,17 +47,17 @@ pub trait ViewsModule: crate::storage::StorageModule {
 
     #[allow(clippy::too_many_arguments)]
     #[view(checkTokenOffers)] 
-    fn check_token_offers(&self, token: TokenIdentifier,  #[var_args] nonces: MultiArgVec<u64>) -> Vec<BulkOffers<Self::Api>> {
-        let mut results = Vec::new();
-        for nonce in nonces.iter() {
-            let offers = self.token_offers_ids(token.clone(), *nonce);
+    fn check_token_offers(&self, token: TokenIdentifier,  #[var_args] nonces: ManagedVarArgs<u64>) -> ManagedVec<BulkOffers<Self::Api>> {
+        let mut results = ManagedVec::new();
+        for nonce in nonces.into_iter() {
+            let offers = self.token_offers_ids(token.clone(), nonce);
             if !offers.is_empty() {
                 for offer_id in offers.iter() {
                     let offer_info = self.offer_by_id(offer_id).get();
                     let result = BulkOffers {
                         offer_id: offer_id,
                         offer: offer_info,
-                        nonce: *nonce,
+                        nonce: nonce,
                     };
                     results.push(result);
                 }
@@ -67,13 +67,13 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
     #[allow(clippy::too_many_arguments)]
     #[view(getBulkOffers)]
-    fn get_bulk_offers(&self, #[var_args] offers: MultiArgVec<u64>) -> Vec<BulkOffers<Self::Api>> {        
-        let mut results = Vec::new();
-        for offer_id in offers.iter() {
-            if !self.offer_by_id(*offer_id).is_empty() {
-                let offer = self.offer_by_id(*offer_id).get();
+    fn get_bulk_offers(&self, #[var_args] offers: ManagedVarArgs<u64>) -> ManagedVec<BulkOffers<Self::Api>> {        
+        let mut results = ManagedVec::new();
+        for offer_id in offers.into_iter() {
+            if !self.offer_by_id(offer_id).is_empty() {
+                let offer = self.offer_by_id(offer_id).get();
                 let result = BulkOffers {
-                    offer_id: *offer_id,
+                    offer_id: offer_id,
                     nonce: offer.token_nonce.clone(),
                     offer: offer,
                 };
@@ -85,13 +85,13 @@ pub trait ViewsModule: crate::storage::StorageModule {
 
     #[allow(clippy::too_many_arguments)]
     #[view(getBulkListings)]
-    fn get_bulk_listings(&self, #[var_args] auction_ids: MultiArgVec<u64>) -> Vec<TokensOnSale<Self::Api>> {        
-        let mut results = Vec::new();
-        for auction_id in auction_ids.iter() {
-            if !self.auction_by_id(*auction_id).is_empty() {
-                let auction = self.auction_by_id(*auction_id).get();
+    fn get_bulk_listings(&self, #[var_args] auction_ids: ManagedVarArgs<u64>) -> ManagedVec<TokensOnSale<Self::Api>> {        
+        let mut results = ManagedVec::new();
+        for auction_id in auction_ids.into_iter() {
+            if !self.auction_by_id(auction_id).is_empty() {
+                let auction = self.auction_by_id(auction_id).get();
                 let result = TokensOnSale {
-                    auction_id: *auction_id,
+                    auction_id: auction_id,
                     auction,
                 };
                 results.push(result);
@@ -114,11 +114,11 @@ pub trait ViewsModule: crate::storage::StorageModule {
     fn get_auctioned_token(
         &self,
         auction_id: u64,
-    ) -> OptionalResult<MultiResult3<TokenIdentifier, u64, BigUint>> {
+    ) -> OptionalValue<MultiValue3<TokenIdentifier, u64, BigUint>> {
         if self.does_auction_exist(auction_id) {
             let auction = self.auction_by_id(auction_id).get();
 
-            OptionalResult::Some(
+            OptionalValue::Some(
                 (
                     auction.auctioned_token_type,
                     auction.auctioned_token_nonce,
@@ -127,7 +127,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
                     .into(),
             )
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
@@ -144,11 +144,11 @@ pub trait ViewsModule: crate::storage::StorageModule {
     fn get_payment_token_for_auction(
         &self,
         auction_id: u64,
-    ) -> OptionalResult<MultiResult2<TokenIdentifier, u64>> {
+    ) -> OptionalValue<MultiValue2<TokenIdentifier, u64>> {
         if self.does_auction_exist(auction_id) {
             let esdt_token = self.auction_by_id(auction_id).get();
 
-            OptionalResult::Some(
+            OptionalValue::Some(
                 (
                     esdt_token.payment_token_type,
                     esdt_token.payment_token_nonce,
@@ -156,78 +156,78 @@ pub trait ViewsModule: crate::storage::StorageModule {
                     .into(),
             )
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
     #[view(getMinMaxBid)]
-    fn get_min_max_bid(&self, auction_id: u64) -> OptionalResult<MultiResult2<BigUint, BigUint>> {
+    fn get_min_max_bid(&self, auction_id: u64) -> OptionalValue<MultiValue2<BigUint, BigUint>> {
         if self.does_auction_exist(auction_id) {
             let auction = self.auction_by_id(auction_id).get();
 
-            OptionalResult::Some(
+            OptionalValue::Some(
                 (
                     auction.min_bid,
-                    auction.max_bid.unwrap_or_else(|| BigUint::zero()),
+                    auction.max_bid,
                 )
                     .into(),
             )
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
     #[view(getStartTime)]
-    fn get_start_time(&self, auction_id: u64) -> OptionalResult<u64> {
+    fn get_start_time(&self, auction_id: u64) -> OptionalValue<u64> {
         if self.does_auction_exist(auction_id) {
-            OptionalResult::Some(self.auction_by_id(auction_id).get().start_time)
+            OptionalValue::Some(self.auction_by_id(auction_id).get().start_time)
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
     #[view(getDeadline)]
-    fn get_deadline(&self, auction_id: u64) -> OptionalResult<u64> {
+    fn get_deadline(&self, auction_id: u64) -> OptionalValue<u64> {
         if self.does_auction_exist(auction_id) {
-            OptionalResult::Some(self.auction_by_id(auction_id).get().deadline)
+            OptionalValue::Some(self.auction_by_id(auction_id).get().deadline)
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
     #[view(getOriginalOwner)]
-    fn get_original_owner(&self, auction_id: u64) -> OptionalResult<ManagedAddress> {
+    fn get_original_owner(&self, auction_id: u64) -> OptionalValue<ManagedAddress> {
         if self.does_auction_exist(auction_id) {
-            OptionalResult::Some(self.auction_by_id(auction_id).get().original_owner)
+            OptionalValue::Some(self.auction_by_id(auction_id).get().original_owner)
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
     #[view(getCurrentWinningBid)]
-    fn get_current_winning_bid(&self, auction_id: u64) -> OptionalResult<BigUint> {
+    fn get_current_winning_bid(&self, auction_id: u64) -> OptionalValue<BigUint> {
         if self.does_auction_exist(auction_id) {
-            OptionalResult::Some(self.auction_by_id(auction_id).get().current_bid)
+            OptionalValue::Some(self.auction_by_id(auction_id).get().current_bid)
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
     #[view(getCurrentWinner)]
-    fn get_current_winner(&self, auction_id: u64) -> OptionalResult<ManagedAddress> {
+    fn get_current_winner(&self, auction_id: u64) -> OptionalValue<ManagedAddress> {
         if self.does_auction_exist(auction_id) {
-            OptionalResult::Some(self.auction_by_id(auction_id).get().current_winner)
+            OptionalValue::Some(self.auction_by_id(auction_id).get().current_winner)
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 
     #[view(getFullAuctionData)]
-    fn get_full_auction_data(&self, auction_id: u64) -> OptionalResult<Auction<Self::Api>> {
+    fn get_full_auction_data(&self, auction_id: u64) -> OptionalValue<Auction<Self::Api>> {
         if self.does_auction_exist(auction_id) {
-            OptionalResult::Some(self.auction_by_id(auction_id).get())
+            OptionalValue::Some(self.auction_by_id(auction_id).get())
         } else {
-            OptionalResult::None
+            OptionalValue::None
         }
     }
 }

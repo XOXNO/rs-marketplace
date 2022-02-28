@@ -2,7 +2,7 @@ elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
 
-#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct Auction<M: ManagedTypeApi> {
     pub auctioned_token_type: TokenIdentifier<M>,
     pub auctioned_token_nonce: u64,
@@ -11,7 +11,7 @@ pub struct Auction<M: ManagedTypeApi> {
     pub payment_token_type: TokenIdentifier<M>,
     pub payment_token_nonce: u64,
     pub min_bid: BigUint<M>,
-    pub max_bid: Option<BigUint<M>>,
+    pub max_bid: BigUint<M>,
     pub start_time: u64,
     pub deadline: u64,
 
@@ -24,7 +24,7 @@ pub struct Auction<M: ManagedTypeApi> {
 
 
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct Offer<M: ManagedTypeApi> {
     pub token_type: TokenIdentifier<M>,
     pub token_nonce: u64,
@@ -39,13 +39,13 @@ pub struct Offer<M: ManagedTypeApi> {
     pub marketplace_cut_percentage: BigUint<M>,
 }
 
-#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct TokensOnSale<M: ManagedTypeApi> {
     pub auction: Auction<M>,
     pub auction_id: u64,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct BulkOffers<M: ManagedTypeApi> {
     pub offer: Offer<M>,
     pub offer_id: u64,
@@ -61,12 +61,54 @@ pub enum AuctionType {
     SftOnePerPayment,
 }
 
+impl ManagedVecItem for AuctionType {
+
+    const PAYLOAD_SIZE: usize = 4;
+    const SKIPS_RESERIALIZATION: bool = true;
+    type Ref<'a> = Self;
+    
+    fn from_byte_reader<Reader: FnMut(&mut [u8])>(reader: Reader) -> Self {
+        todo!()
+    }
+
+    unsafe fn from_byte_reader_as_borrow<'a, Reader: FnMut(&mut [u8])>(
+        reader: Reader,
+    ) -> Self::Ref<'a> {
+        todo!()
+    }
+
+    fn to_byte_writer<R, Writer: FnMut(&[u8]) -> R>(&self, writer: Writer) -> R {
+        todo!()
+    }
+}
+
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug, Clone)]
 pub enum OfferStatus {
     Pending,
     Accepted,
     Declined,
     Withdraw,
+}
+
+impl ManagedVecItem for OfferStatus {
+
+    const PAYLOAD_SIZE: usize = 4;
+    const SKIPS_RESERIALIZATION: bool = true;
+    type Ref<'a> = Self;
+    
+    fn from_byte_reader<Reader: FnMut(&mut [u8])>(reader: Reader) -> Self {
+        todo!()
+    }
+
+    unsafe fn from_byte_reader_as_borrow<'a, Reader: FnMut(&mut [u8])>(
+        reader: Reader,
+    ) -> Self::Ref<'a> {
+        todo!()
+    }
+
+    fn to_byte_writer<R, Writer: FnMut(&[u8]) -> R>(&self, writer: Writer) -> R {
+        todo!()
+    }
 }
 
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
