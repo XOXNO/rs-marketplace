@@ -52,7 +52,7 @@ pub struct BulkOffers<M: ManagedTypeApi> {
     pub nonce: u64,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
 pub enum AuctionType {
     None,
     NftBid,
@@ -61,54 +61,12 @@ pub enum AuctionType {
     SftOnePerPayment,
 }
 
-impl ManagedVecItem for AuctionType {
-
-    const PAYLOAD_SIZE: usize = 4;
-    const SKIPS_RESERIALIZATION: bool = true;
-    type Ref<'a> = Self;
-    
-    fn from_byte_reader<Reader: FnMut(&mut [u8])>(reader: Reader) -> Self {
-        todo!()
-    }
-
-    unsafe fn from_byte_reader_as_borrow<'a, Reader: FnMut(&mut [u8])>(
-        reader: Reader,
-    ) -> Self::Ref<'a> {
-        todo!()
-    }
-
-    fn to_byte_writer<R, Writer: FnMut(&[u8]) -> R>(&self, writer: Writer) -> R {
-        todo!()
-    }
-}
-
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug, Clone)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug, Clone)]
 pub enum OfferStatus {
     Pending,
     Accepted,
     Declined,
     Withdraw,
-}
-
-impl ManagedVecItem for OfferStatus {
-
-    const PAYLOAD_SIZE: usize = 4;
-    const SKIPS_RESERIALIZATION: bool = true;
-    type Ref<'a> = Self;
-    
-    fn from_byte_reader<Reader: FnMut(&mut [u8])>(reader: Reader) -> Self {
-        todo!()
-    }
-
-    unsafe fn from_byte_reader_as_borrow<'a, Reader: FnMut(&mut [u8])>(
-        reader: Reader,
-    ) -> Self::Ref<'a> {
-        todo!()
-    }
-
-    fn to_byte_writer<R, Writer: FnMut(&[u8]) -> R>(&self, writer: Writer) -> R {
-        todo!()
-    }
 }
 
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
