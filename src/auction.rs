@@ -48,15 +48,15 @@ impl<M: ManagedTypeApi> NestedDecode for Auction<M> {
         I: elrond_codec::NestedDecodeInput,
         H: elrond_codec::DecodeErrorHandler,
     {
-        let auctioned_token_type = TokenIdentifier::dep_decode(input).unwrap();
-        let auctioned_token_nonce = u64::dep_decode(input).unwrap();
-        let nr_auctioned_tokens = BigUint::dep_decode(input).unwrap();
-        let auction_type = AuctionType::dep_decode(input).unwrap();
-        let payment_token_type = TokenIdentifier::dep_decode(input).unwrap();
-        let payment_token_nonce = u64::dep_decode(input).unwrap();
-        let min_bid = BigUint::dep_decode(input).unwrap();
+        let auctioned_token_type = TokenIdentifier::dep_decode_or_handle_err(input, h)?;
+        let auctioned_token_nonce = u64::dep_decode_or_handle_err(input, h)?;
+        let nr_auctioned_tokens = BigUint::dep_decode_or_handle_err(input, h)?;
+        let auction_type = AuctionType::dep_decode_or_handle_err(input, h)?;
+        let payment_token_type = TokenIdentifier::dep_decode_or_handle_err(input, h)?;
+        let payment_token_nonce = u64::dep_decode_or_handle_err(input, h)?;
+        let min_bid = BigUint::dep_decode_or_handle_err(input, h)?;
 
-        let option_prefix = u8::dep_decode(input).unwrap();
+        let option_prefix = u8::dep_decode_or_handle_err(input, h)?;
         let max_bid = match option_prefix {
             0 => CustomOption {
                 id: CustomOptionId::None,
@@ -64,26 +64,26 @@ impl<M: ManagedTypeApi> NestedDecode for Auction<M> {
             },
             1 => CustomOption {
                 id: CustomOptionId::Some,
-                value: BigUint::dep_decode(input).unwrap(),
+                value: BigUint::dep_decode_or_handle_err(input, h)?,
             },
             2 => CustomOption {
                 id: CustomOptionId::None,
-                value: BigUint::dep_decode(input).unwrap(),
+                value: BigUint::dep_decode_or_handle_err(input, h)?,
             },
             3 => CustomOption {
                 id: CustomOptionId::Some,
-                value: BigUint::dep_decode(input).unwrap(),
+                value: BigUint::dep_decode_or_handle_err(input, h)?,
             },
             _ => return core::result::Result::Err(h.handle_error(DecodeError::from("invalid data"))),
         };
 
-        let start_time = u64::dep_decode(input).unwrap();
-        let deadline = u64::dep_decode(input).unwrap();
-        let original_owner = ManagedAddress::dep_decode(input).unwrap();
-        let current_bid = BigUint::dep_decode(input).unwrap();
-        let current_winner = ManagedAddress::dep_decode(input).unwrap();
-        let marketplace_cut_percentage = BigUint::dep_decode(input).unwrap();
-        let creator_royalties_percentage = BigUint::dep_decode(input).unwrap();
+        let start_time = u64::dep_decode_or_handle_err(input, h)?;
+        let deadline = u64::dep_decode_or_handle_err(input, h)?;
+        let original_owner = ManagedAddress::dep_decode_or_handle_err(input, h)?;
+        let current_bid = BigUint::dep_decode_or_handle_err(input, h)?;
+        let current_winner = ManagedAddress::dep_decode_or_handle_err(input, h)?;
+        let marketplace_cut_percentage = BigUint::dep_decode_or_handle_err(input, h)?;
+        let creator_royalties_percentage = BigUint::dep_decode_or_handle_err(input, h)?;
 
         core::result::Result::Ok(
             Auction {
