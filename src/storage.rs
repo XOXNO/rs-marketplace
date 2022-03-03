@@ -14,7 +14,13 @@ pub trait StorageModule {
 
     #[view(checkOfferSent)]
     #[storage_mapper("checkOfferSent")]
-    fn check_offer_sent(&self, address: ManagedAddress, nft: TokenIdentifier, nonce: u64, payment_token: TokenIdentifier) -> SingleValueMapper<bool>;
+    fn check_offer_sent(
+        &self,
+        address: ManagedAddress,
+        nft: TokenIdentifier,
+        nonce: u64,
+        payment_token: TokenIdentifier,
+    ) -> SingleValueMapper<bool>;
 
     #[view(getListingsByWallet)]
     #[storage_mapper("listingsByWallet")]
@@ -48,7 +54,6 @@ pub trait StorageModule {
     #[storage_mapper("acceptedTokens")]
     fn accepted_tokens(&self) -> SetMapper<TokenIdentifier>;
 
-
     #[view(blackListWallets)]
     #[storage_mapper("blacklistWallets")]
     fn blacklist_wallets(&self) -> SetMapper<ManagedAddress>;
@@ -66,13 +71,9 @@ pub trait StorageModule {
         token_nonce: u64,
     ) -> SingleValueMapper<BigUint>;
 
-
     #[view(getClaimableTokens)]
     #[storage_mapper("claimableTokens")]
-    fn claimable_tokens(
-        &self,
-        address: &ManagedAddress,
-    ) -> SetMapper<TokenIdentifier>;
+    fn claimable_tokens(&self, address: &ManagedAddress) -> SetMapper<TokenIdentifier>;
 
     #[view(getClaimableTokenNonces)]
     #[storage_mapper("claimableTokenNonces")]

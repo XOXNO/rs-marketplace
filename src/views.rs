@@ -26,7 +26,11 @@ pub trait ViewsModule: crate::storage::StorageModule {
 
     #[allow(clippy::too_many_arguments)]
     #[view(getOnSaleTokensForTicker)]
-    fn get_on_sale_tokens_for_ticker(&self, token: TokenIdentifier,  #[var_args] nonces: MultiValueEncoded<u64>) -> ManagedVec<TokensOnSale<Self::Api>> {
+    fn get_on_sale_tokens_for_ticker(
+        &self,
+        token: TokenIdentifier,
+        #[var_args] nonces: MultiValueEncoded<u64>,
+    ) -> ManagedVec<TokensOnSale<Self::Api>> {
         let mut results = ManagedVec::new();
         if self.token_items_for_sale(token.clone()).is_empty() {
             return results;
@@ -46,8 +50,12 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[view(checkTokenOffers)] 
-    fn check_token_offers(&self, token: TokenIdentifier,  #[var_args] nonces: MultiValueEncoded<u64>) -> ManagedVec<BulkOffers<Self::Api>> {
+    #[view(checkTokenOffers)]
+    fn check_token_offers(
+        &self,
+        token: TokenIdentifier,
+        #[var_args] nonces: MultiValueEncoded<u64>,
+    ) -> ManagedVec<BulkOffers<Self::Api>> {
         let mut results = ManagedVec::new();
         for nonce in nonces.into_iter() {
             let offers = self.token_offers_ids(token.clone(), nonce);
@@ -67,7 +75,10 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
     #[allow(clippy::too_many_arguments)]
     #[view(getBulkOffers)]
-    fn get_bulk_offers(&self, #[var_args] offers: MultiValueEncoded<u64>) -> ManagedVec<BulkOffers<Self::Api>> {        
+    fn get_bulk_offers(
+        &self,
+        #[var_args] offers: MultiValueEncoded<u64>,
+    ) -> ManagedVec<BulkOffers<Self::Api>> {
         let mut results = ManagedVec::new();
         for offer_id in offers.into_iter() {
             if !self.offer_by_id(offer_id).is_empty() {
@@ -85,7 +96,10 @@ pub trait ViewsModule: crate::storage::StorageModule {
 
     #[allow(clippy::too_many_arguments)]
     #[view(getBulkListings)]
-    fn get_bulk_listings(&self, #[var_args] auction_ids: MultiValueEncoded<u64>) -> ManagedVec<TokensOnSale<Self::Api>> {        
+    fn get_bulk_listings(
+        &self,
+        #[var_args] auction_ids: MultiValueEncoded<u64>,
+    ) -> ManagedVec<TokensOnSale<Self::Api>> {
         let mut results = ManagedVec::new();
         for auction_id in auction_ids.into_iter() {
             if !self.auction_by_id(auction_id).is_empty() {
@@ -168,7 +182,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
             OptionalValue::Some(
                 (
                     auction.min_bid,
-                    auction.max_bid,
+                    auction.max_bid.value,
                 )
                     .into(),
             )
