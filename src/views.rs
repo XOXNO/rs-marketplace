@@ -182,7 +182,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
             OptionalValue::Some(
                 (
                     auction.min_bid,
-                    auction.max_bid.value,
+                    auction.max_bid.unwrap_or_else(|| BigUint::zero()),
                 )
                     .into(),
             )

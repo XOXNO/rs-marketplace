@@ -150,9 +150,13 @@ pub trait EsdtNftMarketplace:
             );
         }
 
-        if max_bid > BigUint::zero() {
-            require!(min_bid <= max_bid, "Min bid can't be higher than max bid");
-        }
+        let opt_max_bid = if max_bid > 0u32 {
+            require!(min_bid <= max_bid, "Min bid can't higher than max bid");
+
+            Some(max_bid)
+        } else {
+            None
+        };
 
         require!(min_bid > 0u32, "Min bid must be higher than 0!");
         require!(
@@ -202,11 +206,6 @@ pub trait EsdtNftMarketplace:
             );
         }
 
-        let max_bid_struct = CustomOption {
-            id: CustomOptionId::Some,
-            value: max_bid,
-        };
-
         let auction = Auction {
             auctioned_token_type: nft_type.clone(),
             auctioned_token_nonce: nft_nonce,
@@ -218,7 +217,7 @@ pub trait EsdtNftMarketplace:
             payment_token_nonce: accepted_payment_nft_nonce,
 
             min_bid,
-            max_bid: max_bid_struct,
+            max_bid: opt_max_bid,
             start_time,
             deadline,
             original_owner: self.blockchain().get_caller(),
@@ -426,9 +425,9 @@ pub trait EsdtNftMarketplace:
             "Bid must be higher than the current winning bid!"
         );
 
-        if auction.max_bid.value > BigUint::zero() {
+        if let Some(max_bid) = &auction.max_bid {
             require!(
-                payment_amount <= auction.max_bid.value,
+                &payment_amount <= max_bid,
                 "Bid must be less than or equal to the max bid!"
             );
         }
@@ -463,10 +462,10 @@ pub trait EsdtNftMarketplace:
         self.listings_bids(auction.current_winner.clone())
             .insert(auction_id);
 
-        if auction.max_bid.value > BigUint::zero() {
-            if auction.current_bid == auction.max_bid.value {
+        if let Some(max_bid) = &auction.max_bid {
+            if &auction.current_bid == max_bid {
                 self.end_auction(auction_id);
-            };
+            }
         }
 
         self.emit_bid_event(auction_id, auction, current_time);
@@ -483,12 +482,11 @@ pub trait EsdtNftMarketplace:
             "Cannot end this type of auction!"
         );
         let deadline_reached = current_time > auction.deadline;
-        let mut max_bid_reached = false;
-        if auction.max_bid.value > BigUint::zero() {
-            if auction.current_bid == auction.max_bid.value {
-                max_bid_reached = true;
-            };
-        }
+        let max_bid_reached = if let Some(max_bid) = &auction.max_bid {
+            &auction.current_bid == max_bid
+        } else {
+            false
+        };
         require!(
             deadline_reached || max_bid_reached,
             "Auction deadline has not passed or the current bid is not equal to the max bid!"
@@ -899,7 +897,7 @@ pub trait EsdtNftMarketplace:
 
         let current_time = self.blockchain().get_block_timestamp();
         self.emit_change_price_event(auction_id, &auction, new_price.clone(), current_time);
-        auction.max_bid.value = new_price.clone();
+        auction.max_bid = Some(new_price.clone());
         auction.min_bid = new_price.clone();
         self.auction_by_id(auction_id).set(auction);
     }
