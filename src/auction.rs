@@ -60,7 +60,7 @@ impl<M: ManagedTypeApi> NestedDecode for Auction<M> {
         let max_bid = match option_prefix {
             0 => CustomOption {
                 id: CustomOptionId::None,
-                value: BigUint::dep_decode(input).unwrap(),
+                value: BigUint::zero(),
             },
             1 => CustomOption {
                 id: CustomOptionId::Some,
