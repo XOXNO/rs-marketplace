@@ -1,14 +1,18 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
-use super::auction::{Auction, AuctionType, OfferStatus, Offer};
+use super::auction::{Auction, AuctionType, Offer, OfferStatus};
 
 #[allow(clippy::too_many_arguments)]
 #[elrond_wasm::module]
 pub trait EventsModule {
-    fn emit_change_price_event(self, auction_id: u64, auction: &Auction<Self::Api>,
-            new_amount: BigUint, 
-            current_time: u64) {
+    fn emit_change_price_event(
+        self,
+        auction_id: u64,
+        auction: &Auction<Self::Api>,
+        new_amount: BigUint,
+        current_time: u64,
+    ) {
         self.change_price_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -21,10 +25,14 @@ pub trait EventsModule {
             current_time,
         )
     }
-    fn emit_out_bid_event(self, auction_id: u64, auction: &Auction<Self::Api>, 
-            bidder: ManagedAddress,
-            new_amount: BigUint, 
-            current_time: u64) {
+    fn emit_out_bid_event(
+        self,
+        auction_id: u64,
+        auction: &Auction<Self::Api>,
+        bidder: ManagedAddress,
+        new_amount: BigUint,
+        current_time: u64,
+    ) {
         self.out_bid_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -71,7 +79,7 @@ pub trait EventsModule {
             offer.timestamp,
             &offer.offer_owner,
             &offer.marketplace_cut_percentage,
-            offer_id
+            offer_id,
         )
     }
 
@@ -88,11 +96,16 @@ pub trait EventsModule {
             offer.timestamp,
             &offer.offer_owner,
             &offer.marketplace_cut_percentage,
-            offer_id
+            offer_id,
         )
     }
 
-    fn emit_accept_offer_event(self, offer_id: u64, offer: Offer<Self::Api>, seller: &ManagedAddress) {
+    fn emit_accept_offer_event(
+        self,
+        offer_id: u64,
+        offer: Offer<Self::Api>,
+        seller: &ManagedAddress,
+    ) {
         self.accept_offer_token_event(
             &offer.token_type,
             offer.token_nonce,
@@ -125,7 +138,12 @@ pub trait EventsModule {
         );
     }
 
-    fn emit_end_auction_event(self, auction_id: u64, auction: Auction<Self::Api>, current_time: u64) {
+    fn emit_end_auction_event(
+        self,
+        auction_id: u64,
+        auction: Auction<Self::Api>,
+        current_time: u64,
+    ) {
         self.end_auction_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -169,7 +187,7 @@ pub trait EventsModule {
             auction_id,
             &auction.nr_auctioned_tokens,
             &auction.original_owner,
-            current_time
+            current_time,
         );
     }
 

@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(generic_associated_types)]
 
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
@@ -18,47 +19,51 @@ pub trait EsdtNftMarketplace:
     storage::StorageModule + views::ViewsModule + events::EventsModule
 {
     #[init]
-    fn init(&self, bid_cut_percentage: u64) -> SCResult<()> {
+    fn init(&self, bid_cut_percentage: u64) {
         self.try_set_bid_cut_percentage(bid_cut_percentage)
     }
 
     // endpoints - owner-only
     #[only_owner]
     #[endpoint(setCutPercentage)]
-    fn set_percentage_cut(&self, new_cut_percentage: u64) -> SCResult<()> {
+    fn set_percentage_cut(&self, new_cut_percentage: u64) {
         self.try_set_bid_cut_percentage(new_cut_percentage)
     }
 
     #[payable("*")]
     #[endpoint(addRewardBalance)]
-    fn add_reward_balance(&self, 
+    fn add_reward_balance(
+        &self,
         #[payment_token] token: TokenIdentifier,
-        #[payment_amount] amount: BigUint) -> SCResult<()> {
-        require!(self.reward_ticker().get() == token, "This token is not used for rewards!");
+        #[payment_amount] amount: BigUint,
+    ) {
+        require!(
+            self.reward_ticker().get() == token,
+            "This token is not used for rewards!"
+        );
         self.reward_balance().update(|qt| *qt += &amount.clone());
-        Ok(())
     }
 
     #[only_owner]
     #[endpoint(setRewardTicker)]
-    fn set_reward_ticker(&self, token: TokenIdentifier) -> SCResult<()> {
-        require!(self.reward_ticker().is_empty(), "The ticker was already set!");
+    fn set_reward_ticker(&self, token: TokenIdentifier) {
+        require!(
+            self.reward_ticker().is_empty(),
+            "The ticker was already set!"
+        );
         self.reward_ticker().set(token);
-        Ok(())
     }
 
     #[only_owner]
     #[endpoint(setSpecialRewardAmount)]
-    fn set_special_reward_amount(&self, token: TokenIdentifier, amount: BigUint) -> SCResult<()> {
+    fn set_special_reward_amount(&self, token: TokenIdentifier, amount: BigUint) {
         self.special_reward_amount(token).set(amount);
-        Ok(())
     }
 
     #[only_owner]
     #[endpoint(setDefaultRewardAmount)]
-    fn set_default_reward_amount(&self, amount: BigUint) -> SCResult<()> {
+    fn set_default_reward_amount(&self, amount: BigUint) {
         self.reward_amount().set(amount);
-        Ok(())
     }
 
     // endpoints - owner-only
@@ -71,9 +76,8 @@ pub trait EsdtNftMarketplace:
     // endpoints - owner-only
     #[only_owner]
     #[endpoint(setAcceptedTokens)]
-    fn set_accepted_tokens(&self, token: TokenIdentifier) -> SCResult<()> {
+    fn set_accepted_tokens(&self, token: TokenIdentifier) {
         self.accepted_tokens().insert(token);
-        Ok(())
     }
     #[only_owner]
     #[endpoint(removeAcceptedTokens)]
@@ -90,9 +94,8 @@ pub trait EsdtNftMarketplace:
     // endpoints - owner-only
     #[only_owner]
     #[endpoint(setStatus)]
-    fn set_status(&self, status: bool) -> SCResult<()> {
+    fn set_status(&self, status: bool) {
         self.status().set(&status);
-        Ok(())
     }
     // endpoints
 
@@ -109,9 +112,9 @@ pub trait EsdtNftMarketplace:
         deadline: u64,
         accepted_payment_token: TokenIdentifier,
         bid: bool,
-        #[var_args] opt_sft_max_one_per_payment: OptionalArg<bool>,
-        #[var_args] opt_start_time: OptionalArg<u64>,
-    ) -> SCResult<u64> {
+        #[var_args] opt_sft_max_one_per_payment: OptionalValue<bool>,
+        #[var_args] opt_start_time: OptionalValue<u64>,
+    ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
 
         require!(
@@ -126,8 +129,8 @@ pub trait EsdtNftMarketplace:
 
         let current_time = self.blockchain().get_block_timestamp();
         let start_time = match opt_start_time {
-            OptionalArg::Some(st) => st,
-            OptionalArg::None => current_time,
+            OptionalValue::Some(st) => st,
+            OptionalValue::None => current_time,
         };
 
         let sft_max_one_per_payment = opt_sft_max_one_per_payment
@@ -202,6 +205,7 @@ pub trait EsdtNftMarketplace:
                 "Deadline is mandatory for this auction type!"
             );
         }
+
         let auction = Auction {
             auctioned_token_type: nft_type.clone(),
             auctioned_token_nonce: nft_nonce,
@@ -242,7 +246,7 @@ pub trait EsdtNftMarketplace:
         //Emit event for new listed token
         self.emit_auction_token_event(auction_id, auction);
 
-        Ok(auction_id)
+        auction_id
     }
 
     #[payable("*")]
@@ -256,7 +260,7 @@ pub trait EsdtNftMarketplace:
         nft_nonce: u64,
         nft_amount: BigUint,
         deadline: u64,
-    ) -> SCResult<u64> {
+    ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
 
         require!(
@@ -279,7 +283,14 @@ pub trait EsdtNftMarketplace:
             "Your address was blacklisted, all your SCAM offers are lost!"
         );
         require!(
-            !self.check_offer_sent(caller.clone(), nft_type.clone(), nft_nonce, payment_token.clone()).get(),
+            !self
+                .check_offer_sent(
+                    caller.clone(),
+                    nft_type.clone(),
+                    nft_nonce,
+                    payment_token.clone()
+                )
+                .get(),
             "You already sent an offer for this NFT with the same token!"
         );
         if !payment_token.is_egld() {
@@ -294,10 +305,7 @@ pub trait EsdtNftMarketplace:
             "The NFT token is not valid!"
         );
 
-        require!(
-            deadline > current_time,
-            "Deadline can't be in the past!"
-        );
+        require!(deadline > current_time, "Deadline can't be in the past!");
 
         let marketplace_cut_percentage = self.bid_cut_percentage().get();
 
@@ -319,30 +327,42 @@ pub trait EsdtNftMarketplace:
         };
         // Map ID with Offer Struct
         self.offer_by_id(offer_id).set(&offer);
-        self.token_offers_ids(nft_type.clone(), nft_nonce).insert(offer_id);
-        self.offers().insert(offer_id); // Push ID to the offers list
+        self.token_offers_ids(nft_type.clone(), nft_nonce)
+            .insert(offer_id);
+        // Push ID to the offers list
+        self.offers().insert(offer_id);
         // Add to the owner wallet the new Offer ID
         self.offers_by_wallet(offer.offer_owner.clone())
             .insert(offer_id.clone());
-        self.check_offer_sent(caller.clone(), nft_type.clone(), nft_nonce, payment_token.clone()).set(&true);
-        // Emit event for new offer 
+        self.check_offer_sent(
+            caller.clone(),
+            nft_type.clone(),
+            nft_nonce,
+            payment_token.clone(),
+        )
+        .set(&true);
+        // Emit event for new offer
         self.emit_offer_token_event(offer_id, offer);
 
-        Ok(offer_id)
+        offer_id
     }
 
     #[only_owner]
     #[endpoint(deleteOffersByWallet)]
-    fn delete_user_offers(
-        &self,
-        user: ManagedAddress,
-    ) {
+    fn delete_user_offers(&self, user: ManagedAddress) {
         let offers_root = self.offers_by_wallet(user.clone());
         if offers_root.len() > 0 {
             for offer in offers_root.iter().take(80) {
                 let offer_info = self.offer_by_id(offer).get();
-                self.token_offers_ids(offer_info.token_type.clone(), offer_info.token_nonce).remove(&offer);
-                self.check_offer_sent(offer_info.offer_owner.clone(), offer_info.token_type.clone(), offer_info.token_nonce, offer_info.payment_token_type.clone()).clear();
+                self.token_offers_ids(offer_info.token_type.clone(), offer_info.token_nonce)
+                    .remove(&offer);
+                self.check_offer_sent(
+                    offer_info.offer_owner.clone(),
+                    offer_info.token_type.clone(),
+                    offer_info.token_nonce,
+                    offer_info.payment_token_type.clone(),
+                )
+                .clear();
                 self.offers().remove(&offer);
                 self.transfer_or_save_payment(
                     &offer_info.offer_owner,
@@ -367,9 +387,9 @@ pub trait EsdtNftMarketplace:
         auction_id: u64,
         nft_type: TokenIdentifier,
         nft_nonce: u64,
-    ) -> SCResult<()> {
+    ) {
         require!(self.status().get(), "Global operation enabled!");
-        let mut auction = self.try_get_auction(auction_id)?;
+        let mut auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
         let current_time = self.blockchain().get_block_timestamp();
 
@@ -411,8 +431,9 @@ pub trait EsdtNftMarketplace:
                 "Bid must be less than or equal to the max bid!"
             );
         }
+
         let current_time = self.blockchain().get_block_timestamp();
-            
+
         // refund losing bid
         if auction.current_winner != ManagedAddress::zero() {
             self.transfer_or_save_payment(
@@ -424,7 +445,13 @@ pub trait EsdtNftMarketplace:
             );
             self.listings_bids(auction.current_winner.clone())
                 .remove(&auction_id);
-            self.emit_out_bid_event(auction_id, &auction, caller.clone(), payment_amount.clone(), current_time);
+            self.emit_out_bid_event(
+                auction_id,
+                &auction,
+                caller.clone(),
+                payment_amount.clone(),
+                current_time,
+            );
         }
 
         // update auction bid and winner
@@ -434,21 +461,21 @@ pub trait EsdtNftMarketplace:
         self.auction_by_id(auction_id).set(&auction);
         self.listings_bids(auction.current_winner.clone())
             .insert(auction_id);
+
         if let Some(max_bid) = &auction.max_bid {
             if &auction.current_bid == max_bid {
                 self.end_auction(auction_id);
             }
         }
+
         self.emit_bid_event(auction_id, auction, current_time);
-        Ok(())
     }
 
     #[endpoint(endAuction)]
-    fn end_auction(&self, auction_id: u64) -> SCResult<()> {
+    fn end_auction(&self, auction_id: u64) {
         require!(self.status().get(), "Global operation enabled!");
-        let auction = self.try_get_auction(auction_id)?;
+        let auction = self.try_get_auction(auction_id);
         let current_time = self.blockchain().get_block_timestamp();
-
         require!(
             auction.auction_type == AuctionType::SftAll
                 || auction.auction_type == AuctionType::NftBid,
@@ -460,12 +487,10 @@ pub trait EsdtNftMarketplace:
         } else {
             false
         };
-
         require!(
             deadline_reached || max_bid_reached,
             "Auction deadline has not passed or the current bid is not equal to the max bid!"
         );
-
         let current_time = self.blockchain().get_block_timestamp();
         self.distribute_tokens(&auction, None);
         self.listings_by_wallet(auction.original_owner.clone())
@@ -480,8 +505,6 @@ pub trait EsdtNftMarketplace:
         self.listings().remove(&auction_id);
         self.auction_by_id(auction_id).clear();
         self.emit_end_auction_event(auction_id, auction, current_time);
-
-        Ok(())
     }
 
     #[payable("*")]
@@ -494,16 +517,16 @@ pub trait EsdtNftMarketplace:
         auction_id: u64,
         nft_type: TokenIdentifier,
         nft_nonce: u64,
-        #[var_args] opt_sft_buy_amount: OptionalArg<BigUint>,
-    ) -> SCResult<()> {
+        #[var_args] opt_sft_buy_amount: OptionalValue<BigUint>,
+    ) {
         require!(self.status().get(), "Global operation enabled!");
-        let mut auction = self.try_get_auction(auction_id)?;
+        let mut auction = self.try_get_auction(auction_id);
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
 
         let buy_amount = match opt_sft_buy_amount {
-            OptionalArg::Some(amt) => amt,
-            OptionalArg::None => BigUint::from(NFT_AMOUNT),
+            OptionalValue::Some(amt) => amt,
+            OptionalValue::None => BigUint::from(NFT_AMOUNT),
         };
 
         let total_value = &buy_amount * &auction.min_bid;
@@ -563,8 +586,6 @@ pub trait EsdtNftMarketplace:
 
         let current_time = self.blockchain().get_block_timestamp();
         self.emit_buy_event(auction_id, auction, buy_amount, current_time);
-
-        Ok(())
     }
 
     #[payable("*")]
@@ -575,21 +596,19 @@ pub trait EsdtNftMarketplace:
         #[payment_nonce] payment_token_nonce: u64,
         #[payment_amount] payment_amount: BigUint,
         offer_id: u64,
-    ) -> SCResult<()> {
+    ) {
         require!(self.status().get(), "Global operation enabled!");
-        let mut offer = self.try_get_offer(offer_id)?;
+        let mut offer = self.try_get_offer(offer_id);
         let current_time = self.blockchain().get_block_timestamp();
         require!(
             current_time <= offer.deadline,
             "Cannot accept the offer after deadline!"
         );
         let seller = self.blockchain().get_caller();
-        let token_auction_ids_instance = self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
+        let token_auction_ids_instance =
+            self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
         if token_auction_ids_instance.is_empty() {
-            require!(
-                offer.offer_owner != seller,
-                "Cannot accept your own offer!"
-            );
+            require!(offer.offer_owner != seller, "Cannot accept your own offer!");
             require!(
                 payment_amount == offer.quantity,
                 "The quantity sent is not matching the offer!"
@@ -609,7 +628,7 @@ pub trait EsdtNftMarketplace:
             );
             let mut iter = token_auction_ids_instance.iter();
             let auction_id = iter.next().unwrap();
-            let auction = self.try_get_auction(auction_id)?;
+            let auction = self.try_get_auction(auction_id);
             require!(
                 auction.auction_type == AuctionType::Nft,
                 "Cannot accept offers for auctions, just for listings with a fixed price!"
@@ -643,14 +662,14 @@ pub trait EsdtNftMarketplace:
                 "The listed token is not matching the offer!"
             );
             self.listings_by_wallet(auction.original_owner.clone())
-            .remove(&auction_id);
+                .remove(&auction_id);
             self.token_auction_ids(offer.token_type.clone(), offer.token_nonce)
                 .remove(&auction_id);
             self.auction_by_id(auction_id).clear();
             self.listings().remove(&auction_id);
             let nft_amount = BigUint::from(NFT_AMOUNT);
             self.token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
-            .update(|qt| *qt -= nft_amount.clone());
+                .update(|qt| *qt -= nft_amount.clone());
 
             if self
                 .token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
@@ -665,7 +684,7 @@ pub trait EsdtNftMarketplace:
             if self.token_items_for_sale(offer.token_type.clone()).len() == 0 {
                 self.collections_listed().remove(&offer.token_type.clone());
             }
-        }        
+        }
 
         offer.status = OfferStatus::Accepted;
         let nft_info = self.get_nft_info(&offer.token_type, offer.token_nonce);
@@ -675,8 +694,16 @@ pub trait EsdtNftMarketplace:
             "Marketplace cut plus royalties exceeds 100%"
         );
         if !self.reward_ticker().is_empty() {
-            if self.special_reward_amount(offer.token_type.clone()).is_empty() {
-                if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.reward_amount().get().mul(2u32)) {
+            if self
+                .special_reward_amount(offer.token_type.clone())
+                .is_empty()
+            {
+                if self.reward_balance().get().gt(&BigUint::from(0u32))
+                    && self
+                        .reward_balance()
+                        .get()
+                        .ge(&self.reward_amount().get().mul(2u32))
+                {
                     self.transfer_or_save_payment(
                         &offer.offer_owner,
                         &self.reward_ticker().get(),
@@ -693,10 +720,16 @@ pub trait EsdtNftMarketplace:
                         b"Trust Market rewards!",
                     );
 
-                    self.reward_balance().update(|qt| *qt -= self.reward_amount().get().mul(2u32));
+                    self.reward_balance()
+                        .update(|qt| *qt -= self.reward_amount().get().mul(2u32));
                 }
             } else {
-                if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.special_reward_amount(offer.token_type.clone()).get().mul(2u32)) {
+                if self.reward_balance().get().gt(&BigUint::from(0u32))
+                    && self.reward_balance().get().ge(&self
+                        .special_reward_amount(offer.token_type.clone())
+                        .get()
+                        .mul(2u32))
+                {
                     self.transfer_or_save_payment(
                         &offer.offer_owner,
                         &self.reward_ticker().get(),
@@ -713,7 +746,12 @@ pub trait EsdtNftMarketplace:
                         b"Trust Market rewards!",
                     );
 
-                    self.reward_balance().update(|qt| *qt -= self.special_reward_amount(offer.token_type.clone()).get().mul(2u32));
+                    self.reward_balance().update(|qt| {
+                        *qt -= self
+                            .special_reward_amount(offer.token_type.clone())
+                            .get()
+                            .mul(2u32)
+                    });
                 }
             }
         }
@@ -725,7 +763,8 @@ pub trait EsdtNftMarketplace:
             b"Trust Market sent the bought token!",
         );
 
-        let bid_split_amounts = self.calculate_offer_bid_split(&offer, &creator_royalties_percentage);
+        let bid_split_amounts =
+            self.calculate_offer_bid_split(&offer, &creator_royalties_percentage);
 
         let owner = self.blockchain().get_owner_address();
         self.transfer_or_save_payment(
@@ -752,22 +791,27 @@ pub trait EsdtNftMarketplace:
             &bid_split_amounts.seller,
             b"Trust Market income!",
         );
-        self.check_offer_sent(offer.offer_owner.clone(), offer.token_type.clone(), offer.token_nonce.clone(), offer.payment_token_type.clone()).clear();
+        self.check_offer_sent(
+            offer.offer_owner.clone(),
+            offer.token_type.clone(),
+            offer.token_nonce.clone(),
+            offer.payment_token_type.clone(),
+        )
+        .clear();
         self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
-        .remove(&offer_id);
+            .remove(&offer_id);
         self.offers_by_wallet(offer.offer_owner.clone())
-                .remove(&offer_id);
+            .remove(&offer_id);
         self.offer_by_id(offer_id).clear();
         self.offers().remove(&offer_id);
 
         self.emit_accept_offer_event(offer_id, offer, &seller);
-        Ok(())
     }
 
     #[endpoint]
-    fn withdraw(&self, auction_id: u64) -> SCResult<()> {
+    fn withdraw(&self, auction_id: u64) {
         require!(self.status().get(), "Global operation enabled!");
-        let auction = self.try_get_auction(auction_id)?;
+        let auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
 
         require!(
@@ -793,15 +837,12 @@ pub trait EsdtNftMarketplace:
         self.listings().remove(&auction_id);
         self.auction_by_id(auction_id).clear();
         self.emit_withdraw_event(auction_id, auction);
-
-        Ok(())
     }
 
-    
     #[endpoint(withdrawOffer)]
-    fn withdraw_offer(&self, offer_id: u64) -> SCResult<()> {
+    fn withdraw_offer(&self, offer_id: u64) {
         require!(self.status().get(), "Global operation enabled!");
-        let mut offer = self.try_get_offer(offer_id)?;
+        let mut offer = self.try_get_offer(offer_id);
         let caller = self.blockchain().get_caller();
 
         require!(
@@ -817,30 +858,31 @@ pub trait EsdtNftMarketplace:
             self.data_or_empty_if_sc(&caller, b"Trust Market withdraw offer!"),
         );
 
-        self.token_offers_ids(
+        self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
+            .remove(&offer_id);
+        self.check_offer_sent(
+            offer.offer_owner.clone(),
             offer.token_type.clone(),
             offer.token_nonce.clone(),
+            offer.payment_token_type.clone(),
         )
-        .remove(&offer_id);
-        self.check_offer_sent(offer.offer_owner.clone(), offer.token_type.clone(), offer.token_nonce.clone(), offer.payment_token_type.clone()).clear();
+        .clear();
         self.offers_by_wallet(offer.offer_owner.clone())
             .remove(&offer_id);
         self.offers().remove(&offer_id);
         self.offer_by_id(offer_id).clear();
         offer.status = OfferStatus::Withdraw;
         self.emit_withdraw_offer_event(offer_id, offer);
-
-        Ok(())
     }
 
     #[endpoint(changePrice)]
-    fn change_price(&self, auction_id: u64, new_price: BigUint) -> SCResult<()> {
+    fn change_price(&self, auction_id: u64, new_price: BigUint) {
         require!(
             self.does_auction_exist(auction_id),
             "Auction does not exist!"
-        ); 
+        );
         require!(self.status().get(), "Global operation enabled!");
-        let mut auction = self.try_get_auction(auction_id)?;
+        let mut auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
 
         require!(
@@ -848,8 +890,8 @@ pub trait EsdtNftMarketplace:
             "Only the original owner can change the price!"
         );
         require!(
-            auction.auction_type == AuctionType::Nft || 
-            auction.auction_type == AuctionType::SftOnePerPayment,
+            auction.auction_type == AuctionType::Nft
+                || auction.auction_type == AuctionType::SftOnePerPayment,
             "You can not change the price of bids!"
         );
 
@@ -858,24 +900,20 @@ pub trait EsdtNftMarketplace:
         auction.max_bid = Some(new_price.clone());
         auction.min_bid = new_price.clone();
         self.auction_by_id(auction_id).set(auction);
-        Ok(())
     }
     // private
 
-    fn try_get_auction(&self, auction_id: u64) -> SCResult<Auction<Self::Api>> {
+    fn try_get_auction(&self, auction_id: u64) -> Auction<Self::Api> {
         require!(
             self.does_auction_exist(auction_id),
             "Auction does not exist!"
         );
-        Ok(self.auction_by_id(auction_id).get())
+        self.auction_by_id(auction_id).get()
     }
 
-    fn try_get_offer(&self, offer_id: u64) -> SCResult<Offer<Self::Api>> {
-        require!(
-            self.does_offer_exist(offer_id),
-            "Offer does not exist!"
-        );
-        Ok(self.offer_by_id(offer_id).get())
+    fn try_get_offer(&self, offer_id: u64) -> Offer<Self::Api> {
+        require!(self.does_offer_exist(offer_id), "Offer does not exist!");
+        self.offer_by_id(offer_id).get()
     }
 
     fn calculate_cut_amount(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
@@ -904,7 +942,7 @@ pub trait EsdtNftMarketplace:
     fn calculate_offer_bid_split(
         &self,
         offer: &Offer<Self::Api>,
-        creator_royalties_percentage: &BigUint
+        creator_royalties_percentage: &BigUint,
     ) -> BidSplitAmounts<Self::Api> {
         let creator_royalties =
             self.calculate_cut_amount(&offer.price, &creator_royalties_percentage);
@@ -958,7 +996,12 @@ pub trait EsdtNftMarketplace:
             );
             if !self.reward_ticker().is_empty() {
                 if self.special_reward_amount(nft_type.clone()).is_empty() {
-                    if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.reward_amount().get().mul(2u32)) {
+                    if self.reward_balance().get().gt(&BigUint::from(0u32))
+                        && self
+                            .reward_balance()
+                            .get()
+                            .ge(&self.reward_amount().get().mul(2u32))
+                    {
                         self.transfer_or_save_payment(
                             &auction.original_owner,
                             &self.reward_ticker().get(),
@@ -974,10 +1017,16 @@ pub trait EsdtNftMarketplace:
                             &self.reward_amount().get(),
                             b"Trust Market rewards!",
                         );
-                        self.reward_balance().update(|qt| *qt -= self.reward_amount().get().mul(2u32));
+                        self.reward_balance()
+                            .update(|qt| *qt -= self.reward_amount().get().mul(2u32));
                     }
-                } else { 
-                    if self.reward_balance().get().gt(&BigUint::from(0u32)) && self.reward_balance().get().ge(&self.special_reward_amount(nft_type.clone()).get().mul(2u32)) {
+                } else {
+                    if self.reward_balance().get().gt(&BigUint::from(0u32))
+                        && self
+                            .reward_balance()
+                            .get()
+                            .ge(&self.special_reward_amount(nft_type.clone()).get().mul(2u32))
+                    {
                         self.transfer_or_save_payment(
                             &auction.original_owner,
                             &self.reward_ticker().get(),
@@ -994,7 +1043,9 @@ pub trait EsdtNftMarketplace:
                             b"Trust Market rewards!",
                         );
 
-                        self.reward_balance().update(|qt| *qt -= self.special_reward_amount(nft_type.clone()).get().mul(2u32));
+                        self.reward_balance().update(|qt| {
+                            *qt -= self.special_reward_amount(nft_type.clone()).get().mul(2u32)
+                        });
                     }
                 }
             }
@@ -1014,7 +1065,8 @@ pub trait EsdtNftMarketplace:
 
             if self
                 .token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
-                .get().eq(&BigUint::from(0u32))
+                .get()
+                .eq(&BigUint::from(0u32))
             {
                 self.token_items_for_sale(nft_type.clone())
                     .remove(&nft_nonce);
@@ -1079,6 +1131,7 @@ pub trait EsdtNftMarketplace:
                 .direct(&claim_destination, &token_id, token_nonce, &amount, &[]);
         }
     }
+
     fn transfer_or_save_payment(
         &self,
         to: &ManagedAddress,
@@ -1119,7 +1172,7 @@ pub trait EsdtNftMarketplace:
         )
     }
 
-    fn try_set_bid_cut_percentage(&self, new_cut_percentage: u64) -> SCResult<()> {
+    fn try_set_bid_cut_percentage(&self, new_cut_percentage: u64) {
         require!(
             new_cut_percentage > 0 && new_cut_percentage < PERCENTAGE_TOTAL,
             "Invalid percentage value, should be between 0 and 10,000"
@@ -1127,7 +1180,5 @@ pub trait EsdtNftMarketplace:
 
         self.bid_cut_percentage()
             .set(&BigUint::from(new_cut_percentage));
-
-        Ok(())
     }
 }

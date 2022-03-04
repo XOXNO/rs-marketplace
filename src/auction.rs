@@ -1,8 +1,7 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
-
-#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct Auction<M: ManagedTypeApi> {
     pub auctioned_token_type: TokenIdentifier<M>,
     pub auctioned_token_nonce: u64,
@@ -22,9 +21,7 @@ pub struct Auction<M: ManagedTypeApi> {
     pub creator_royalties_percentage: BigUint<M>,
 }
 
-
-
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct Offer<M: ManagedTypeApi> {
     pub token_type: TokenIdentifier<M>,
     pub token_nonce: u64,
@@ -39,20 +36,20 @@ pub struct Offer<M: ManagedTypeApi> {
     pub marketplace_cut_percentage: BigUint<M>,
 }
 
-#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct TokensOnSale<M: ManagedTypeApi> {
     pub auction: Auction<M>,
     pub auction_id: u64,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct BulkOffers<M: ManagedTypeApi> {
     pub offer: Offer<M>,
     pub offer_id: u64,
     pub nonce: u64,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
 pub enum AuctionType {
     None,
     NftBid,
@@ -61,7 +58,7 @@ pub enum AuctionType {
     SftOnePerPayment,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug, Clone)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug, Clone)]
 pub enum OfferStatus {
     Pending,
     Accepted,
