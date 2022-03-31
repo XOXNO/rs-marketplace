@@ -88,7 +88,24 @@ pub trait EsdtNftMarketplace:
     #[only_owner]
     #[endpoint(addWitelistedSC)]
     fn add_whitelisted_sc(&self, sc: ManagedAddress) {
-        self.whitelisted_contracts().insert(sc);
+        self.whitelisted_contracts().insert(sc.clone());  
+        let mut tokens = self.claimable_tokens(&sc);
+        for token in tokens.iter() {
+            let mut nonces = self.claimable_token_nonces(&sc, &token);
+            for nonce in nonces.iter() {
+                let amount_map = self.claimable_amount(&sc, &token, nonce);
+                self.send().direct(
+                    &sc,
+                    &token,
+                    nonce,
+                    &amount_map.get(),
+                    &[],
+                );
+                amount_map.clear();
+            }
+            nonces.clear();
+        }
+        tokens.clear();
     }
 
     // endpoints - owner-only
