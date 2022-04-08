@@ -9,6 +9,11 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.listings().len()
     }
 
+    #[view(getOffersCount)]
+    fn get_offers_count(&self) -> usize {
+        self.offers().len()
+    }
+
     #[view(getCollectionsCount)]
     fn get_collections_count(&self) -> usize {
         self.collections_listed().len()

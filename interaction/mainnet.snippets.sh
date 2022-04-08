@@ -39,7 +39,7 @@ upgrade() {
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments 0x00000000000000000500fe83c52898ee3fd58f41a537daee668832a4385a6667 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments 0x000000000000000005002a196f24309e37f8fe6df8e8e3b0d2e19101da466f6b --send --proxy=${PROXY} --chain=1
 }
 
 setStatusOn() {
@@ -146,6 +146,10 @@ listNFT() {
 
 getListingsCount() {
     erdpy --verbose contract query ${ADDRESS} --function="getListingsCount" --proxy=${PROXY}
+}
+
+getOffersCount() {
+    erdpy --verbose contract query ${ADDRESS} --function="getOffersCount" --proxy=${PROXY}
 }
 
 getListings() {

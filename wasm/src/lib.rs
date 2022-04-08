@@ -48,6 +48,7 @@ elrond_wasm_node::wasm_endpoints! {
         getMinMaxBid
         getOffers
         getOffersByWallet
+        getOffersCount
         getOnSaleTokensForTicker
         getOriginalOwner
         getPaymentTokenForAuction

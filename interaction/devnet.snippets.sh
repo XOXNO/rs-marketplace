@@ -13,13 +13,13 @@ EVEWALLET=erd18tudnj2z8vjh0339yu3vrkgzz2jpz8mjq0uhgnmklnap6z33qqeszq2yn4
 EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
-ADDRESS=erd1qqqqqqqqqqqqqpgqkl2zt3funy7mfvnzjqpdzfgsvjjyl4tpd8ssd64q6n
+ADDRESS=erd1qqqqqqqqqqqqqpgqll6ncfgjppe7gns40vq7xuq6wsvkfk6kd8ss8ujx5r
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-devnet)
 PROXY=https://devnet-gateway.elrond.com
 
 deploy() {
     echo ${PROJECT}
-    erdpy --verbose contract deploy --project=${PROJECT} --metadata-payable --recall-nonce --pem=${ALICE} --gas-limit=125000000 --arguments 0xFA --send --outfile="deploy-devnet.interaction.json" --proxy=${PROXY} --chain=D || return
+    erdpy --verbose contract deploy --project=${PROJECT} --metadata-payable --recall-nonce --pem=${ALICE} --gas-limit=225000000 --arguments 0xFA --send --outfile="deploy-devnet.interaction.json" --proxy=${PROXY} --chain=D || return
 
     TRANSACTION=$(erdpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['hash']")
     ADDRESS=$(erdpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['address']")
@@ -50,7 +50,7 @@ setStatusOff() {
 }
 
 setAcceptedTokens() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="setAcceptedTokens" --arguments 0x4c4b4d45582d383035653831 --send --proxy=${PROXY} --chain=D
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=10500000 --function="setAcceptedTokens" --arguments 0x45474c44 --send --proxy=${PROXY} --chain=D
 }
 removeAcceptedTokens() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=D
