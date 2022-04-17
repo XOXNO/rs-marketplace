@@ -61,6 +61,7 @@ elrond_wasm_node::wasm_endpoints! {
         getTokenItemsForSaleCount
         getTokenItemsQuantityForSale
         getTokenOffersIds
+        isCollectionListed
         listing
         offerById
         removeAcceptedTokens

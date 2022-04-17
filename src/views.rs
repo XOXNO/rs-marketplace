@@ -19,6 +19,11 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.collections_listed().len()
     }
 
+    #[view(isCollectionListed)]
+    fn is_collection_listed(&self, token: TokenIdentifier) -> bool {
+        self.collections_listed().contains(&token)
+    }
+
     #[view(getAcceptedTokensCount)]
     fn get_accepted_tokens_count(&self) -> usize {
         self.accepted_tokens().len()
