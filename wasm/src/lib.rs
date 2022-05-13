@@ -13,11 +13,13 @@ elrond_wasm_node::wasm_endpoints! {
         addWitelistedSC
         bid
         blackListWallets
+        bulkBuy
         buy
         changePrice
         checkOfferSent
         checkTokenOffers
         claimTokens
+        declineOffer
         defaultRewardAmount
         deleteOffersByWallet
         doesAuctionExist

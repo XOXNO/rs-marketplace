@@ -13,7 +13,7 @@ EVEWALLET=erd18tudnj2z8vjh0339yu3vrkgzz2jpz8mjq0uhgnmklnap6z33qqeszq2yn4
 EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
-ADDRESS=erd1qqqqqqqqqqqqqpgqll6ncfgjppe7gns40vq7xuq6wsvkfk6kd8ss8ujx5r
+ADDRESS=erd1qqqqqqqqqqqqqpgqn4fnwl43hhchz9emdy66eh5azzhl599zd8ssxjdyh3
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-devnet)
 PROXY=https://devnet-gateway.elrond.com
 
@@ -42,7 +42,7 @@ getDustAmountLeft() {
 }
 
 setStatusOn() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=D
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=15000000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=D
 }
 
 setStatusOff() {

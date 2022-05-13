@@ -88,20 +88,22 @@ pub trait EsdtNftMarketplace:
     #[only_owner]
     #[endpoint(addWitelistedSC)]
     fn add_whitelisted_sc(&self, sc: ManagedAddress) {
-        self.whitelisted_contracts().insert(sc.clone());  
+        require!(
+            self.blockchain().is_smart_contract(&sc),
+            "The address is not a smart contract!"
+        );
+        self.whitelisted_contracts().insert(sc.clone());
         let mut tokens = self.claimable_tokens(&sc);
         for token in tokens.iter() {
             let mut nonces = self.claimable_token_nonces(&sc, &token);
             for nonce in nonces.iter() {
                 let amount_map = self.claimable_amount(&sc, &token, nonce);
-                self.send().direct(
-                    &sc,
-                    &token,
-                    nonce,
-                    &amount_map.get(),
-                    &[],
-                );
-                amount_map.clear();
+                let amount = amount_map.get();
+                if amount > BigUint::zero() {
+                    self.send()
+                        .direct(&sc, &token, nonce, &amount_map.get(), &[]);
+                    amount_map.clear();
+                }
             }
             nonces.clear();
         }
@@ -370,26 +372,7 @@ pub trait EsdtNftMarketplace:
         let offers_root = self.offers_by_wallet(user.clone());
         if offers_root.len() > 0 {
             for offer in offers_root.iter().take(80) {
-                let offer_info = self.offer_by_id(offer).get();
-                self.token_offers_ids(offer_info.token_type.clone(), offer_info.token_nonce)
-                    .remove(&offer);
-                self.check_offer_sent(
-                    offer_info.offer_owner.clone(),
-                    offer_info.token_type.clone(),
-                    offer_info.token_nonce,
-                    offer_info.payment_token_type.clone(),
-                )
-                .clear();
-                self.offers().remove(&offer);
-                self.transfer_or_save_payment(
-                    &offer_info.offer_owner,
-                    &offer_info.payment_token_type.clone(),
-                    offer_info.payment_token_nonce,
-                    &offer_info.price,
-                    b"Trust Market refunded your offer!",
-                );
-                self.offer_by_id(offer).clear();
-                self.offers_by_wallet(user.clone()).remove(&offer);
+                self.internal_withdraw_offer(offer);
             }
         }
     }
@@ -603,6 +586,53 @@ pub trait EsdtNftMarketplace:
 
         let current_time = self.blockchain().get_block_timestamp();
         self.emit_buy_event(auction_id, auction, buy_amount, current_time);
+    }
+
+    #[payable("*")]
+    #[endpoint(bulkBuy)]
+    fn bulk_buy(
+        &self,
+        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_nonce] payment_token_nonce: u64,
+        #[payment_amount] payment_amount: BigUint,
+        #[var_args] auction_ids: MultiValueEncoded<u64>,
+    ) {
+        let mut total_available = payment_amount.clone();
+        for auction_id in auction_ids.into_iter() {
+            require!(
+                self.does_auction_exist(auction_id),
+                "One of your listings does not exist!"
+            );
+            let listing = self.try_get_auction(auction_id);
+            require!(
+                listing.auction_type == AuctionType::Nft,
+                "You can bulk buy just NFTs on sell with a fixed price!"
+            );
+            require!(
+                total_available >= listing.min_bid,
+                "You do not have funds to buy all the NFTs!"
+            );
+            let buy_amount = listing.min_bid.clone();
+            total_available -= listing.min_bid;
+            self.buy(
+                payment_token.clone(),
+                payment_token_nonce,
+                buy_amount,
+                auction_id,
+                listing.auctioned_token_type,
+                listing.auctioned_token_nonce,
+                OptionalValue::None,
+            )
+        }
+        if total_available > BigUint::zero() {
+            self.send().direct(
+                &self.blockchain().get_caller(),
+                &payment_token,
+                payment_token_nonce,
+                &total_available,
+                &[],
+            )
+        }
     }
 
     #[payable("*")]
@@ -825,6 +855,61 @@ pub trait EsdtNftMarketplace:
         self.emit_accept_offer_event(offer_id, offer, &seller);
     }
 
+    #[payable("*")]
+    #[endpoint(declineOffer)]
+    fn decline_offer(
+        &self,
+        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_nonce] payment_token_nonce: u64,
+        #[payment_amount] payment_amount: BigUint,
+        offer_id: u64,
+    ) {
+        require!(self.status().get(), "Global operation enabled!");
+        let offer = self.try_get_offer(offer_id);
+        let owner = self.blockchain().get_caller();
+
+        let token_auction_ids_instance =
+            self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
+        if token_auction_ids_instance.is_empty() {
+            require!(
+                payment_amount == offer.quantity,
+                "The quantity sent is not matching the offer!"
+            );
+            require!(
+                payment_token_nonce == offer.token_nonce,
+                "The nonce used is not matching the offer!"
+            );
+            require!(
+                payment_token == offer.token_type,
+                "The token sent is not matching the offer!"
+            );
+            self.send().direct(
+                &owner,
+                &payment_token,
+                payment_token_nonce,
+                &payment_amount,
+                &[],
+            );
+        } else {
+            require!(
+                token_auction_ids_instance.len() == 1,
+                "You cannot decline offers for SFTs with more than 1 supply minted!"
+            );
+            let mut iter = token_auction_ids_instance.iter();
+            let auction_id = iter.next().unwrap();
+            let auction = self.try_get_auction(auction_id);
+            require!(
+                auction.auction_type == AuctionType::Nft,
+                "Cannot decline offers for auctions, just for listings with a fixed price!"
+            );
+            require!(
+                owner == auction.original_owner,
+                "Just the owner of the NFT can decline the offer!"
+            );
+        }
+        self.internal_withdraw_offer(offer_id);
+    }
+
     #[endpoint]
     fn withdraw(&self, auction_id: u64) {
         require!(self.status().get(), "Global operation enabled!");
@@ -892,6 +977,36 @@ pub trait EsdtNftMarketplace:
         self.emit_withdraw_offer_event(offer_id, offer);
     }
 
+    #[inline]
+    fn internal_withdraw_offer(&self, offer_id: u64) {
+        require!(self.status().get(), "Global operation enabled!");
+        let mut offer = self.try_get_offer(offer_id);
+
+        self.send().direct(
+            &offer.offer_owner,
+            &offer.payment_token_type,
+            offer.payment_token_nonce,
+            &offer.price,
+            self.data_or_empty_if_sc(&offer.offer_owner, b"Trust Market withdraw offer!"),
+        );
+
+        self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
+            .remove(&offer_id);
+        self.check_offer_sent(
+            offer.offer_owner.clone(),
+            offer.token_type.clone(),
+            offer.token_nonce.clone(),
+            offer.payment_token_type.clone(),
+        )
+        .clear();
+        self.offers_by_wallet(offer.offer_owner.clone())
+            .remove(&offer_id);
+        self.offers().remove(&offer_id);
+        self.offer_by_id(offer_id).clear();
+        offer.status = OfferStatus::Withdraw;
+        self.emit_withdraw_offer_event(offer_id, offer);
+    }
+
     #[endpoint(changePrice)]
     fn change_price(&self, auction_id: u64, new_price: BigUint) {
         require!(
@@ -918,7 +1033,6 @@ pub trait EsdtNftMarketplace:
         auction.min_bid = new_price.clone();
         self.auction_by_id(auction_id).set(auction);
     }
-    // private
 
     fn try_get_auction(&self, auction_id: u64) -> Auction<Self::Api> {
         require!(
