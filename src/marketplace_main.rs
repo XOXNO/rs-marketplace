@@ -79,11 +79,13 @@ pub trait EsdtNftMarketplace:
     fn set_accepted_tokens(&self, token: TokenIdentifier) {
         self.accepted_tokens().insert(token);
     }
+
     #[only_owner]
     #[endpoint(removeAcceptedTokens)]
     fn remove_accepted_tokens(&self, token: TokenIdentifier) -> bool {
         self.accepted_tokens().remove(&token)
     }
+
     // endpoints - owner-only
     #[only_owner]
     #[endpoint(addWitelistedSC)]
@@ -1311,5 +1313,22 @@ pub trait EsdtNftMarketplace:
 
         self.bid_cut_percentage()
             .set(&BigUint::from(new_cut_percentage));
+    }
+
+    #[endpoint(cleanExpiredOffers)]
+    fn clean_expired_offers(&self) -> i32 {
+        let timestamp = self.blockchain().get_block_timestamp();
+        let mut found = 0;
+        for offer_id in self.offers().iter() {
+            let offer = self.offer_by_id(offer_id).get();
+            if offer.deadline < timestamp {
+                found += 1;
+                self.internal_withdraw_offer(offer_id);
+            }
+            if found == 80 {
+                break;
+            }
+        }
+        found
     }
 }

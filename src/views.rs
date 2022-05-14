@@ -24,6 +24,19 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.collections_listed().contains(&token)
     }
 
+    #[view(expiredOffersCount)]
+    fn expired_offers_count(&self) -> i32 {
+        let timestamp = self.blockchain().get_block_timestamp();
+        let mut found = 0;
+        for offer_id in self.offers().iter() {
+            let offer = self.offer_by_id(offer_id).get();
+            if offer.deadline < timestamp {
+                found += 1;
+            }
+        }
+        found
+    }
+
     #[view(getAcceptedTokensCount)]
     fn get_accepted_tokens_count(&self) -> usize {
         self.accepted_tokens().len()

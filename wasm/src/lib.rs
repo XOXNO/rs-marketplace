@@ -19,12 +19,14 @@ elrond_wasm_node::wasm_endpoints! {
         checkOfferSent
         checkTokenOffers
         claimTokens
+        cleanExpiredOffers
         declineOffer
         defaultRewardAmount
         deleteOffersByWallet
         doesAuctionExist
         doesOfferExist
         endAuction
+        expiredOffersCount
         getAcceptedTokens
         getAcceptedTokensCount
         getActiveListingsBids
