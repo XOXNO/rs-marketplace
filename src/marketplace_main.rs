@@ -1320,13 +1320,17 @@ pub trait EsdtNftMarketplace:
         let timestamp = self.blockchain().get_block_timestamp();
         let mut found = 0;
         for offer_id in self.offers().iter() {
-            let offer = self.offer_by_id(offer_id).get();
-            if offer.deadline < timestamp {
-                found += 1;
-                self.internal_withdraw_offer(offer_id);
-            }
-            if found == 80 {
-                break;
+            let offer = self.offer_by_id(offer_id);
+            if !offer.is_empty() {
+                if offer.get().deadline < timestamp {
+                    found += 1;
+                    self.internal_withdraw_offer(offer_id);
+                }
+                if found == 150 {
+                    break;
+                }
+            } else {
+                self.offers().remove(&offer_id);
             }
         }
         found
