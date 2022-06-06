@@ -39,9 +39,12 @@ upgrade() {
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments 0x000000000000000005002a196f24309e37f8fe6df8e8e3b0d2e19101da466f6b --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqzazlwcv9ggg5f5al68n4phaevnt2thgqlwfqdhpv6z --send --proxy=${PROXY} --chain=1
 }
 
+removeWitelistedSC() {
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="removeWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqlhku5jw5skv5x28q3mw6e8cms0fcuptvcj9qyuxalm --send --proxy=${PROXY} --chain=1
+}
 setStatusOn() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=1
 }

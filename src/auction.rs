@@ -40,6 +40,7 @@ pub struct Offer<M: ManagedTypeApi> {
 pub struct TokensOnSale<M: ManagedTypeApi> {
     pub auction: Auction<M>,
     pub auction_id: u64,
+    pub token_type: u8,
 }
 
 #[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
@@ -49,7 +50,9 @@ pub struct BulkOffers<M: ManagedTypeApi> {
     pub nonce: u64,
 }
 
-#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug)]
+#[derive(
+    ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug,
+)]
 pub enum AuctionType {
     None,
     NftBid,
@@ -58,7 +61,17 @@ pub enum AuctionType {
     SftOnePerPayment,
 }
 
-#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug, Clone)]
+#[derive(
+    ManagedVecItem,
+    TopEncode,
+    TopDecode,
+    NestedEncode,
+    NestedDecode,
+    TypeAbi,
+    PartialEq,
+    Debug,
+    Clone,
+)]
 pub enum OfferStatus {
     Pending,
     Accepted,

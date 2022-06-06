@@ -32,6 +32,7 @@ elrond_wasm_node::wasm_endpoints! {
         getActiveListingsBids
         getAuctionType
         getAuctionedToken
+        getAuctionedTokenAndOwner
         getBulkListings
         getBulkOffers
         getClaimableAmount
@@ -69,6 +70,7 @@ elrond_wasm_node::wasm_endpoints! {
         listing
         offerById
         removeAcceptedTokens
+        removeWitelistedSC
         sendOffer
         setAcceptedTokens
         setCutPercentage

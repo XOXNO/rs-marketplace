@@ -62,9 +62,15 @@ pub trait ViewsModule: crate::storage::StorageModule {
             let auctions = self.token_auction_ids(token.clone(), nonce);
             for auction in auctions.iter() {
                 let auction_info = self.auction_by_id(auction).get();
+                let token_type = self.blockchain().get_esdt_token_data(
+                    &self.blockchain().get_owner_address(),
+                    &auction_info.auctioned_token_type,
+                    auction_info.auctioned_token_nonce,
+                );
                 let result = TokensOnSale {
                     auction_id: auction,
                     auction: auction_info,
+                    token_type: token_type.token_type.as_u8(),
                 };
                 results.push(result);
             }
@@ -127,9 +133,15 @@ pub trait ViewsModule: crate::storage::StorageModule {
         for auction_id in auction_ids.into_iter() {
             if !self.auction_by_id(auction_id).is_empty() {
                 let auction = self.auction_by_id(auction_id).get();
+                let token_type = self.blockchain().get_esdt_token_data(
+                    &self.blockchain().get_owner_address(),
+                    &auction.auctioned_token_type,
+                    auction.auctioned_token_nonce,
+                );
                 let result = TokensOnSale {
                     auction_id: auction_id,
                     auction,
+                    token_type: token_type.token_type.as_u8(),
                 };
                 results.push(result);
             }
@@ -160,6 +172,30 @@ pub trait ViewsModule: crate::storage::StorageModule {
                     auction.auctioned_token_type,
                     auction.auctioned_token_nonce,
                     auction.nr_auctioned_tokens,
+                )
+                    .into(),
+            )
+        } else {
+            OptionalValue::None
+        }
+    }
+
+    #[view(getAuctionedTokenAndOwner)]
+    fn get_auctioned_token_and_owner(
+        &self,
+        auction_id: u64,
+    ) -> OptionalValue<MultiValue5<TokenIdentifier, u64, BigUint, ManagedAddress, AuctionType>>
+    {
+        if self.does_auction_exist(auction_id) {
+            let auction = self.auction_by_id(auction_id).get();
+
+            OptionalValue::Some(
+                (
+                    auction.auctioned_token_type,
+                    auction.auctioned_token_nonce,
+                    auction.nr_auctioned_tokens,
+                    auction.original_owner,
+                    auction.auction_type,
                 )
                     .into(),
             )
