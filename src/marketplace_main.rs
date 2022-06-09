@@ -1013,6 +1013,12 @@ pub trait EsdtNftMarketplace:
                 token_auction_ids_instance.len() == 1,
                 "You cannot decline offers for SFTs with more than 1 supply minted!"
             );
+            require!(
+                payment_token_nonce == 0
+                    && payment_token.is_egld()
+                    && payment_amount.eq(&BigUint::zero()),
+                "You have to send 0 eGLD as payment to decline the offer!"
+            );
             let mut iter = token_auction_ids_instance.iter();
             let auction_id = iter.next().unwrap();
             let auction = self.try_get_auction(auction_id);
