@@ -105,6 +105,7 @@ pub trait EventsModule {
         offer_id: u64,
         offer: Offer<Self::Api>,
         seller: &ManagedAddress,
+        auction_removed: u64,
     ) {
         self.accept_offer_token_event(
             &offer.token_type,
@@ -120,6 +121,7 @@ pub trait EventsModule {
             &offer.marketplace_cut_percentage,
             offer_id,
             seller,
+            auction_removed,
         )
     }
 
@@ -260,6 +262,7 @@ pub trait EventsModule {
         #[indexed] marketplace_cut_percentage: &BigUint,
         #[indexed] offer_id: u64,
         #[indexed] seller: &ManagedAddress,
+        #[indexed] auction_removed: u64,
     );
 
     #[event("bid_event")]

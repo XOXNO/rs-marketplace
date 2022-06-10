@@ -730,6 +730,7 @@ pub trait EsdtNftMarketplace:
         let token_auction_ids_instance =
             self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
         let mut found_match = false;
+        let mut auction_removed = 0;
         if token_auction_ids_instance.is_empty() {
             require!(
                 payment_amount == offer.quantity,
@@ -779,6 +780,8 @@ pub trait EsdtNftMarketplace:
                 auction.auctioned_token_type == offer.token_type,
                 "The listed token is not matching the offer!"
             );
+
+            auction_removed = auction_id;
             self.listings_by_wallet(auction.original_owner.clone())
                 .remove(&auction_id);
             self.token_auction_ids(offer.token_type.clone(), offer.token_nonce)
@@ -823,6 +826,7 @@ pub trait EsdtNftMarketplace:
                     && seller == owner_auction
                     && (auction_type == AuctionType::Nft || auction_type == AuctionType::SftAll)
                 {
+                    auction_removed = auction_id;
                     self.listings_by_wallet(owner_auction).remove(&auction_id);
                     self.token_auction_ids(offer.token_type.clone(), offer.token_nonce)
                         .remove(&auction_id);
@@ -970,7 +974,7 @@ pub trait EsdtNftMarketplace:
         self.offer_by_id(offer_id).clear();
         self.offers().remove(&offer_id);
 
-        self.emit_accept_offer_event(offer_id, offer, &seller);
+        self.emit_accept_offer_event(offer_id, offer, &seller, auction_removed);
     }
 
     #[payable("*")]
