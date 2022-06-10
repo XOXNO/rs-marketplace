@@ -607,6 +607,10 @@ pub trait EsdtNftMarketplace:
 
         require!(buy_amount > 0, "The amount must be more than 0!");
         require!(
+            payment_amount.gt(&BigUint::zero()),
+            "The paid amount must be higher than 0!"
+        );
+        require!(
             auction.auction_type == AuctionType::SftOnePerPayment
                 || auction.auction_type == AuctionType::Nft,
             "Cannot buy for this type of auction!"
