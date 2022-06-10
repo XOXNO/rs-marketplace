@@ -731,7 +731,7 @@ pub trait EsdtNftMarketplace:
             self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
         let mut found_match = false;
         let mut auction_removed = 0;
-        if token_auction_ids_instance.is_empty() {
+        if token_auction_ids_instance.is_empty() || payment_token.is_esdt() {
             require!(
                 payment_amount == offer.quantity,
                 "The quantity sent is not matching the offer!"
