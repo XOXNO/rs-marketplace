@@ -14,6 +14,17 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.offers().len()
     }
 
+    #[view(getListings)]
+    fn get_listings(&self, from: usize, to: usize) -> ManagedVec<u64> {
+        let mut results = ManagedVec::new();
+
+        for auction_id in self.listings().iter().skip(from).take(to) {
+            results.push(auction_id);
+        }
+
+        return results;
+    }
+
     #[view(getCollectionsCount)]
     fn get_collections_count(&self) -> usize {
         self.collections_listed().len()
