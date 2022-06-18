@@ -677,10 +677,9 @@ pub trait EsdtNftMarketplace:
     ) {
         let mut total_available = payment_amount.clone();
         for auction_id in auction_ids.into_iter() {
-            require!(
-                self.does_auction_exist(auction_id),
-                "One of your listings does not exist!"
-            );
+            if !self.does_auction_exist(auction_id) {
+                continue;
+            }
             let listing = self.try_get_auction(auction_id);
             require!(
                 listing.auction_type == AuctionType::Nft,
@@ -700,7 +699,7 @@ pub trait EsdtNftMarketplace:
                 listing.auctioned_token_type,
                 listing.auctioned_token_nonce,
                 OptionalValue::None,
-            )
+            );
         }
         if total_available > BigUint::zero() {
             self.send().direct(

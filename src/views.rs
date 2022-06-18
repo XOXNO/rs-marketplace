@@ -15,8 +15,8 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
 
     #[view(getListings)]
-    fn get_listings(&self, from: usize, to: usize) -> ManagedVec<u64> {
-        let mut results = ManagedVec::new();
+    fn get_listings(&self, from: usize, to: usize) -> MultiValueEncoded<u64> {
+        let mut results = MultiValueEncoded::new();
 
         for auction_id in self.listings().iter().skip(from).take(to) {
             results.push(auction_id);

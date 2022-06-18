@@ -78,10 +78,10 @@ removeAcceptedTokens() {
 }
 
 deleteOffersByWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1zykk5un0jacznhc436n0h2swmdw34x7vygg42rdyywtymptwmlyshe5ya7 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1qzy9ht9reuxxjdnafj8xcslj72gexkjskgyj3lwu6m9cryh2whzqcfntdq --send --proxy=${PROXY} --chain=1
 }
 addBlackListWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd1zykk5un0jacznhc436n0h2swmdw34x7vygg42rdyywtymptwmlyshe5ya7 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd1qzy9ht9reuxxjdnafj8xcslj72gexkjskgyj3lwu6m9cryh2whzqcfntdq --send --proxy=${PROXY} --chain=1
 }
 
 withdraw() {
