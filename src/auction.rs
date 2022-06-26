@@ -90,3 +90,44 @@ pub struct BidSplitAmounts<M: ManagedTypeApi> {
     pub marketplace: BigUint<M>,
     pub seller: BigUint<M>,
 }
+
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+pub struct P2PListedOffer<M: ManagedTypeApi> {
+    pub offer_id: u64,
+    pub owner: ManagedAddress<M>,
+    pub accepted_tokens: ManagedVec<M, TokenIdentifier<M>>,
+    pub mandatory_only: bool,
+    pub offered_tokens: ManagedVec<M, EsdtTokenPayment<M>>,
+    pub offers_linked: ManagedVec<M, u64>,
+    pub reserved_for: Option<ManagedAddress<M>>,
+    pub last_change: u64,
+}
+
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+pub struct P2PCounterOffer<M: ManagedTypeApi> {
+    pub visible: bool,
+    pub offer_id: u64,
+    pub owner: ManagedAddress<M>,
+    pub offered_tokens: ManagedVec<M, EsdtTokenPayment<M>>,
+    pub linked_offer: u64,
+    pub status: P2POfferStatus,
+    pub last_change: u64,
+}
+
+#[derive(
+    ManagedVecItem,
+    TopEncode,
+    TopDecode,
+    NestedEncode,
+    NestedDecode,
+    TypeAbi,
+    PartialEq,
+    Debug,
+    Clone,
+)]
+pub enum P2POfferStatus {
+    Pending,
+    Accepted,
+    Declined,
+    Withdraw,
+}

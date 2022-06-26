@@ -6,7 +6,6 @@ elrond_wasm::derive_imports!();
 
 pub mod auction;
 use auction::*;
-
 mod events;
 pub mod storage;
 pub mod views;
@@ -1044,7 +1043,7 @@ pub trait EsdtNftMarketplace:
     #[endpoint]
     fn withdraw(&self, auction_id: u64) {
         require!(self.status().get(), "Global operation enabled!");
-        let auction = self.try_get_auction(auction_id);
+        let mut auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
 
         require!(
@@ -1057,7 +1056,7 @@ pub trait EsdtNftMarketplace:
                 || auction.auction_type == AuctionType::Nft,
             "Cannot withdraw, the auction already has bids!"
         );
-
+        auction.current_winner = ManagedAddress::zero();
         self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens));
 
         self.token_auction_ids(
