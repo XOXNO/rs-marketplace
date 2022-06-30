@@ -1401,6 +1401,9 @@ pub trait EsdtNftMarketplace:
         amount: &BigUint,
         data: &'static [u8],
     ) {
+        if amount == &0 {
+            return;
+        }
         if self.blockchain().is_smart_contract(to) && !self.whitelisted_contracts().contains(&to) {
             self.claimable_tokens(to).insert(token_id.clone());
             self.claimable_token_nonces(to, token_id).insert(nonce);

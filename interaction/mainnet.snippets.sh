@@ -39,7 +39,7 @@ upgrade() {
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqr7p4pww4qqyl3k4ezyn7jh894d8asl3har5sd47vlg --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgq7dprvwd4pdlszp4p0emzlcpzl9cnhpg34yuqen7vd2 --send --proxy=${PROXY} --chain=1
 }
 
 removeWitelistedSC() {
@@ -78,10 +78,10 @@ removeAcceptedTokens() {
 }
 
 deleteOffersByWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1jlhmfzlmlp002r6y4wdlgaatcsa9crej5846hw7sxz2mqyna4szsj69ldz --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1e55992j6wmwtazf79gzx4gr7vxqephugs3l3lakrej4qw7jfw7jqerqtx3 --send --proxy=${PROXY} --chain=1
 }
 addBlackListWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd1jlhmfzlmlp002r6y4wdlgaatcsa9crej5846hw7sxz2mqyna4szsj69ldz --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd1e55992j6wmwtazf79gzx4gr7vxqephugs3l3lakrej4qw7jfw7jqerqtx3 --send --proxy=${PROXY} --chain=1
 }
 
 withdraw() {
