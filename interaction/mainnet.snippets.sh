@@ -17,7 +17,7 @@ SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
 ADDRESS=erd1qqqqqqqqqqqqqpgq6wegs2xkypfpync8mn2sa5cmpqjlvrhwz5nqgepyg8
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-mainnet)
-PROXY=https://gateway.elrond.tools
+PROXY=https://gateway.elrond.com
 
 deploy() {
     echo ${PROJECT}
@@ -39,7 +39,7 @@ upgrade() {
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgq7dprvwd4pdlszp4p0emzlcpzl9cnhpg34yuqen7vd2 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqup56pfvlh6s3grlrx08jt06ksa35kqxu548sj7cxpt --send --proxy=${PROXY} --chain=1
 }
 
 removeWitelistedSC() {
@@ -70,7 +70,7 @@ setCutPercentage() {
 }
 
 setAcceptedTokens() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setAcceptedTokens" --arguments 0x57415445522d396564343030 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:QWT-46ac01 --send --proxy=${PROXY} --chain=1
 }
 
 removeAcceptedTokens() {
@@ -78,10 +78,10 @@ removeAcceptedTokens() {
 }
 
 deleteOffersByWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1e55992j6wmwtazf79gzx4gr7vxqephugs3l3lakrej4qw7jfw7jqerqtx3 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1t06za9p59khz4cyz7n3e38d3rn9mlhp40nxfcuwez7tqkdq6dpfs9kmwxf --send --proxy=${PROXY} --chain=1
 }
 addBlackListWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd1e55992j6wmwtazf79gzx4gr7vxqephugs3l3lakrej4qw7jfw7jqerqtx3 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd1t06za9p59khz4cyz7n3e38d3rn9mlhp40nxfcuwez7tqkdq6dpfs9kmwxf --send --proxy=${PROXY} --chain=1
 }
 
 withdraw() {
@@ -188,7 +188,7 @@ getTokenBalanceDifference() {
 }
 
 getTokenItemsForSale() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSale" --arguments 0x4b42422d316339353733 --proxy=${PROXY}
+    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSale" --arguments str:MICE-a0c447 --proxy=${PROXY}
 }
 
 getTokenItemsQuantityForSale() {
@@ -196,7 +196,7 @@ getTokenItemsQuantityForSale() {
 }
 
 getTokenItemsForSaleCount() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSaleCount" --arguments 0x4b42422d316339353733 --proxy=${PROXY}
+    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSaleCount" --arguments str:MICE-a0c447 --proxy=${PROXY}
 }
 
 doesAuctionExist() {
@@ -257,4 +257,13 @@ defaultRewardAmount() {
 
 getRewardTicker() {
     erdpy --verbose contract query ${ADDRESS} --function="getRewardTicker" --proxy=${PROXY}
+}
+
+offerById() {
+    erdpy --verbose contract query ${ADDRESS} --function="offerById" --arguments 0x0114e5 --proxy=${PROXY}
+}
+
+
+getOffersByWallet() {
+    erdpy --verbose contract query ${ADDRESS} --function="getOffersByWallet" --arguments erd1wrr0gvvgpevwg2plphsqzw022wppf726ja94fw8dkrv84vslaarsdqpyt4 --proxy=${PROXY}
 }
