@@ -89,6 +89,19 @@ pub trait ViewsModule: crate::storage::StorageModule {
         return results;
     }
 
+    #[view(getAuctionsForTicker)]
+    fn get_auctions_for_ticker(&self, token: TokenIdentifier) -> ManagedVec<u64> {
+        let mut results = ManagedVec::new();
+        let nonces = self.token_items_for_sale(token.clone());
+        for nonce in nonces.iter() {
+            let auctions = self.token_auction_ids(token.clone(), nonce);
+            for auction_id in auctions.iter() {
+                results.push(auction_id);
+            }
+        }
+        results
+    }
+
     #[allow(clippy::too_many_arguments)]
     #[view(checkTokenOffers)]
     fn check_token_offers(

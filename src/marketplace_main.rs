@@ -1466,4 +1466,30 @@ pub trait EsdtNftMarketplace:
         }
         found
     }
+
+    #[only_owner]
+    #[endpoint(returnListing)]
+    fn return_listing(&self, auction_id: u64) {
+        let mut auction = self.try_get_auction(auction_id);
+
+        require!(
+            auction.current_winner.is_zero()
+                || auction.auction_type == AuctionType::SftOnePerPayment
+                || auction.auction_type == AuctionType::Nft,
+            "Cannot withdraw, the auction already has bids!"
+        );
+        auction.current_winner = ManagedAddress::zero();
+        self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens));
+
+        self.token_auction_ids(
+            auction.auctioned_token_type.clone(),
+            auction.auctioned_token_nonce.clone(),
+        )
+        .remove(&auction_id);
+        self.listings_by_wallet(auction.original_owner.clone())
+            .remove(&auction_id);
+        self.listings().remove(&auction_id);
+        self.auction_by_id(auction_id).clear();
+        self.emit_withdraw_event(auction_id, auction);
+    }
 }
