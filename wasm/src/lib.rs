@@ -7,6 +7,7 @@
 elrond_wasm_node::wasm_endpoints! {
     esdt_nft_marketplace
     (
+        acceptGlobalOffer
         acceptOffer
         addBlackListWallet
         addRewardBalance
@@ -19,6 +20,7 @@ elrond_wasm_node::wasm_endpoints! {
         checkOfferSent
         checkTokenOffers
         claimTokens
+        claimTokensForCreator
         cleanExpiredOffers
         declineOffer
         defaultRewardAmount
@@ -39,13 +41,17 @@ elrond_wasm_node::wasm_endpoints! {
         getClaimableAmount
         getClaimableTokenNonces
         getClaimableTokens
+        getCollectionGlobalOffers
         getCollectionsCount
         getCollectionsListed
         getCurrentWinner
         getCurrentWinningBid
         getDeadline
         getFullAuctionData
+        getGlobalOffer
+        getGlobalOffers
         getLastValidAuctionId
+        getLastValidGlobalOfferId
         getLastValidOfferId
         getListings
         getListingsByWallet
@@ -68,11 +74,14 @@ elrond_wasm_node::wasm_endpoints! {
         getTokenItemsQuantityForSale
         getTokenOffersIds
         isCollectionListed
+        isSCWl
         listing
         offerById
         removeAcceptedTokens
+        removeBlackListWallet
         removeWitelistedSC
         returnListing
+        sendGlobalOffer
         sendOffer
         setAcceptedTokens
         setCutPercentage
@@ -81,8 +90,11 @@ elrond_wasm_node::wasm_endpoints! {
         setSpecialRewardAmount
         setStatus
         specialRewardAmount
+        userCollectionGlobalOffers
+        userGlobalOffers
         whitelistedContracts
         withdraw
+        withdrawGlobalOffer
         withdrawOffer
     )
 }

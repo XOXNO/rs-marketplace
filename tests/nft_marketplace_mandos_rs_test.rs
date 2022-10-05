@@ -8,6 +8,7 @@ use elrond_wasm_debug::{
     managed_address, managed_biguint, managed_token_id, rust_biguint,
     testing_framework::*,
 };
+use esdt_nft_marketplace::admin::AdminModule;
 use esdt_nft_marketplace::auction::AuctionType;
 use esdt_nft_marketplace::storage::StorageModule;
 use esdt_nft_marketplace::views::ViewsModule;

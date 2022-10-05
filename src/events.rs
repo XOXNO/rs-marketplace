@@ -1,6 +1,8 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
+use crate::auction::GlobalOffer;
+
 use super::auction::{Auction, AuctionType, Offer, OfferStatus};
 
 #[allow(clippy::too_many_arguments)]
@@ -227,6 +229,37 @@ pub trait EventsModule {
         #[indexed] offer_owner: &ManagedAddress,
         #[indexed] marketplace_cut_percentage: &BigUint,
         #[indexed] offer_id: u64,
+    );
+
+    fn emit_send_global_offer_event(self, offer: &GlobalOffer<Self::Api>) {
+        self.send_global_offer_event(offer);
+    }
+
+    #[event("send_global_offer")]
+    fn send_global_offer_event(&self, #[indexed] offer: &GlobalOffer<Self::Api>);
+
+    fn emit_remove_global_offer_event(self, offer_id: u64) {
+        self.remove_global_offer_event(offer_id);
+    }
+    #[event("remove_global_offer")]
+    fn remove_global_offer_event(&self, #[indexed] offer_id: u64);
+
+    fn emit_accept_global_offer_event(
+        self,
+        offer: &GlobalOffer<Self::Api>,
+        seller: &ManagedAddress,
+        nonce: u64,
+        amount: &BigUint,
+    ) {
+        self.accept_global_offer_event(offer, seller, nonce, amount);
+    }
+    #[event("accept_global_offer")]
+    fn accept_global_offer_event(
+        &self,
+        #[indexed] offer: &GlobalOffer<Self::Api>,
+        #[indexed] seller: &ManagedAddress,
+        #[indexed] nonce: u64,
+        #[indexed] amount: &BigUint,
     );
 
     #[event("withdraw_offer_token_event")]

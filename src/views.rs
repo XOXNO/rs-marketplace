@@ -93,10 +93,16 @@ pub trait ViewsModule: crate::storage::StorageModule {
     fn get_auctions_for_ticker(&self, token: TokenIdentifier) -> ManagedVec<u64> {
         let mut results = ManagedVec::new();
         let nonces = self.token_items_for_sale(token.clone());
+
+        let timestamp = self.blockchain().get_block_timestamp();
         for nonce in nonces.iter() {
             let auctions = self.token_auction_ids(token.clone(), nonce);
             for auction_id in auctions.iter() {
-                results.push(auction_id);
+                let auction_info = self.auction_by_id(auction_id);
+                let dl = auction_info.get().deadline;
+                if dl > timestamp || dl == 0 {
+                    results.push(auction_id);
+                }
             }
         }
         results
@@ -178,9 +184,9 @@ pub trait ViewsModule: crate::storage::StorageModule {
         !self.auction_by_id(auction_id).is_empty()
     }
 
-    #[view(doesOfferExist)]
-    fn does_offer_exist(&self, offer_id: u64) -> bool {
-        !self.offer_by_id(offer_id).is_empty()
+    #[view(isSCWl)]
+    fn is_sc_wl(&self, sc: ManagedAddress) -> bool {
+        self.whitelisted_contracts().contains(&sc)
     }
 
     #[view(getAuctionedToken)]

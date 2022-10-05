@@ -128,4 +128,29 @@ pub trait StorageModule {
     #[view(getLastValidOfferId)]
     #[storage_mapper("lastValidOfferId")]
     fn last_valid_offer_id(&self) -> SingleValueMapper<u64>;
+
+
+    #[view(getLastValidGlobalOfferId)]
+    #[storage_mapper("lastValidGlobalOfferId")]
+    fn last_valid_global_offer_id(&self) -> SingleValueMapper<u64>;
+
+    #[view(getGlobalOffers)]
+    #[storage_mapper("globalOfferIDs")]
+    fn global_offer_ids(&self) -> UnorderedSetMapper<u64>;
+
+    #[view(getGlobalOffer)]
+    #[storage_mapper("globalOffer")]
+    fn global_offer(&self, offer_id: u64) -> SingleValueMapper<GlobalOffer<Self::Api>>;
+
+    #[view(getCollectionGlobalOffers)]
+    #[storage_mapper("collectionGlobalOffers")]
+    fn collection_global_offers(&self, collection: &TokenIdentifier) -> UnorderedSetMapper<u64>;
+
+    #[view(userGlobalOffers)]
+    #[storage_mapper("userGlobalOffers")]
+    fn user_global_offers(&self, address: &ManagedAddress) -> UnorderedSetMapper<u64>;
+
+    #[view(userCollectionGlobalOffers)]
+    #[storage_mapper("userCollectionGlobalOffers")]
+    fn user_collection_global_offers(&self, address: &ManagedAddress, collection: &TokenIdentifier) -> UnorderedSetMapper<u64>;
 }
