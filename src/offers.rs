@@ -568,20 +568,22 @@ pub trait CustomOffersModule:
         );
         let mut user_map = self.user_collection_global_offers(&caller, &collection);
         require!(user_map.len() <= 5, "You have a limit of 5 offers per collection!");
-        let offer_id = self.last_valid_global_offer_id().update(|x| *x + 1);
-        self.collection_global_offers(&collection).insert(offer_id);
-        self.user_global_offers(&caller).insert(offer_id);
-        user_map.insert(offer_id);
+        let offer_id = self.last_valid_global_offer_id().get() + 1;
         let offer = GlobalOffer {
             offer_id,
-            collection,
+            collection: collection.clone(),
             quantity: BigUint::from(NFT_AMOUNT),
             payment_token,
             payment_nonce,
             price,
             timestamp: current_time,
-            owner: caller,
+            owner: caller.clone(),
         };
+        self.last_valid_global_offer_id().set(&offer_id);
+
+        self.collection_global_offers(&collection).insert(offer_id);
+        self.user_global_offers(&caller).insert(offer_id);
+        user_map.insert(offer_id);
         self.emit_send_global_offer_event(&offer);
         self.global_offer_ids().insert(offer_id);
         self.global_offer(offer_id).set(offer);
@@ -607,6 +609,7 @@ pub trait CustomOffersModule:
         self.global_offer_ids().swap_remove(&offer_id);
         offer_map.clear();
         self.emit_remove_global_offer_event(offer_id);
+        self.transfer_or_save_payment(&offer.owner, &offer.payment_token, offer.payment_nonce, &offer.price, &[]);
         offer_id
     }
 

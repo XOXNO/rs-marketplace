@@ -267,6 +267,12 @@ offerById() {
     erdpy --verbose contract query ${ADDRESS} --function="offerById" --arguments 0x0114e5 --proxy=${PROXY}
 }
 
+getLastValidGlobalOfferId() {
+    erdpy --verbose contract query ${ADDRESS} --function="getLastValidGlobalOfferId" --proxy=${PROXY}
+}
+getGlobalOffers() {
+    erdpy --verbose contract query ${ADDRESS} --function="getGlobalOffers" --proxy=${PROXY}
+}
 
 getOffersByWallet() {
     erdpy --verbose contract query ${ADDRESS} --function="getOffersByWallet" --arguments erd1wrr0gvvgpevwg2plphsqzw022wppf726ja94fw8dkrv84vslaarsdqpyt4 --proxy=${PROXY}

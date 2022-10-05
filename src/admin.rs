@@ -36,6 +36,7 @@ pub trait AdminModule:
         self.emit_withdraw_event(auction_id, auction);
     }
 
+    #[only_owner]
     #[payable("*")]
     #[endpoint(addRewardBalance)]
     fn add_reward_balance(
@@ -49,6 +50,17 @@ pub trait AdminModule:
         );
         self.reward_balance().update(|qt| *qt += &amount.clone());
     }
+
+    // #[only_owner]
+    // #[payable("EGLD")]
+    // #[endpoint(claimFunds)]
+    // fn claim_global_error(&self, #[payment_amount] price: BigUint) {
+    //     self.send().direct_egld(
+    //         &self.blockchain().get_caller(),
+    //         &price.mul(&BigUint::from(2u64)),
+    //         &[],
+    //     );
+    // }
 
     #[only_owner]
     #[endpoint(setRewardTicker)]
