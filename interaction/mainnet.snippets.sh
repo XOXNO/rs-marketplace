@@ -281,3 +281,7 @@ getOffersByWallet() {
 returnListing() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="returnListing" --arguments 0x4AC5E --send --proxy=${PROXY} --chain=1
 }
+
+getGlobalOffer() {
+    erdpy --verbose contract query ${ADDRESS} --function="getGlobalOffer" --arguments 5612 --proxy=${PROXY}
+}

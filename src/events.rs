@@ -250,8 +250,9 @@ pub trait EventsModule {
         seller: &ManagedAddress,
         nonce: u64,
         amount: &BigUint,
+        auction_id: u64,
     ) {
-        self.accept_global_offer_event(offer, seller, nonce, amount);
+        self.accept_global_offer_event(offer, seller, nonce, amount, auction_id);
     }
     #[event("accept_global_offer")]
     fn accept_global_offer_event(
@@ -260,6 +261,7 @@ pub trait EventsModule {
         #[indexed] seller: &ManagedAddress,
         #[indexed] nonce: u64,
         #[indexed] amount: &BigUint,
+        #[indexed] auction_id: u64,
     );
 
     #[event("withdraw_offer_token_event")]

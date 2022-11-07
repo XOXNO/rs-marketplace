@@ -19,7 +19,7 @@ PROXY=https://devnet-gateway.elrond.com
 
 deploy() {
     echo ${PROJECT}
-    erdpy --verbose contract deploy --project=${PROJECT} --metadata-payable --recall-nonce --pem=${ALICE} --gas-limit=225000000 --arguments 0xFA --send --outfile="deploy-devnet.interaction.json" --proxy=${PROXY} --chain=D || return
+    erdpy --verbose contract deploy --project=${PROJECT} --recall-nonce --pem=${ALICE} --gas-limit=225000000 --arguments 0xFA --send --outfile="deploy-devnet.interaction.json" --proxy=${PROXY} --chain=D || return
 
     TRANSACTION=$(erdpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['hash']")
     ADDRESS=$(erdpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['address']")
@@ -208,4 +208,11 @@ getCurrentWinner() {
 
 getFullAuctionData() {
     erdpy --verbose contract query ${ADDRESS} --function="getFullAuctionData" --arguments 0x05 --proxy=${PROXY}
+}
+
+getLastValidGlobalOfferId() {
+    erdpy --verbose contract query ${ADDRESS} --function="getLastValidGlobalOfferId" --proxy=${PROXY}
+}
+getGlobalOffers() {
+    erdpy --verbose contract query ${ADDRESS} --function="getGlobalOffers" --proxy=${PROXY}
 }

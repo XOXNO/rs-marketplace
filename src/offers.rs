@@ -567,7 +567,10 @@ pub trait CustomOffersModule:
             "Your address was blacklisted!"
         );
         let mut user_map = self.user_collection_global_offers(&caller, &collection);
-        require!(user_map.len() <= 5, "You have a limit of 5 offers per collection!");
+        require!(
+            user_map.len() <= 5,
+            "You have a limit of 5 offers per collection!"
+        );
         let offer_id = self.last_valid_global_offer_id().get() + 1;
         let offer = GlobalOffer {
             offer_id,
@@ -591,25 +594,36 @@ pub trait CustomOffersModule:
     }
 
     #[endpoint(withdrawGlobalOffer)]
-    fn withdraw_global_offer(
-        &self,
-        offer_id: u64,
-    ) -> u64 {
+    fn withdraw_global_offer(&self, offer_id: u64) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
         let caller = self.blockchain().get_caller();
         let offer_map = self.global_offer(offer_id);
         require!(!offer_map.is_empty(), "This offer is already removed!");
         let mut user_map = self.user_global_offers(&caller);
-        require!(user_map.contains(&offer_id), "You are not the owner of this offer!");
+        require!(
+            user_map.contains(&offer_id),
+            "You are not the owner of this offer!"
+        );
         let offer = offer_map.get();
-        require!(offer.owner.eq(&caller), "You are not the owner of this offer!");
+        require!(
+            offer.owner.eq(&caller),
+            "You are not the owner of this offer!"
+        );
         user_map.swap_remove(&offer_id);
-        self.user_collection_global_offers(&caller, &offer.collection).swap_remove(&offer_id);
-        self.collection_global_offers(&offer.collection).swap_remove(&offer_id);
+        self.user_collection_global_offers(&caller, &offer.collection)
+            .swap_remove(&offer_id);
+        self.collection_global_offers(&offer.collection)
+            .swap_remove(&offer_id);
         self.global_offer_ids().swap_remove(&offer_id);
         offer_map.clear();
         self.emit_remove_global_offer_event(offer_id);
-        self.transfer_or_save_payment(&offer.owner, &offer.payment_token, offer.payment_nonce, &offer.price, &[]);
+        self.transfer_or_save_payment(
+            &offer.owner,
+            &offer.payment_token,
+            offer.payment_nonce,
+            &offer.price,
+            &[],
+        );
         offer_id
     }
 
@@ -618,21 +632,104 @@ pub trait CustomOffersModule:
     fn accept_global_offer(
         &self,
         #[payment_token] collection: TokenIdentifier,
-        #[payment_nonce] collection_nonce: u64,
+        #[payment_nonce] c_nonce: u64,
         #[payment_amount] amount: BigUint,
         offer_id: u64,
+        #[var_args] auction_id_opt: OptionalValue<u64>,
     ) -> u64 {
-        require!(collection_nonce > 0, "You can not accept it with ESDT!");
         require!(self.status().get(), "Global operation enabled!");
         let offer_map = self.global_offer(offer_id);
         require!(!offer_map.is_empty(), "This offer is already removed!");
-        let offer = offer_map.get();
-        require!(offer.collection.eq(&collection), "The collection sent is not the offer requested one!");
-        require!(offer.quantity.eq(&amount), "Your quantity is not matching the offer requested one!");
         let seller = self.blockchain().get_caller();
-        self.user_collection_global_offers(&offer.owner, &offer.collection).swap_remove(&offer.offer_id);
-        self.collection_global_offers(&offer.collection).swap_remove(&offer.offer_id);
-        self.user_global_offers(&offer.owner).swap_remove(&offer.offer_id);
+        let offer = offer_map.get();
+        let mut collection_nonce = c_nonce;
+        let auction_id_option = auction_id_opt.into_option();
+        if auction_id_option.is_some() {
+            require!(collection.is_empty(), "You don't have to send anything");
+            require!(amount.eq(&BigUint::zero()), "Amount has to be 0");
+            let auction_id = auction_id_option.unwrap();
+            let auction = self.try_get_auction(auction_id);
+            require!(
+                auction.auction_type == AuctionType::Nft,
+                "Cannot accept offers for auctions, just for listings with a fixed price!"
+            );
+
+            require!(
+                offer.owner != auction.original_owner,
+                "Cannot accept your own offer!"
+            );
+
+            require!(
+                seller == auction.original_owner,
+                "Just the owner of the listed NFT can accept the offer!"
+            );
+
+            require!(
+                auction.nr_auctioned_tokens == offer.quantity,
+                "The quantity listed is not matching the offer!"
+            );
+
+            require!(
+                auction.auctioned_token_type == offer.collection,
+                "The listed token is not matching the offer!"
+            );
+            collection_nonce = auction.auctioned_token_nonce;
+            self.listings_by_wallet(auction.original_owner.clone())
+                .remove(&auction_id);
+            self.token_auction_ids(
+                auction.auctioned_token_type.clone(),
+                auction.auctioned_token_nonce,
+            )
+            .remove(&auction_id);
+            self.auction_by_id(auction_id).clear();
+            self.listings().remove(&auction_id);
+            self.token_items_quantity_for_sale(
+                auction.auctioned_token_type.clone(),
+                auction.auctioned_token_nonce,
+            )
+            .update(|qt| *qt -= &offer.quantity);
+
+            if self
+                .token_items_quantity_for_sale(
+                    auction.auctioned_token_type.clone(),
+                    auction.auctioned_token_nonce,
+                )
+                .get()
+                == BigUint::from(0u32)
+            {
+                self.token_items_for_sale(auction.auctioned_token_type.clone())
+                    .remove(&auction.auctioned_token_nonce);
+                self.token_items_quantity_for_sale(
+                    auction.auctioned_token_type.clone(),
+                    auction.auctioned_token_nonce,
+                )
+                .clear();
+            }
+            if self
+                .token_items_for_sale(auction.auctioned_token_type.clone())
+                .len()
+                == 0
+            {
+                self.collections_listed()
+                    .remove(&auction.auctioned_token_type.clone());
+            }
+        } else {
+            require!(collection_nonce > 0, "You can not accept it with ESDT!");
+            require!(
+                offer.collection.eq(&collection),
+                "The collection sent is not the offer requested one!"
+            );
+            require!(
+                offer.quantity.eq(&amount),
+                "Your quantity is not matching the offer requested one!"
+            );
+        }
+        self.user_collection_global_offers(&offer.owner, &offer.collection)
+            .swap_remove(&offer.offer_id);
+        self.collection_global_offers(&offer.collection)
+            .swap_remove(&offer.offer_id);
+        self.user_global_offers(&offer.owner)
+            .swap_remove(&offer.offer_id);
         self.global_offer(offer.offer_id).clear();
         self.global_offer_ids().swap_remove(&offer.offer_id);
 
@@ -666,13 +763,19 @@ pub trait CustomOffersModule:
 
         self.transfer_or_save_payment(
             &offer.owner,
-            &collection,
+            &offer.collection,
             collection_nonce,
-            &amount,
+            &offer.quantity,
             b"Trust Market income!",
         );
 
-        self.emit_accept_global_offer_event(&offer, &seller, collection_nonce, &amount);
+        self.emit_accept_global_offer_event(
+            &offer,
+            &seller,
+            collection_nonce,
+            &offer.quantity,
+            auction_id_option.unwrap_or(0u64),
+        );
         offer_id
     }
 
