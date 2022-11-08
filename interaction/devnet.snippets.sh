@@ -33,7 +33,7 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    erdpy --verbose contract upgrade ${ADDRESS} --arguments 0x64 --project=${PROJECT} --recall-nonce --pem=${ALICE} \
+    erdpy --verbose contract upgrade ${ADDRESS} --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" --project=${PROJECT} --recall-nonce --pem=${ALICE} \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 

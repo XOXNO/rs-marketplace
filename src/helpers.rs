@@ -1,6 +1,8 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
+use core::convert::TryInto;
+
 use crate::{
     auction::{Auction, AuctionType, BidSplitAmounts, GlobalOffer, Offer},
     NFT_AMOUNT, PERCENTAGE_TOTAL,
@@ -288,5 +290,30 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                 b"Trust Market returned your token!",
             );
         }
+    }
+
+    fn decimal_to_ascii(&self, mut number: u32) -> ManagedBuffer {
+        const MAX_NUMBER_CHARACTERS: usize = 10;
+        const ZERO_ASCII: u8 = b'0';
+
+        let mut as_ascii = [0u8; MAX_NUMBER_CHARACTERS];
+        let mut nr_chars = 0;
+
+        loop {
+            let reminder: u8 = (number % 10).try_into().unwrap();
+            number /= 10;
+
+            as_ascii[nr_chars] = ZERO_ASCII + reminder;
+            nr_chars += 1;
+
+            if number == 0 {
+                break;
+            }
+        }
+
+        let slice = &mut as_ascii[..nr_chars];
+        slice.reverse();
+
+        ManagedBuffer::new_from_bytes(slice)
     }
 }

@@ -1,14 +1,20 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
+use core::convert::TryInto;
+
 use crate::auction::GlobalOffer;
 use crate::events;
 use crate::helpers;
 use crate::views;
 use crate::{storage, NFT_AMOUNT, PERCENTAGE_TOTAL};
+use elrond_wasm::api::ED25519_SIGNATURE_BYTE_LEN;
 
 use super::auction::{AuctionType, Offer, OfferStatus};
 
+const MAX_DATA_LEN: usize = 15000;
+
+pub type Signature<M> = ManagedByteArray<M, ED25519_SIGNATURE_BYTE_LEN>;
 #[elrond_wasm::module]
 pub trait CustomOffersModule:
     storage::StorageModule + helpers::HelpersModule + events::EventsModule + views::ViewsModule
@@ -552,6 +558,7 @@ pub trait CustomOffersModule:
         #[payment_nonce] payment_nonce: u64,
         #[payment_amount] price: BigUint,
         collection: TokenIdentifier,
+        #[var_args] attributes: OptionalValue<ManagedBuffer>,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
 
@@ -571,6 +578,7 @@ pub trait CustomOffersModule:
             user_map.len() <= 5,
             "You have a limit of 5 offers per collection!"
         );
+
         let offer_id = self.last_valid_global_offer_id().get() + 1;
         let offer = GlobalOffer {
             offer_id,
@@ -581,6 +589,7 @@ pub trait CustomOffersModule:
             price,
             timestamp: current_time,
             owner: caller.clone(),
+            attributes: attributes.into_option(),
         };
         self.last_valid_global_offer_id().set(&offer_id);
 
@@ -636,6 +645,7 @@ pub trait CustomOffersModule:
         #[payment_amount] amount: BigUint,
         offer_id: u64,
         #[var_args] auction_id_opt: OptionalValue<u64>,
+        #[var_args] signature: OptionalValue<Signature<Self::Api>>,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
         let offer_map = self.global_offer(offer_id);
@@ -644,7 +654,7 @@ pub trait CustomOffersModule:
         let offer = offer_map.get();
         let mut collection_nonce = c_nonce;
         let auction_id_option = auction_id_opt.into_option();
-        if auction_id_option.is_some() {
+        if auction_id_option.is_some() && auction_id_option.clone().unwrap() > 0 {
             require!(collection.is_empty(), "You don't have to send anything");
             require!(amount.eq(&BigUint::zero()), "Amount has to be 0");
             let auction_id = auction_id_option.unwrap();
@@ -723,6 +733,24 @@ pub trait CustomOffersModule:
                 offer.quantity.eq(&amount),
                 "Your quantity is not matching the offer requested one!"
             );
+        }
+        if offer.attributes.is_some() {
+            let sign = signature.into_option();
+            require!(sign.is_some(), "Signature required!");
+            let mut data = ManagedBuffer::new();
+            data.append(seller.as_managed_buffer());
+            data.append(offer.collection.as_managed_buffer());
+            data.append(&self.decimal_to_ascii(collection_nonce.try_into().unwrap()));
+            data.append(&self.decimal_to_ascii(offer.offer_id.try_into().unwrap()));
+            data.append(&offer.attributes.clone().unwrap());
+
+            let signer: ManagedAddress = self.signer().get();
+            let valid_signature = self.crypto().verify_ed25519_managed::<MAX_DATA_LEN>(
+                signer.as_managed_byte_array(),
+                &data,
+                &sign.unwrap(),
+            );
+            require!(valid_signature, "Invalid signature");
         }
         self.user_collection_global_offers(&offer.owner, &offer.collection)
             .swap_remove(&offer.offer_id);

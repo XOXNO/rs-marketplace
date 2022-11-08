@@ -1,5 +1,6 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
+use elrond_wasm::elrond_codec::NestedDecodeInput;
 
 #[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct Auction<M: ManagedTypeApi> {
@@ -92,7 +93,7 @@ pub struct BidSplitAmounts<M: ManagedTypeApi> {
 }
 
 
-#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[derive(TopEncode, TypeAbi)]
 pub struct GlobalOffer<M: ManagedTypeApi> {
     pub offer_id: u64,
     pub collection: TokenIdentifier<M>,
@@ -102,4 +103,40 @@ pub struct GlobalOffer<M: ManagedTypeApi> {
     pub price: BigUint<M>,
     pub timestamp: u64,
     pub owner: ManagedAddress<M>,
+    pub attributes: Option<ManagedBuffer<M>>
+}
+
+impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
+    fn top_decode<I>(input: I) -> Result<Self, DecodeError>
+    where
+        I: elrond_codec::TopDecodeInput,
+    {
+        let mut input = input.into_nested_buffer();
+        let offer_id = u64::dep_decode(&mut input)?;
+        let collection = TokenIdentifier::dep_decode(&mut input)?;
+        let quantity = BigUint::dep_decode(&mut input)?;
+        let payment_token = TokenIdentifier::dep_decode(&mut input)?;
+        let payment_nonce = u64::dep_decode(&mut input)?;
+        let price = BigUint::dep_decode(&mut input)?;
+        let timestamp = u64::dep_decode(&mut input)?;
+        let owner = ManagedAddress::dep_decode(&mut input)?;
+
+        let attributes = if input.is_depleted() {
+            None
+        } else {
+            Option::<ManagedBuffer<M>>::dep_decode(&mut input)?
+        };
+
+        Result::Ok(GlobalOffer {
+            offer_id,
+            collection,
+            quantity,
+            payment_token,
+            payment_nonce,
+            price,
+            timestamp,
+            owner,
+            attributes
+        })
+    }
 }

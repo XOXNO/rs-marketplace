@@ -66,6 +66,7 @@ elrond_wasm_node::wasm_endpoints! {
         getPaymentTokenForAuction
         getRewardBalance
         getRewardTicker
+        getSigner
         getStartTime
         getStatus
         getTokenAuctionIds

@@ -4,6 +4,10 @@ use crate::auction::*;
 
 #[elrond_wasm::module]
 pub trait StorageModule {
+    #[view(getSigner)]
+    #[storage_mapper("signer")]
+    fn signer(&self) -> SingleValueMapper<ManagedAddress>;
+
     #[view(getMarketplaceCutPercentage)]
     #[storage_mapper("bidCutPercentage")]
     fn bid_cut_percentage(&self) -> SingleValueMapper<BigUint>;

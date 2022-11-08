@@ -28,8 +28,9 @@ pub trait EsdtNftMarketplace:
     + creator::CreatorModule
 {
     #[init]
-    fn init(&self, bid_cut_percentage: u64) {
-        self.try_set_bid_cut_percentage(bid_cut_percentage)
+    fn init(&self, bid_cut_percentage: u64, signer: ManagedAddress) {
+        self.try_set_bid_cut_percentage(bid_cut_percentage);
+        self.signer().set_if_empty(&signer);
     }
 
     #[payable("*")]
