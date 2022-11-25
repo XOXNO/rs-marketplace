@@ -22,6 +22,7 @@ pub trait CreatorModule: crate::storage::StorageModule {
         }
     }
 
+    #[only_owner]
     #[endpoint(claimTokensForCreator)]
     fn claim_tokens_for_creator(
         &self,
@@ -34,9 +35,9 @@ pub trait CreatorModule: crate::storage::StorageModule {
 
         if amount > 0 {
             amount_mapper.clear();
-
+            let caller = self.blockchain().get_caller();
             self.send()
-                .direct(&creator, &token_id, token_nonce, &amount, &[]);
+                .direct(&caller, &token_id, token_nonce, &amount, &[]);
         }
     }
 }

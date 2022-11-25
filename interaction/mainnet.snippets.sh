@@ -39,11 +39,11 @@ upgrade() {
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqv25y7chlq0fdz64jwxwqckkey9mepaajzzss2d0349 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqj27rxxk4j0zyea59qz2uzskh9m7urzy5xtzqgv8e0z --send --proxy=${PROXY} --chain=1
 }
 
 removeWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="removeWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqlhku5jw5skv5x28q3mw6e8cms0fcuptvcj9qyuxalm --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="removeWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgq7xafv9j6cr29vjhwduvlqharxxe2vjzaaxfsw8d4pm --send --proxy=${PROXY} --chain=1
 }
 setStatusOn() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=1
@@ -78,7 +78,7 @@ removeAcceptedTokens() {
 }
 
 deleteOffersByWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd18f36frger6admss266yftsh475d0u946hx8hwuu0zm58sttgsd3q2p2da7 --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd10ljy8s8ctrvy93hzgugr3wx2k8zjlwnnnggrmmjfa9u7dx0ux5qspj0jgp --send --proxy=${PROXY} --chain=1
 }
 addBlackListWallet() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd18f36frger6admss266yftsh475d0u946hx8hwuu0zm58sttgsd3q2p2da7 --send --proxy=${PROXY} --chain=1
@@ -279,7 +279,7 @@ getOffersByWallet() {
 }
 
 returnListing() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="returnListing" --arguments 0x4AC5E --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="returnListing" --arguments 163493 --send --proxy=${PROXY} --chain=1
 }
 
 getGlobalOffer() {

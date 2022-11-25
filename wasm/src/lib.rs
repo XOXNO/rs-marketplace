@@ -96,6 +96,7 @@ elrond_wasm_node::wasm_endpoints! {
         whitelistedContracts
         withdraw
         withdrawGlobalOffer
+        withdrawGlobalOffers
         withdrawOffer
     )
 }

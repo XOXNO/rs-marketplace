@@ -636,6 +636,35 @@ pub trait CustomOffersModule:
         offer_id
     }
 
+    #[only_owner]
+    #[endpoint(withdrawGlobalOffers)]
+    fn withdraw_global_offers(&self, offer_id: u64) {
+        require!(self.status().get(), "Global operation enabled!");
+        // for offer_id in offer_ids.iter() {
+            let offer_map = self.global_offer(offer_id);
+            require!(!offer_map.is_empty(), "This offer is already removed!");
+
+            let offer = offer_map.get();
+            let mut user_map = self.user_global_offers(&offer.owner);
+
+            user_map.swap_remove(&offer_id);
+            self.user_collection_global_offers(&offer.owner, &offer.collection)
+                .swap_remove(&offer_id);
+            self.collection_global_offers(&offer.collection)
+                .swap_remove(&offer_id);
+            self.global_offer_ids().swap_remove(&offer_id);
+            offer_map.clear();
+            self.emit_remove_global_offer_event(offer_id);
+            self.transfer_or_save_payment(
+                &offer.owner,
+                &offer.payment_token,
+                offer.payment_nonce,
+                &offer.price,
+                &[],
+            );
+        // }
+    }
+
     #[payable("*")]
     #[endpoint(acceptGlobalOffer)]
     fn accept_global_offer(
