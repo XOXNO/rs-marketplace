@@ -38,7 +38,7 @@ pub trait CustomOffersModule:
         let seller = self.blockchain().get_caller();
         require!(offer.offer_owner != seller, "Cannot accept your own offer!");
         let token_auction_ids_instance =
-            self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
+            self.token_auction_ids(&offer.token_type, offer.token_nonce);
         let mut found_match = false;
         let mut auction_removed = 0;
         if token_auction_ids_instance.is_empty() || payment_token.is_esdt() {
@@ -92,27 +92,27 @@ pub trait CustomOffersModule:
             );
 
             auction_removed = auction_id;
-            self.listings_by_wallet(auction.original_owner.clone())
+            self.listings_by_wallet(&auction.original_owner)
                 .remove(&auction_id);
-            self.token_auction_ids(offer.token_type.clone(), offer.token_nonce)
+            self.token_auction_ids(&offer.token_type, offer.token_nonce)
                 .remove(&auction_id);
             self.auction_by_id(auction_id).clear();
             self.listings().remove(&auction_id);
-            self.token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
+            self.token_items_quantity_for_sale(&offer.token_type, offer.token_nonce)
                 .update(|qt| *qt -= &offer.quantity);
 
             if self
-                .token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
+                .token_items_quantity_for_sale(&offer.token_type, offer.token_nonce)
                 .get()
                 == BigUint::from(0u32)
             {
-                self.token_items_for_sale(offer.token_type.clone())
+                self.token_items_for_sale(&offer.token_type)
                     .remove(&offer.token_nonce);
-                self.token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
+                self.token_items_quantity_for_sale(&offer.token_type, offer.token_nonce)
                     .clear();
             }
-            if self.token_items_for_sale(offer.token_type.clone()).len() == 0 {
-                self.collections_listed().remove(&offer.token_type.clone());
+            if self.token_items_for_sale(&offer.token_type).len() == 0 {
+                self.collections_listed().remove(&offer.token_type);
             }
 
             found_match = true;
@@ -137,23 +137,23 @@ pub trait CustomOffersModule:
                     && (auction_type == AuctionType::Nft || auction_type == AuctionType::SftAll)
                 {
                     auction_removed = auction_id;
-                    self.listings_by_wallet(owner_auction).remove(&auction_id);
-                    self.token_auction_ids(offer.token_type.clone(), offer.token_nonce)
+                    self.listings_by_wallet(&owner_auction).remove(&auction_id);
+                    self.token_auction_ids(&offer.token_type, offer.token_nonce)
                         .remove(&auction_id);
                     self.auction_by_id(auction_id).clear();
                     self.listings().remove(&auction_id);
-                    self.token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
+                    self.token_items_quantity_for_sale(&offer.token_type, offer.token_nonce)
                         .update(|qt| *qt -= &offer.quantity);
 
                     if self
-                        .token_items_quantity_for_sale(offer.token_type.clone(), offer.token_nonce)
+                        .token_items_quantity_for_sale(&offer.token_type, offer.token_nonce)
                         .get()
                         == BigUint::from(0u32)
                     {
-                        self.token_items_for_sale(offer.token_type.clone())
+                        self.token_items_for_sale(&offer.token_type)
                             .remove(&offer.token_nonce);
                         self.token_items_quantity_for_sale(
-                            offer.token_type.clone(),
+                            &offer.token_type,
                             offer.token_nonce,
                         )
                         .clear();
@@ -174,7 +174,7 @@ pub trait CustomOffersModule:
         );
         if !self.reward_ticker().is_empty() {
             if self
-                .special_reward_amount(offer.token_type.clone())
+                .special_reward_amount(&offer.token_type)
                 .is_empty()
             {
                 if self.reward_balance().get().gt(&BigUint::from(0u32))
@@ -203,7 +203,7 @@ pub trait CustomOffersModule:
             } else {
                 if self.reward_balance().get().gt(&BigUint::from(0u32))
                     && self.reward_balance().get().ge(&self
-                        .special_reward_amount(offer.token_type.clone())
+                        .special_reward_amount(&offer.token_type)
                         .get()
                         .mul(2u32))
                 {
@@ -211,19 +211,19 @@ pub trait CustomOffersModule:
                         &offer.offer_owner,
                         &self.reward_ticker().get(),
                         0u64,
-                        &self.special_reward_amount(offer.token_type.clone()).get(),
+                        &self.special_reward_amount(&offer.token_type).get(),
                     );
 
                     self.transfer_or_save_payment(
                         &seller,
                         &self.reward_ticker().get(),
                         0u64,
-                        &self.special_reward_amount(offer.token_type.clone()).get(),
+                        &self.special_reward_amount(&offer.token_type).get(),
                     );
 
                     self.reward_balance().update(|qt| {
                         *qt -= self
-                            .special_reward_amount(offer.token_type.clone())
+                            .special_reward_amount(&offer.token_type)
                             .get()
                             .mul(2u32)
                     });
@@ -263,15 +263,15 @@ pub trait CustomOffersModule:
             &bid_split_amounts.seller,
         );
         self.check_offer_sent(
-            offer.offer_owner.clone(),
-            offer.token_type.clone(),
-            offer.token_nonce.clone(),
-            offer.payment_token_type.clone(),
+            &offer.offer_owner,
+            &offer.token_type,
+            offer.token_nonce,
+            &offer.payment_token_type,
         )
         .clear();
-        self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
+        self.token_offers_ids(&offer.token_type, offer.token_nonce)
             .remove(&offer_id);
-        self.offers_by_wallet(offer.offer_owner.clone())
+        self.offers_by_wallet(&offer.offer_owner)
             .remove(&offer_id);
         self.offer_by_id(offer_id).clear();
         self.offers().remove(&offer_id);
@@ -293,7 +293,7 @@ pub trait CustomOffersModule:
         let owner = self.blockchain().get_caller();
 
         let token_auction_ids_instance =
-            self.token_auction_ids(offer.token_type.clone(), offer.token_nonce.clone());
+            self.token_auction_ids(&offer.token_type, offer.token_nonce);
         if token_auction_ids_instance.is_empty() {
             require!(
                 payment_amount == offer.quantity,
@@ -357,16 +357,16 @@ pub trait CustomOffersModule:
             &offer.price,
         );
 
-        self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
+        self.token_offers_ids(&offer.token_type, offer.token_nonce)
             .remove(&offer_id);
         self.check_offer_sent(
-            offer.offer_owner.clone(),
-            offer.token_type.clone(),
-            offer.token_nonce.clone(),
-            offer.payment_token_type.clone(),
+            &offer.offer_owner,
+            &offer.token_type,
+            offer.token_nonce,
+            &offer.payment_token_type,
         )
         .clear();
-        self.offers_by_wallet(offer.offer_owner.clone())
+        self.offers_by_wallet(&offer.offer_owner)
             .remove(&offer_id);
         self.offers().remove(&offer_id);
         self.offer_by_id(offer_id).clear();
@@ -385,16 +385,16 @@ pub trait CustomOffersModule:
             &offer.price,
         );
 
-        self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
+        self.token_offers_ids(&offer.token_type, offer.token_nonce)
             .remove(&offer_id);
         self.check_offer_sent(
-            offer.offer_owner.clone(),
-            offer.token_type.clone(),
-            offer.token_nonce.clone(),
-            offer.payment_token_type.clone(),
+            &offer.offer_owner,
+            &offer.token_type,
+            offer.token_nonce,
+            &offer.payment_token_type,
         )
         .clear();
-        self.offers_by_wallet(offer.offer_owner.clone())
+        self.offers_by_wallet(&offer.offer_owner)
             .remove(&offer_id);
         self.offers().remove(&offer_id);
         self.offer_by_id(offer_id).clear();
@@ -477,10 +477,10 @@ pub trait CustomOffersModule:
         require!(
             !self
                 .check_offer_sent(
-                    caller.clone(),
-                    nft_type.clone(),
+                    &caller,
+                    &nft_type,
                     nft_nonce,
-                    payment_token.clone()
+                    &payment_token
                 )
                 .get(),
             "You already sent an offer for this NFT with the same token!"
@@ -506,8 +506,8 @@ pub trait CustomOffersModule:
 
         let offer = Offer {
             token_type: nft_type.clone(),
-            token_nonce: nft_nonce.clone(),
-            quantity: nft_amount.clone(),
+            token_nonce: nft_nonce,
+            quantity: nft_amount,
             payment_token_type: payment_token.clone(),
             payment_token_nonce,
             status: OfferStatus::Pending,
@@ -519,18 +519,18 @@ pub trait CustomOffersModule:
         };
         // Map ID with Offer Struct
         self.offer_by_id(offer_id).set(&offer);
-        self.token_offers_ids(nft_type.clone(), nft_nonce)
+        self.token_offers_ids(&nft_type, nft_nonce)
             .insert(offer_id);
         // Push ID to the offers list
         self.offers().insert(offer_id);
         // Add to the owner wallet the new Offer ID
-        self.offers_by_wallet(offer.offer_owner.clone())
-            .insert(offer_id.clone());
+        self.offers_by_wallet(&offer.offer_owner)
+            .insert(offer_id);
         self.check_offer_sent(
-            caller.clone(),
-            nft_type.clone(),
+            &caller,
+            &nft_type,
             nft_nonce,
-            payment_token.clone(),
+            &payment_token,
         )
         .set(&true);
         // Emit event for new offer
@@ -670,7 +670,7 @@ pub trait CustomOffersModule:
         let offer = offer_map.get();
         let mut collection_nonce = c_nonce;
         let auction_id_option = auction_id_opt.into_option();
-        if auction_id_option.is_some() && auction_id_option.clone().unwrap() > 0 {
+        if auction_id_option.is_some() && auction_id_option.unwrap() > 0 {
             require!(collection.is_egld(), "You don't have to send anything");
             require!(amount.eq(&BigUint::zero()), "Amount has to be 0");
             let auction_id = auction_id_option.unwrap();
@@ -700,44 +700,44 @@ pub trait CustomOffersModule:
                 "The listed token is not matching the offer!"
             );
             collection_nonce = auction.auctioned_token_nonce;
-            self.listings_by_wallet(auction.original_owner.clone())
+            self.listings_by_wallet(&auction.original_owner)
                 .remove(&auction_id);
             self.token_auction_ids(
-                auction.auctioned_token_type.clone(),
+                &auction.auctioned_token_type,
                 auction.auctioned_token_nonce,
             )
             .remove(&auction_id);
             self.auction_by_id(auction_id).clear();
             self.listings().remove(&auction_id);
             self.token_items_quantity_for_sale(
-                auction.auctioned_token_type.clone(),
+                &auction.auctioned_token_type,
                 auction.auctioned_token_nonce,
             )
             .update(|qt| *qt -= &offer.quantity);
 
             if self
                 .token_items_quantity_for_sale(
-                    auction.auctioned_token_type.clone(),
+                    &auction.auctioned_token_type,
                     auction.auctioned_token_nonce,
                 )
                 .get()
                 == BigUint::from(0u32)
             {
-                self.token_items_for_sale(auction.auctioned_token_type.clone())
+                self.token_items_for_sale(&auction.auctioned_token_type)
                     .remove(&auction.auctioned_token_nonce);
                 self.token_items_quantity_for_sale(
-                    auction.auctioned_token_type.clone(),
+                    &auction.auctioned_token_type,
                     auction.auctioned_token_nonce,
                 )
                 .clear();
             }
             if self
-                .token_items_for_sale(auction.auctioned_token_type.clone())
+                .token_items_for_sale(&auction.auctioned_token_type)
                 .len()
                 == 0
             {
                 self.collections_listed()
-                    .remove(&auction.auctioned_token_type.clone());
+                    .remove(&auction.auctioned_token_type);
             }
         } else {
             require!(collection_nonce > 0, "You can not accept it with ESDT!");
@@ -758,7 +758,7 @@ pub trait CustomOffersModule:
             data.append(offer.collection.as_managed_buffer());
             data.append(&self.decimal_to_ascii(collection_nonce.try_into().unwrap()));
             data.append(&self.decimal_to_ascii(offer.offer_id.try_into().unwrap()));
-            data.append(&offer.attributes.clone().unwrap());
+            data.append(&offer.attributes.as_ref().unwrap());
 
             let signer: ManagedAddress = self.signer().get();
             let valid_signature = self.crypto().verify_ed25519_legacy_managed::<MAX_DATA_LEN>(
@@ -821,8 +821,8 @@ pub trait CustomOffersModule:
 
     #[only_owner]
     #[endpoint(deleteOffersByWallet)]
-    fn delete_user_offers(&self, user: ManagedAddress) {
-        let offers_root = self.offers_by_wallet(user.clone());
+    fn delete_user_offers(&self, user: &ManagedAddress) {
+        let offers_root = self.offers_by_wallet(user);
         if offers_root.len() > 0 {
             for offer in offers_root.iter().take(80) {
                 self.internal_withdraw_offer(offer);

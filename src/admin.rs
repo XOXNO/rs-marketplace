@@ -25,11 +25,11 @@ pub trait AdminModule:
         self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens));
 
         self.token_auction_ids(
-            auction.auctioned_token_type.clone(),
-            auction.auctioned_token_nonce.clone(),
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
         )
         .remove(&auction_id);
-        self.listings_by_wallet(auction.original_owner.clone())
+        self.listings_by_wallet(&auction.original_owner)
             .remove(&auction_id);
         self.listings().remove(&auction_id);
         self.auction_by_id(auction_id).clear();
@@ -48,7 +48,7 @@ pub trait AdminModule:
             self.reward_ticker().get() == token,
             "This token is not used for rewards!"
         );
-        self.reward_balance().update(|qt| *qt += &amount.clone());
+        self.reward_balance().update(|qt| *qt += &amount);
     }
 
     #[only_owner]
@@ -63,7 +63,7 @@ pub trait AdminModule:
 
     #[only_owner]
     #[endpoint(setSpecialRewardAmount)]
-    fn set_special_reward_amount(&self, token: TokenIdentifier, amount: BigUint) {
+    fn set_special_reward_amount(&self, token: &TokenIdentifier, amount: BigUint) {
         self.special_reward_amount(token).set(amount);
     }
 

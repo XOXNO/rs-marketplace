@@ -14,43 +14,43 @@ pub trait StorageModule {
 
     #[view(getOffersByWallet)]
     #[storage_mapper("offersByWallet")]
-    fn offers_by_wallet(&self, address: ManagedAddress) -> SetMapper<u64>;
+    fn offers_by_wallet(&self, address: &ManagedAddress) -> SetMapper<u64>;
 
     #[view(checkOfferSent)]
     #[storage_mapper("checkOfferSent")]
     fn check_offer_sent(
         &self,
-        address: ManagedAddress,
-        nft: TokenIdentifier,
+        address: &ManagedAddress,
+        nft: &TokenIdentifier,
         nonce: u64,
-        payment_token: EgldOrEsdtTokenIdentifier,
+        payment_token: &EgldOrEsdtTokenIdentifier,
     ) -> SingleValueMapper<bool>;
 
     #[view(getListingsByWallet)]
     #[storage_mapper("listingsByWallet")]
-    fn listings_by_wallet(&self, address: ManagedAddress) -> SetMapper<u64>;
+    fn listings_by_wallet(&self, address: &ManagedAddress) -> SetMapper<u64>;
 
     #[view(getActiveListingsBids)]
     #[storage_mapper("listingsBids")]
-    fn listings_bids(&self, address: ManagedAddress) -> SetMapper<u64>;
+    fn listings_bids(&self, address: &ManagedAddress) -> SetMapper<u64>;
 
     #[view(getTokenItemsForSale)]
     #[storage_mapper("tokenItemsForSale")]
-    fn token_items_for_sale(&self, token: TokenIdentifier) -> SetMapper<u64>;
+    fn token_items_for_sale(&self, token: &TokenIdentifier) -> SetMapper<u64>;
 
     #[view(getTokenAuctionIds)]
     #[storage_mapper("tokenAuctionIDs")]
-    fn token_auction_ids(&self, token: TokenIdentifier, nonce: u64) -> SetMapper<u64>;
+    fn token_auction_ids(&self, token: &TokenIdentifier, nonce: u64) -> SetMapper<u64>;
 
     #[view(getTokenOffersIds)]
     #[storage_mapper("tokenOffersIDs")]
-    fn token_offers_ids(&self, token: TokenIdentifier, nonce: u64) -> SetMapper<u64>;
+    fn token_offers_ids(&self, token: &TokenIdentifier, nonce: u64) -> SetMapper<u64>;
 
     #[view(getTokenItemsQuantityForSale)]
     #[storage_mapper("tokenItemsQuantityForSale")]
     fn token_items_quantity_for_sale(
         &self,
-        token: TokenIdentifier,
+        token: &TokenIdentifier,
         nonce: u64,
     ) -> SingleValueMapper<BigUint>;
 
@@ -123,7 +123,7 @@ pub trait StorageModule {
 
     #[view(specialRewardAmount)]
     #[storage_mapper("specialRewardAmount")]
-    fn special_reward_amount(&self, token: TokenIdentifier) -> SingleValueMapper<BigUint>;
+    fn special_reward_amount(&self, token: &TokenIdentifier) -> SingleValueMapper<BigUint>;
 
     #[view(defaultRewardAmount)]
     #[storage_mapper("defaultRewardAmount")]

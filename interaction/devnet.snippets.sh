@@ -163,7 +163,7 @@ getTokenItemsForSale() {
 }
 
 getTokenItemsQuantityForSale() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsQuantityForSale" --arguments 0x4b42422d316339353733 0x05 --proxy=${PROXY}
+    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsQuantityForSale" --arguments str:MICE-f17a5e 188 --proxy=${PROXY}
 }
 
 getTokenItemsForSaleCount() {

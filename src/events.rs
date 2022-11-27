@@ -12,7 +12,7 @@ pub trait EventsModule {
         self,
         auction_id: u64,
         auction: &Auction<Self::Api>,
-        new_amount: BigUint,
+        new_amount: &BigUint,
         current_time: u64,
     ) {
         self.change_price_event(
@@ -21,7 +21,7 @@ pub trait EventsModule {
             auction_id,
             &auction.original_owner,
             &auction.min_bid,
-            &new_amount,
+            new_amount,
             &auction.payment_token_type,
             auction.payment_token_nonce,
             current_time,
@@ -31,8 +31,8 @@ pub trait EventsModule {
         self,
         auction_id: u64,
         auction: &Auction<Self::Api>,
-        bidder: ManagedAddress,
-        new_amount: BigUint,
+        bidder: &ManagedAddress,
+        new_amount: &BigUint,
         current_time: u64,
     ) {
         self.out_bid_event(
@@ -40,9 +40,9 @@ pub trait EventsModule {
             auction.auctioned_token_nonce,
             auction_id,
             &auction.current_winner,
-            &bidder,
+            bidder,
             &auction.current_bid,
-            &new_amount,
+            new_amount,
             &auction.payment_token_type,
             auction.payment_token_nonce,
             current_time,

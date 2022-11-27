@@ -2,7 +2,6 @@
 
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
-
 pub mod auction;
 use auction::*;
 pub mod offers;
@@ -84,7 +83,7 @@ pub trait EsdtNftMarketplace:
         let opt_max_bid = if max_bid > 0u32 {
             require!(min_bid <= max_bid, "Min bid can't higher than max bid");
 
-            Some(max_bid.clone())
+            Some(&max_bid)
         } else {
             None
         };
@@ -134,7 +133,7 @@ pub trait EsdtNftMarketplace:
             require!(
                 auction_type == AuctionType::Nft
                     || auction_type == AuctionType::SftOnePerPayment
-                    || (auction_type == AuctionType::SftAll && min_bid == max_bid.clone()),
+                    || (auction_type == AuctionType::SftAll && &min_bid == &max_bid),
                 "Deadline is mandatory for this auction type!"
             );
         }
@@ -150,7 +149,7 @@ pub trait EsdtNftMarketplace:
             payment_token_nonce: accepted_payment_nft_nonce,
 
             min_bid,
-            max_bid: opt_max_bid,
+            max_bid: opt_max_bid.cloned(),
             start_time,
             deadline,
             original_owner: self.blockchain().get_caller(),
@@ -161,21 +160,21 @@ pub trait EsdtNftMarketplace:
         };
         // Map ID with Auction Struct
         self.auction_by_id(auction_id).set(&auction);
-        self.collections_listed().insert(nft_type.clone());
         self.listings().insert(auction_id); // Push ID to the auctions list
                                             // Add to the owner wallet the new Auction ID
-        self.listings_by_wallet(auction.original_owner.clone())
-            .insert(auction_id.clone());
+        self.listings_by_wallet(&auction.original_owner)
+            .insert(auction_id);
         // Insert nonce for sale per collection
-        self.token_items_for_sale(nft_type.clone())
+        self.token_items_for_sale(&nft_type)
             .insert(nft_nonce);
         // Insert auction ID per token and nonce
-        self.token_auction_ids(nft_type.clone(), nft_nonce.clone())
+        self.token_auction_ids(&nft_type, nft_nonce)
             .insert(auction_id);
 
-        self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
-            .update(|qt| *qt += &nft_amount.clone());
+        self.token_items_quantity_for_sale(&nft_type, nft_nonce)
+            .update(|qt| *qt += &nft_amount);
 
+        self.collections_listed().insert(nft_type);
         //Emit event for new listed token
         self.emit_auction_token_event(auction_id, auction);
 
@@ -254,13 +253,13 @@ pub trait EsdtNftMarketplace:
                 auction.payment_token_nonce,
                 &auction.current_bid,
             );
-            self.listings_bids(auction.current_winner.clone())
+            self.listings_bids(&auction.current_winner)
                 .remove(&auction_id);
             self.emit_out_bid_event(
                 auction_id,
                 &auction,
-                caller.clone(),
-                payment_amount.clone(),
+                &caller,
+                &payment_amount,
                 current_time,
             );
         }
@@ -270,11 +269,11 @@ pub trait EsdtNftMarketplace:
         auction.current_bid = payment_amount;
         auction.current_winner = caller;
         self.auction_by_id(auction_id).set(&auction);
-        self.listings_bids(auction.current_winner.clone())
+        self.listings_bids(&auction.current_winner)
             .insert(auction_id);
 
         if let Some(max_bid) = &auction.max_bid {
-            if &auction.current_bid.clone() == max_bid {
+            if &auction.current_bid == max_bid {
                 self.buy_now_bid(auction_id);
             }
         }
@@ -282,7 +281,7 @@ pub trait EsdtNftMarketplace:
             self.emit_bid_event(auction_id, auction, current_time);
         } else {
             if let Some(max_bid) = &auction.max_bid {
-                if &auction.current_bid.clone() != max_bid {
+                if &auction.current_bid != max_bid {
                     self.emit_bid_event(auction_id, auction, current_time);
                 }
             }
@@ -321,13 +320,13 @@ pub trait EsdtNftMarketplace:
         );
         let current_time = self.blockchain().get_block_timestamp();
         self.distribute_tokens(&auction, None);
-        self.listings_by_wallet(auction.original_owner.clone())
+        self.listings_by_wallet(&auction.original_owner)
             .remove(&auction_id);
-        self.listings_bids(auction.current_winner.clone())
+        self.listings_bids(&auction.current_winner)
             .remove(&auction_id);
         self.token_auction_ids(
-            auction.auctioned_token_type.clone(),
-            auction.auctioned_token_nonce.clone(),
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
         )
         .remove(&auction_id);
         self.listings().remove(&auction_id);
@@ -357,13 +356,13 @@ pub trait EsdtNftMarketplace:
         );
         let current_time = self.blockchain().get_block_timestamp();
         self.distribute_tokens(&auction, None);
-        self.listings_by_wallet(auction.original_owner.clone())
+        self.listings_by_wallet(&auction.original_owner)
             .remove(&auction_id);
-        self.listings_bids(auction.current_winner.clone())
+        self.listings_bids(&auction.current_winner)
             .remove(&auction_id);
         self.token_auction_ids(
-            auction.auctioned_token_type.clone(),
-            auction.auctioned_token_nonce.clone(),
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
         )
         .remove(&auction_id);
         self.listings().remove(&auction_id);
@@ -442,9 +441,9 @@ pub trait EsdtNftMarketplace:
         self.distribute_tokens(&auction, Some(&buy_amount));
         auction.nr_auctioned_tokens -= &buy_amount;
         if auction.nr_auctioned_tokens == 0 {
-            self.listings_by_wallet(auction.original_owner.clone())
+            self.listings_by_wallet(&auction.original_owner)
                 .remove(&auction_id);
-            self.token_auction_ids(nft_type.clone(), nft_nonce.clone())
+            self.token_auction_ids(&nft_type, nft_nonce)
                 .remove(&auction_id);
             self.auction_by_id(auction_id).clear();
             self.listings().remove(&auction_id);
@@ -521,11 +520,11 @@ pub trait EsdtNftMarketplace:
         self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens));
 
         self.token_auction_ids(
-            auction.auctioned_token_type.clone(),
-            auction.auctioned_token_nonce.clone(),
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
         )
         .remove(&auction_id);
-        self.listings_by_wallet(auction.original_owner.clone())
+        self.listings_by_wallet(&auction.original_owner)
             .remove(&auction_id);
         self.listings().remove(&auction_id);
         self.auction_by_id(auction_id).clear();
@@ -533,7 +532,7 @@ pub trait EsdtNftMarketplace:
     }
 
     #[endpoint(changePrice)]
-    fn change_price(&self, auction_id: u64, new_price: BigUint) {
+    fn change_price(&self, auction_id: u64, new_price: &BigUint) {
         require!(
             self.does_auction_exist(auction_id),
             "Auction does not exist!"
@@ -553,7 +552,7 @@ pub trait EsdtNftMarketplace:
         );
 
         let current_time = self.blockchain().get_block_timestamp();
-        self.emit_change_price_event(auction_id, &auction, new_price.clone(), current_time);
+        self.emit_change_price_event(auction_id, &auction, new_price, current_time);
         auction.max_bid = Some(new_price.clone());
         auction.min_bid = new_price.clone();
         self.auction_by_id(auction_id).set(auction);

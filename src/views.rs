@@ -54,7 +54,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
 
     #[view(getTokenItemsForSaleCount)]
-    fn get_token_items_for_sale_count(&self, token: TokenIdentifier) -> usize {
+    fn get_token_items_for_sale_count(&self, token: &TokenIdentifier) -> usize {
         self.token_items_for_sale(token).len()
     }
 
@@ -62,15 +62,15 @@ pub trait ViewsModule: crate::storage::StorageModule {
     #[view(getOnSaleTokensForTicker)]
     fn get_on_sale_tokens_for_ticker(
         &self,
-        token: TokenIdentifier,
+        token: &TokenIdentifier,
         nonces: MultiValueEncoded<u64>,
     ) -> ManagedVec<TokensOnSale<Self::Api>> {
         let mut results = ManagedVec::new();
-        if self.token_items_for_sale(token.clone()).is_empty() {
+        if self.token_items_for_sale(token).is_empty() {
             return results;
         }
         for nonce in nonces.into_iter() {
-            let auctions = self.token_auction_ids(token.clone(), nonce);
+            let auctions = self.token_auction_ids(token, nonce);
             for auction in auctions.iter() {
                 let auction_info = self.auction_by_id(auction).get();
                 let token_type = self.blockchain().get_esdt_token_data(
@@ -90,13 +90,13 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
 
     #[view(getAuctionsForTicker)]
-    fn get_auctions_for_ticker(&self, token: TokenIdentifier) -> ManagedVec<u64> {
+    fn get_auctions_for_ticker(&self, token: &TokenIdentifier) -> ManagedVec<u64> {
         let mut results = ManagedVec::new();
-        let nonces = self.token_items_for_sale(token.clone());
+        let nonces = self.token_items_for_sale(token);
 
         let timestamp = self.blockchain().get_block_timestamp();
         for nonce in nonces.iter() {
-            let auctions = self.token_auction_ids(token.clone(), nonce);
+            let auctions = self.token_auction_ids(token, nonce);
             for auction_id in auctions.iter() {
                 let auction_info = self.auction_by_id(auction_id);
                 let dl = auction_info.get().deadline;
@@ -112,12 +112,12 @@ pub trait ViewsModule: crate::storage::StorageModule {
     #[view(checkTokenOffers)]
     fn check_token_offers(
         &self,
-        token: TokenIdentifier,
+        token: &TokenIdentifier,
         nonces: MultiValueEncoded<u64>,
     ) -> ManagedVec<BulkOffers<Self::Api>> {
         let mut results = ManagedVec::new();
         for nonce in nonces.into_iter() {
-            let offers = self.token_offers_ids(token.clone(), nonce);
+            let offers = self.token_offers_ids(token, nonce);
             if !offers.is_empty() {
                 for offer_id in offers.iter() {
                     let offer_info = self.offer_by_id(offer_id).get();
@@ -144,7 +144,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
                 let offer = self.offer_by_id(offer_id).get();
                 let result = BulkOffers {
                     offer_id: offer_id,
-                    nonce: offer.token_nonce.clone(),
+                    nonce: offer.token_nonce,
                     offer: offer,
                 };
                 results.push(result);

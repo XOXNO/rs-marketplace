@@ -169,7 +169,7 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                 &bid_split_amounts.seller,
             );
             if !self.reward_ticker().is_empty() {
-                if self.special_reward_amount(nft_type.clone()).is_empty() {
+                if self.special_reward_amount(nft_type).is_empty() {
                     if self.reward_balance().get().gt(&BigUint::from(0u32))
                         && self
                             .reward_balance()
@@ -197,24 +197,24 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                         && self
                             .reward_balance()
                             .get()
-                            .ge(&self.special_reward_amount(nft_type.clone()).get().mul(2u32))
+                            .ge(&self.special_reward_amount(nft_type).get().mul(2u32))
                     {
                         self.transfer_or_save_payment(
                             &auction.original_owner,
                             &self.reward_ticker().get(),
                             0u64,
-                            &self.special_reward_amount(nft_type.clone()).get(),
+                            &self.special_reward_amount(nft_type).get(),
                         );
 
                         self.transfer_or_save_payment(
                             &auction.current_winner,
                             &self.reward_ticker().get(),
                             0u64,
-                            &self.special_reward_amount(nft_type.clone()).get(),
+                            &self.special_reward_amount(nft_type).get(),
                         );
 
                         self.reward_balance().update(|qt| {
-                            *qt -= self.special_reward_amount(nft_type.clone()).get().mul(2u32)
+                            *qt -= self.special_reward_amount(nft_type).get().mul(2u32)
                         });
                     }
                 }
@@ -230,20 +230,20 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                 },
                 _ => &auction.nr_auctioned_tokens,
             };
-            self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
-                .update(|qt| *qt -= nft_amount_to_send.clone());
+            self.token_items_quantity_for_sale(nft_type, nft_nonce)
+                .update(|qt| *qt -= nft_amount_to_send);
 
             if self
-                .token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
+                .token_items_quantity_for_sale(nft_type, nft_nonce)
                 .get()
                 .eq(&BigUint::from(0u32))
             {
-                self.token_items_for_sale(nft_type.clone())
+                self.token_items_for_sale(nft_type)
                     .remove(&nft_nonce);
-                self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
+                self.token_items_quantity_for_sale(nft_type, nft_nonce)
                     .clear();
             }
-            if self.token_items_for_sale(nft_type.clone()).len() == 0 {
+            if self.token_items_for_sale(nft_type).len() == 0 {
                 self.collections_listed().remove(&nft_type);
             }
 
@@ -256,19 +256,19 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
         } else {
             // return to original owner
 
-            self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
+            self.token_items_quantity_for_sale(nft_type, nft_nonce)
                 .update(|qt| *qt -= &auction.nr_auctioned_tokens);
             let quantity_token = self
-                .token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
+                .token_items_quantity_for_sale(nft_type, nft_nonce)
                 .get();
             if quantity_token.eq(&BigUint::from(0u32)) {
-                self.token_items_for_sale(nft_type.clone())
+                self.token_items_for_sale(nft_type)
                     .remove(&nft_nonce);
-                self.token_items_quantity_for_sale(nft_type.clone(), nft_nonce.clone())
+                self.token_items_quantity_for_sale(nft_type, nft_nonce)
                     .clear();
             }
 
-            if self.token_items_for_sale(nft_type.clone()).len() == 0 {
+            if self.token_items_for_sale(nft_type).len() == 0 {
                 self.collections_listed().remove(&nft_type);
             }
 
