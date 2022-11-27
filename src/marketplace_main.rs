@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(generic_associated_types)]
 
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
@@ -38,16 +37,13 @@ pub trait EsdtNftMarketplace:
     #[allow(clippy::too_many_arguments)]
     fn listing(
         &self,
-        #[payment_token] nft_type: TokenIdentifier,
-        #[payment_nonce] nft_nonce: u64,
-        #[payment_amount] nft_amount: BigUint,
         min_bid: BigUint,
         max_bid: BigUint,
         deadline: u64,
-        accepted_payment_token: TokenIdentifier,
+        accepted_payment_token: EgldOrEsdtTokenIdentifier,
         bid: bool,
-        #[var_args] opt_sft_max_one_per_payment: OptionalValue<bool>,
-        #[var_args] opt_start_time: OptionalValue<u64>,
+        opt_sft_max_one_per_payment: OptionalValue<bool>,
+        opt_start_time: OptionalValue<u64>,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
 
@@ -55,12 +51,13 @@ pub trait EsdtNftMarketplace:
             self.accepted_tokens().contains(&accepted_payment_token),
             "The payment token is not whitelisted!"
         );
-
+ 
+       let (nft_type, nft_nonce, nft_amount) = self.call_value().single_esdt().into_tuple();
+       
         require!(
             nft_amount >= BigUint::from(NFT_AMOUNT),
             "Must tranfer at least one"
         );
-
         let current_time = self.blockchain().get_block_timestamp();
         let start_time = match opt_start_time {
             OptionalValue::Some(st) => st,
@@ -79,7 +76,7 @@ pub trait EsdtNftMarketplace:
         }
         if !accepted_payment_token.is_egld() {
             require!(
-                accepted_payment_token.is_valid_esdt_identifier(),
+                accepted_payment_token.is_esdt(),
                 "The payment token is not valid!"
             );
         }
@@ -189,7 +186,7 @@ pub trait EsdtNftMarketplace:
     #[endpoint]
     fn bid(
         &self,
-        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] payment_token_nonce: u64,
         #[payment_amount] payment_amount: BigUint,
         auction_id: u64,
@@ -256,7 +253,6 @@ pub trait EsdtNftMarketplace:
                 &auction.payment_token_type,
                 auction.payment_token_nonce,
                 &auction.current_bid,
-                b"Trust Market refunded your bid!",
             );
             self.listings_bids(auction.current_winner.clone())
                 .remove(&auction_id);
@@ -379,13 +375,13 @@ pub trait EsdtNftMarketplace:
     #[endpoint(buy)]
     fn buy(
         &self,
-        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] payment_token_nonce: u64,
         #[payment_amount] payment_amount: BigUint,
         auction_id: u64,
         nft_type: TokenIdentifier,
         nft_nonce: u64,
-        #[var_args] opt_sft_buy_amount: OptionalValue<BigUint>,
+        opt_sft_buy_amount: OptionalValue<BigUint>,
     ) {
         require!(self.status().get(), "Global operation enabled!");
         let mut auction = self.try_get_auction(auction_id);
@@ -464,10 +460,10 @@ pub trait EsdtNftMarketplace:
     #[endpoint(bulkBuy)]
     fn bulk_buy(
         &self,
-        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] payment_token_nonce: u64,
         #[payment_amount] payment_amount: BigUint,
-        #[var_args] auction_ids: MultiValueEncoded<u64>,
+        auction_ids: MultiValueEncoded<u64>,
     ) {
         let mut total_available = payment_amount.clone();
         for auction_id in auction_ids.into_iter() {
@@ -501,7 +497,6 @@ pub trait EsdtNftMarketplace:
                 &payment_token,
                 payment_token_nonce,
                 &total_available,
-                &[],
             )
         }
     }

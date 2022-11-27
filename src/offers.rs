@@ -23,7 +23,7 @@ pub trait CustomOffersModule:
     #[endpoint(acceptOffer)]
     fn accept_offer(
         &self,
-        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] payment_token_nonce: u64,
         #[payment_amount] payment_amount: BigUint,
         offer_id: u64,
@@ -127,7 +127,7 @@ pub trait CustomOffersModule:
                 ) = match self.get_auctioned_token_and_owner(auction_id) {
                     OptionalValue::Some(arg) => arg.into_tuple(),
                     OptionalValue::None => {
-                        elrond_wasm::sc_panic!("The auction should have values!")
+                        sc_panic!("The auction should have values!")
                     }
                 };
                 if offer.token_type == auctioned_token_type
@@ -188,7 +188,6 @@ pub trait CustomOffersModule:
                         &self.reward_ticker().get(),
                         0u64,
                         &self.reward_amount().get(),
-                        b"Trust Market rewards!",
                     );
 
                     self.transfer_or_save_payment(
@@ -196,7 +195,6 @@ pub trait CustomOffersModule:
                         &self.reward_ticker().get(),
                         0u64,
                         &self.reward_amount().get(),
-                        b"Trust Market rewards!",
                     );
 
                     self.reward_balance()
@@ -214,7 +212,6 @@ pub trait CustomOffersModule:
                         &self.reward_ticker().get(),
                         0u64,
                         &self.special_reward_amount(offer.token_type.clone()).get(),
-                        b"Trust Market rewards!",
                     );
 
                     self.transfer_or_save_payment(
@@ -222,7 +219,6 @@ pub trait CustomOffersModule:
                         &self.reward_ticker().get(),
                         0u64,
                         &self.special_reward_amount(offer.token_type.clone()).get(),
-                        b"Trust Market rewards!",
                     );
 
                     self.reward_balance().update(|qt| {
@@ -236,10 +232,9 @@ pub trait CustomOffersModule:
         }
         self.transfer_or_save_payment(
             &offer.offer_owner,
-            &offer.token_type,
+            &EgldOrEsdtTokenIdentifier::esdt(offer.token_type.clone()),
             offer.token_nonce,
             &offer.quantity,
-            b"Trust Market sent the bought token!",
         );
 
         let bid_split_amounts =
@@ -251,7 +246,6 @@ pub trait CustomOffersModule:
             &offer.payment_token_type,
             offer.payment_token_nonce,
             &bid_split_amounts.marketplace,
-            b"Trust Market fees revenue!",
         );
 
         self.transfer_or_save_payment(
@@ -259,7 +253,6 @@ pub trait CustomOffersModule:
             &offer.payment_token_type,
             offer.payment_token_nonce,
             &bid_split_amounts.creator,
-            b"Trust Market royalties for your token!",
         );
 
         // send rest of the offer to original seller
@@ -268,7 +261,6 @@ pub trait CustomOffersModule:
             &offer.payment_token_type,
             offer.payment_token_nonce,
             &bid_split_amounts.seller,
-            b"Trust Market income!",
         );
         self.check_offer_sent(
             offer.offer_owner.clone(),
@@ -291,7 +283,7 @@ pub trait CustomOffersModule:
     #[endpoint(declineOffer)]
     fn decline_offer(
         &self,
-        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] payment_token_nonce: u64,
         #[payment_amount] payment_amount: BigUint,
         offer_id: u64,
@@ -320,7 +312,6 @@ pub trait CustomOffersModule:
                 &payment_token,
                 payment_token_nonce,
                 &payment_amount,
-                &[],
             );
         } else {
             require!(
@@ -364,7 +355,6 @@ pub trait CustomOffersModule:
             &offer.payment_token_type,
             offer.payment_token_nonce,
             &offer.price,
-            self.data_or_empty_if_sc(&caller, b"Trust Market withdraw offer!"),
         );
 
         self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
@@ -393,7 +383,6 @@ pub trait CustomOffersModule:
             &offer.payment_token_type,
             offer.payment_token_nonce,
             &offer.price,
-            self.data_or_empty_if_sc(&offer.offer_owner, b"Trust Market withdraw offer!"),
         );
 
         self.token_offers_ids(offer.token_type.clone(), offer.token_nonce.clone())
@@ -456,7 +445,7 @@ pub trait CustomOffersModule:
     #[endpoint(sendOffer)]
     fn send_offer(
         &self,
-        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] payment_token_nonce: u64,
         #[payment_amount] payment_amount: BigUint,
         nft_type: TokenIdentifier,
@@ -498,7 +487,7 @@ pub trait CustomOffersModule:
         );
         if !payment_token.is_egld() {
             require!(
-                payment_token.is_valid_esdt_identifier(),
+                payment_token.is_esdt(),
                 "The payment token is not valid!"
             );
         }
@@ -554,11 +543,11 @@ pub trait CustomOffersModule:
     #[endpoint(sendGlobalOffer)]
     fn send_global_offer(
         &self,
-        #[payment_token] payment_token: TokenIdentifier,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] payment_nonce: u64,
         #[payment_amount] price: BigUint,
         collection: TokenIdentifier,
-        #[var_args] attributes: OptionalValue<ManagedBuffer>,
+        attributes: OptionalValue<ManagedBuffer>,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
 
@@ -631,7 +620,6 @@ pub trait CustomOffersModule:
             &offer.payment_token,
             offer.payment_nonce,
             &offer.price,
-            &[],
         );
         offer_id
     }
@@ -660,7 +648,6 @@ pub trait CustomOffersModule:
                 &offer.payment_token,
                 offer.payment_nonce,
                 &offer.price,
-                &[],
             );
         // }
     }
@@ -669,12 +656,12 @@ pub trait CustomOffersModule:
     #[endpoint(acceptGlobalOffer)]
     fn accept_global_offer(
         &self,
-        #[payment_token] collection: TokenIdentifier,
+        #[payment_token] collection: EgldOrEsdtTokenIdentifier,
         #[payment_nonce] c_nonce: u64,
         #[payment_amount] amount: BigUint,
         offer_id: u64,
-        #[var_args] auction_id_opt: OptionalValue<u64>,
-        #[var_args] signature: OptionalValue<Signature<Self::Api>>,
+        auction_id_opt: OptionalValue<u64>,
+        signature: OptionalValue<Signature<Self::Api>>,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
         let offer_map = self.global_offer(offer_id);
@@ -684,7 +671,7 @@ pub trait CustomOffersModule:
         let mut collection_nonce = c_nonce;
         let auction_id_option = auction_id_opt.into_option();
         if auction_id_option.is_some() && auction_id_option.clone().unwrap() > 0 {
-            require!(collection.is_empty(), "You don't have to send anything");
+            require!(collection.is_egld(), "You don't have to send anything");
             require!(amount.eq(&BigUint::zero()), "Amount has to be 0");
             let auction_id = auction_id_option.unwrap();
             let auction = self.try_get_auction(auction_id);
@@ -774,7 +761,7 @@ pub trait CustomOffersModule:
             data.append(&offer.attributes.clone().unwrap());
 
             let signer: ManagedAddress = self.signer().get();
-            let valid_signature = self.crypto().verify_ed25519_managed::<MAX_DATA_LEN>(
+            let valid_signature = self.crypto().verify_ed25519_legacy_managed::<MAX_DATA_LEN>(
                 signer.as_managed_byte_array(),
                 &data,
                 &sign.unwrap(),
@@ -798,7 +785,6 @@ pub trait CustomOffersModule:
             &offer.payment_token,
             offer.payment_nonce,
             &payments.marketplace,
-            b"Trust Market fees revenue!",
         );
 
         self.transfer_or_save_payment(
@@ -806,7 +792,6 @@ pub trait CustomOffersModule:
             &offer.payment_token,
             offer.payment_nonce,
             &payments.creator,
-            b"Trust Market royalties for your token!",
         );
 
         // send rest of the offer to original seller
@@ -815,15 +800,13 @@ pub trait CustomOffersModule:
             &offer.payment_token,
             offer.payment_nonce,
             &payments.seller,
-            b"Trust Market income!",
         );
 
         self.transfer_or_save_payment(
             &offer.owner,
-            &offer.collection,
+            &EgldOrEsdtTokenIdentifier::esdt(offer.collection.clone()),
             collection_nonce,
             &offer.quantity,
-            b"Trust Market income!",
         );
 
         self.emit_accept_global_offer_event(

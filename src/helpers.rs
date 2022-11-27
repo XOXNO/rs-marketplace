@@ -13,10 +13,9 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
     fn transfer_or_save_payment(
         &self,
         to: &ManagedAddress,
-        token_id: &TokenIdentifier,
+        token_id: &EgldOrEsdtTokenIdentifier,
         nonce: u64,
         amount: &BigUint,
-        data: &'static [u8],
     ) {
         if amount == &0 {
             return;
@@ -32,7 +31,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                 token_id,
                 nonce,
                 amount,
-                self.data_or_empty_if_sc(to, data),
             );
         }
     }
@@ -142,7 +140,7 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
         let nft_type = &auction.auctioned_token_type;
         let nft_nonce = auction.auctioned_token_nonce;
         if !auction.current_winner.is_zero() {
-            let nft_info = self.get_nft_info(nft_type, nft_nonce);
+            let nft_info = self.get_nft_info(&nft_type, nft_nonce);
             let token_id = &auction.payment_token_type;
             let nonce = auction.payment_token_nonce;
             let bid_split_amounts = self.calculate_winning_bid_split(auction);
@@ -154,7 +152,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                 token_id,
                 nonce,
                 &bid_split_amounts.marketplace,
-                b"Trust Market fees revenue!",
             );
 
             self.transfer_or_save_payment(
@@ -162,7 +159,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                 token_id,
                 nonce,
                 &bid_split_amounts.creator,
-                b"Trust Market royalties for your token!",
             );
 
             // send rest of the bid to original owner
@@ -171,7 +167,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                 token_id,
                 nonce,
                 &bid_split_amounts.seller,
-                b"Trust Market income!",
             );
             if !self.reward_ticker().is_empty() {
                 if self.special_reward_amount(nft_type.clone()).is_empty() {
@@ -186,7 +181,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                             &self.reward_ticker().get(),
                             0u64,
                             &self.reward_amount().get(),
-                            b"Trust Market rewards!",
                         );
 
                         self.transfer_or_save_payment(
@@ -194,7 +188,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                             &self.reward_ticker().get(),
                             0u64,
                             &self.reward_amount().get(),
-                            b"Trust Market rewards!",
                         );
                         self.reward_balance()
                             .update(|qt| *qt -= self.reward_amount().get().mul(2u32));
@@ -211,7 +204,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                             &self.reward_ticker().get(),
                             0u64,
                             &self.special_reward_amount(nft_type.clone()).get(),
-                            b"Trust Market rewards!",
                         );
 
                         self.transfer_or_save_payment(
@@ -219,7 +211,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
                             &self.reward_ticker().get(),
                             0u64,
                             &self.special_reward_amount(nft_type.clone()).get(),
-                            b"Trust Market rewards!",
                         );
 
                         self.reward_balance().update(|qt| {
@@ -258,10 +249,9 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
 
             self.transfer_or_save_payment(
                 &auction.current_winner,
-                nft_type,
+                &EgldOrEsdtTokenIdentifier::esdt(nft_type.clone()),
                 nft_nonce,
                 nft_amount_to_send,
-                b"Trust Market sent the bought token!",
             );
         } else {
             // return to original owner
@@ -284,10 +274,9 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
 
             self.transfer_or_save_payment(
                 &auction.original_owner,
-                nft_type,
+                &EgldOrEsdtTokenIdentifier::esdt(nft_type.clone()),
                 nft_nonce,
                 &auction.nr_auctioned_tokens,
-                b"Trust Market returned your token!",
             );
         }
     }

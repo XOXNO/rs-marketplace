@@ -6,7 +6,7 @@ pub trait CreatorModule: crate::storage::StorageModule {
     #[endpoint(claimTokens)]
     fn claim_tokens(
         &self,
-        token_id: TokenIdentifier,
+        token_id: EgldOrEsdtTokenIdentifier,
         token_nonce: u64,
         claim_destination: ManagedAddress,
     ) {
@@ -18,7 +18,7 @@ pub trait CreatorModule: crate::storage::StorageModule {
             amount_mapper.clear();
 
             self.send()
-                .direct(&claim_destination, &token_id, token_nonce, &amount, &[]);
+                .direct(&claim_destination, &token_id, token_nonce, &amount);
         }
     }
 
@@ -26,7 +26,7 @@ pub trait CreatorModule: crate::storage::StorageModule {
     #[endpoint(claimTokensForCreator)]
     fn claim_tokens_for_creator(
         &self,
-        token_id: TokenIdentifier,
+        token_id: EgldOrEsdtTokenIdentifier,
         token_nonce: u64,
         creator: ManagedAddress,
     ) {
@@ -37,7 +37,7 @@ pub trait CreatorModule: crate::storage::StorageModule {
             amount_mapper.clear();
             let caller = self.blockchain().get_caller();
             self.send()
-                .direct(&caller, &token_id, token_nonce, &amount, &[]);
+                .direct(&caller, &token_id, token_nonce, &amount);
         }
     }
 }

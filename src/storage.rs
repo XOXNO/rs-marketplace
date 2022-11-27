@@ -23,7 +23,7 @@ pub trait StorageModule {
         address: ManagedAddress,
         nft: TokenIdentifier,
         nonce: u64,
-        payment_token: TokenIdentifier,
+        payment_token: EgldOrEsdtTokenIdentifier,
     ) -> SingleValueMapper<bool>;
 
     #[view(getListingsByWallet)]
@@ -56,7 +56,7 @@ pub trait StorageModule {
 
     #[view(getAcceptedTokens)]
     #[storage_mapper("acceptedTokens")]
-    fn accepted_tokens(&self) -> SetMapper<TokenIdentifier>;
+    fn accepted_tokens(&self) -> SetMapper<EgldOrEsdtTokenIdentifier>;
 
     #[view(blackListWallets)]
     #[storage_mapper("blacklistWallets")]
@@ -71,20 +71,20 @@ pub trait StorageModule {
     fn claimable_amount(
         &self,
         address: &ManagedAddress,
-        token_id: &TokenIdentifier,
+        token_id: &EgldOrEsdtTokenIdentifier,
         token_nonce: u64,
     ) -> SingleValueMapper<BigUint>;
 
     #[view(getClaimableTokens)]
     #[storage_mapper("claimableTokens")]
-    fn claimable_tokens(&self, address: &ManagedAddress) -> SetMapper<TokenIdentifier>;
+    fn claimable_tokens(&self, address: &ManagedAddress) -> SetMapper<EgldOrEsdtTokenIdentifier>;
 
     #[view(getClaimableTokenNonces)]
     #[storage_mapper("claimableTokenNonces")]
     fn claimable_token_nonces(
         &self,
         address: &ManagedAddress,
-        token: &TokenIdentifier,
+        token: &EgldOrEsdtTokenIdentifier,
     ) -> SetMapper<u64>;
 
     #[view(getCollectionsListed)]
@@ -119,7 +119,7 @@ pub trait StorageModule {
 
     #[view(getRewardTicker)]
     #[storage_mapper("getRewardTicker")]
-    fn reward_ticker(&self) -> SingleValueMapper<TokenIdentifier>;
+    fn reward_ticker(&self) -> SingleValueMapper<EgldOrEsdtTokenIdentifier>;
 
     #[view(specialRewardAmount)]
     #[storage_mapper("specialRewardAmount")]

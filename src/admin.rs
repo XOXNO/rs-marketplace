@@ -41,7 +41,7 @@ pub trait AdminModule:
     #[endpoint(addRewardBalance)]
     fn add_reward_balance(
         &self,
-        #[payment_token] token: TokenIdentifier,
+        #[payment_token] token: EgldOrEsdtTokenIdentifier,
         #[payment_amount] amount: BigUint,
     ) {
         require!(
@@ -53,7 +53,7 @@ pub trait AdminModule:
 
     #[only_owner]
     #[endpoint(setRewardTicker)]
-    fn set_reward_ticker(&self, token: TokenIdentifier) {
+    fn set_reward_ticker(&self, token: EgldOrEsdtTokenIdentifier) {
         require!(
             self.reward_ticker().is_empty(),
             "The ticker was already set!"
@@ -75,13 +75,13 @@ pub trait AdminModule:
 
     #[only_owner]
     #[endpoint(setAcceptedTokens)]
-    fn set_accepted_tokens(&self, token: TokenIdentifier) {
+    fn set_accepted_tokens(&self, token: EgldOrEsdtTokenIdentifier) {
         self.accepted_tokens().insert(token);
     }
 
     #[only_owner]
     #[endpoint(removeAcceptedTokens)]
-    fn remove_accepted_tokens(&self, token: TokenIdentifier) -> bool {
+    fn remove_accepted_tokens(&self, token: EgldOrEsdtTokenIdentifier) -> bool {
         self.accepted_tokens().remove(&token)
     }
 
@@ -100,8 +100,7 @@ pub trait AdminModule:
                 let amount_map = self.claimable_amount(&sc, &token, nonce);
                 let amount = amount_map.get();
                 if amount > BigUint::zero() {
-                    self.send()
-                        .direct(&sc, &token, nonce, &amount_map.get(), &[]);
+                    self.send().direct(&sc, &token, nonce, &amount_map.get());
                     amount_map.clear();
                 }
             }

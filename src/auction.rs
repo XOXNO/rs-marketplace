@@ -8,7 +8,7 @@ pub struct Auction<M: ManagedTypeApi> {
     pub auctioned_token_nonce: u64,
     pub nr_auctioned_tokens: BigUint<M>,
     pub auction_type: AuctionType,
-    pub payment_token_type: TokenIdentifier<M>,
+    pub payment_token_type: EgldOrEsdtTokenIdentifier<M>,
     pub payment_token_nonce: u64,
     pub min_bid: BigUint<M>,
     pub max_bid: Option<BigUint<M>>,
@@ -28,7 +28,7 @@ pub struct Offer<M: ManagedTypeApi> {
     pub token_nonce: u64,
     pub quantity: BigUint<M>,
     pub status: OfferStatus,
-    pub payment_token_type: TokenIdentifier<M>,
+    pub payment_token_type: EgldOrEsdtTokenIdentifier<M>,
     pub payment_token_nonce: u64,
     pub price: BigUint<M>,
     pub deadline: u64,
@@ -98,7 +98,7 @@ pub struct GlobalOffer<M: ManagedTypeApi> {
     pub offer_id: u64,
     pub collection: TokenIdentifier<M>,
     pub quantity: BigUint<M>,
-    pub payment_token: TokenIdentifier<M>,
+    pub payment_token: EgldOrEsdtTokenIdentifier<M>,
     pub payment_nonce: u64,
     pub price: BigUint<M>,
     pub timestamp: u64,
@@ -115,7 +115,7 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
         let offer_id = u64::dep_decode(&mut input)?;
         let collection = TokenIdentifier::dep_decode(&mut input)?;
         let quantity = BigUint::dep_decode(&mut input)?;
-        let payment_token = TokenIdentifier::dep_decode(&mut input)?;
+        let payment_token = EgldOrEsdtTokenIdentifier::dep_decode(&mut input)?;
         let payment_nonce = u64::dep_decode(&mut input)?;
         let price = BigUint::dep_decode(&mut input)?;
         let timestamp = u64::dep_decode(&mut input)?;
