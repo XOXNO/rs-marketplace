@@ -441,7 +441,7 @@ pub trait CustomOffersModule:
         self.blacklist_wallets().remove(&wallet)
     }
 
-    #[payable("*")]
+    #[payable("EGLD")]
     #[endpoint(sendOffer)]
     fn send_offer(
         &self,
