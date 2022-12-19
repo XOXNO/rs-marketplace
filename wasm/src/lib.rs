@@ -16,6 +16,7 @@ elrond_wasm_node::wasm_endpoints! {
         blackListWallets
         bulkBuy
         buy
+        buyFor
         changePrice
         checkOfferSent
         checkTokenOffers

@@ -168,6 +168,8 @@ pub trait EventsModule {
         auction: Auction<Self::Api>,
         nr_bought_tokens: BigUint,
         current_time: u64,
+        message: OptionalValue<ManagedBuffer>,
+        buy_by: OptionalValue<ManagedAddress>,
     ) {
         self.buy_event(
             &auction.auctioned_token_type,
@@ -180,6 +182,8 @@ pub trait EventsModule {
             auction.payment_token_type,
             auction.payment_token_nonce,
             current_time,
+            message.into_option().unwrap_or(ManagedBuffer::new()),
+            buy_by.into_option().unwrap_or(ManagedAddress::default()),
         )
     }
 
@@ -372,6 +376,8 @@ pub trait EventsModule {
         #[indexed] accepted_payment_token: EgldOrEsdtTokenIdentifier,
         #[indexed] accepted_payment_token_nonce: u64,
         #[indexed] timestamp: u64,
+        #[indexed] message: ManagedBuffer,
+        #[indexed] buy_by: ManagedAddress,
     );
 
     #[event("withdraw_event")]

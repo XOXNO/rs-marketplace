@@ -485,12 +485,12 @@ pub trait CustomOffersModule:
                 .get(),
             "You already sent an offer for this NFT with the same token!"
         );
-        if !payment_token.is_egld() {
-            require!(
-                payment_token.is_esdt(),
-                "The payment token is not valid!"
-            );
-        }
+
+        require!(
+            payment_token.is_egld(),
+            "The payment token is not valid!"
+        );
+        
 
         require!(
             nft_type.is_valid_esdt_identifier(),

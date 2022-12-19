@@ -452,7 +452,99 @@ pub trait EsdtNftMarketplace:
         }
 
         let current_time = self.blockchain().get_block_timestamp();
-        self.emit_buy_event(auction_id, auction, buy_amount, current_time);
+        self.emit_buy_event(auction_id, auction, buy_amount, current_time, OptionalValue::None, OptionalValue::None);
+    }
+
+    #[payable("*")]
+    #[endpoint(buyFor)]
+    fn buy_for(
+        &self,
+        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
+        #[payment_nonce] payment_token_nonce: u64,
+        #[payment_amount] payment_amount: BigUint,
+        auction_id: u64,
+        nft_type: TokenIdentifier,
+        nft_nonce: u64,
+        opt_sft_buy_amount: OptionalValue<BigUint>,
+        buy_for: OptionalValue<ManagedAddress>,
+        message: OptionalValue<ManagedBuffer>
+    ) {
+        require!(self.status().get(), "Global operation enabled!");
+        let mut auction = self.try_get_auction(auction_id);
+        let current_time = self.blockchain().get_block_timestamp();
+        let caller = self.blockchain().get_caller();
+
+        let buy_amount = match opt_sft_buy_amount {
+            OptionalValue::Some(amt) => amt,
+            OptionalValue::None => BigUint::from(NFT_AMOUNT),
+        };
+
+        let buyer = match buy_for {
+            OptionalValue::Some(bu) => bu,
+            OptionalValue::None => caller.clone(),
+        };
+
+        let total_value = &buy_amount * &auction.min_bid;
+
+        require!(buy_amount > 0, "The amount must be more than 0!");
+        require!(
+            payment_amount.gt(&BigUint::zero()),
+            "The paid amount must be higher than 0!"
+        );
+        require!(
+            auction.auction_type == AuctionType::SftOnePerPayment
+                || auction.auction_type == AuctionType::Nft,
+            "Cannot buy for this type of auction!"
+        );
+        require!(
+            auction.auctioned_token_type == nft_type && auction.auctioned_token_nonce == nft_nonce,
+            "Auction ID does not match the token!"
+        );
+        require!(
+            auction.original_owner != buyer,
+            "Cannot buy your own token!"
+        );
+        require!(
+            buy_amount <= auction.nr_auctioned_tokens,
+            "Not enough quantity available!"
+        );
+        require!(
+            payment_token == auction.payment_token_type,
+            "Wrong token used as payment"
+        );
+        require!(
+            total_value == payment_amount,
+            "Wrong amount paid, must pay equal to the selling price!"
+        );
+        require!(
+            current_time >= auction.start_time,
+            "Cannot buy before start time!"
+        );
+        if auction.deadline != 0 {
+            require!(
+                current_time <= auction.deadline,
+                "Cannot buy after deadline!"
+            );
+        }
+
+        auction.current_winner = buyer;
+        auction.current_bid = payment_amount;
+        auction.payment_token_nonce = payment_token_nonce;
+        self.distribute_tokens(&auction, Some(&buy_amount));
+        auction.nr_auctioned_tokens -= &buy_amount;
+        if auction.nr_auctioned_tokens == 0 {
+            self.listings_by_wallet(&auction.original_owner)
+                .remove(&auction_id);
+            self.token_auction_ids(&nft_type, nft_nonce)
+                .remove(&auction_id);
+            self.auction_by_id(auction_id).clear();
+            self.listings().remove(&auction_id);
+        } else {
+            self.auction_by_id(auction_id).set(&auction);
+        }
+
+        let current_time = self.blockchain().get_block_timestamp();
+        self.emit_buy_event(auction_id, auction, buy_amount, current_time, message, OptionalValue::Some(caller));
     }
 
     #[payable("*")]
