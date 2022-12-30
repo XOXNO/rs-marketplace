@@ -1,5 +1,3 @@
-use crate::auction::AuctionType;
-
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
@@ -9,31 +7,34 @@ pub trait AdminModule:
     + crate::helpers::HelpersModule
     + crate::views::ViewsModule
     + crate::events::EventsModule
+    + crate::common::CommonModule
 {
     #[only_owner]
     #[endpoint(returnListing)]
     fn return_listing(&self, auction_id: u64) {
-        let mut auction = self.try_get_auction(auction_id);
+        let auction = self.try_get_auction(auction_id);
+        self.withdraw_auction_common(auction_id, &auction);
+        self.emit_withdraw_event(auction_id, &auction);
+    }
 
-        require!(
-            auction.current_winner.is_zero()
-                || auction.auction_type == AuctionType::SftOnePerPayment
-                || auction.auction_type == AuctionType::Nft,
-            "Cannot withdraw, the auction already has bids!"
-        );
-        auction.current_winner = ManagedAddress::zero();
-        self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens));
+    #[only_owner]
+    #[endpoint(withdrawGlobalOffers)]
+    fn withdraw_global_offers(&self, offer_id: u64) {
+        require!(self.status().get(), "Global operation enabled!");
+        let offer = self.try_get_global_offer(offer_id);
+        self.common_global_offer_remove(&offer, true);
+        self.emit_remove_global_offer_event(offer_id);
+    }
 
-        self.token_auction_ids(
-            &auction.auctioned_token_type,
-            auction.auctioned_token_nonce,
-        )
-        .remove(&auction_id);
-        self.listings_by_wallet(&auction.original_owner)
-            .remove(&auction_id);
-        self.listings().remove(&auction_id);
-        self.auction_by_id(auction_id).clear();
-        self.emit_withdraw_event(auction_id, auction);
+    #[only_owner]
+    #[endpoint(deleteOffersByWallet)]
+    fn delete_user_offers(&self, user: &ManagedAddress) {
+        let offers_root = self.offers_by_wallet(user);
+        if offers_root.len() > 0 {
+            for offer in offers_root.iter().take(80) {
+                self.common_withdraw_offer(offer, &self.offer_by_id(offer).get());
+            }
+        }
     }
 
     #[only_owner]
@@ -129,5 +130,35 @@ pub trait AdminModule:
     #[endpoint(setCutPercentage)]
     fn set_percentage_cut(&self, new_cut_percentage: u64) {
         self.try_set_bid_cut_percentage(new_cut_percentage)
+    }
+
+    #[only_owner]
+    #[endpoint(claimTokensForCreator)]
+    fn claim_tokens_for_creator(
+        &self,
+        token_id: EgldOrEsdtTokenIdentifier,
+        token_nonce: u64,
+        creator: ManagedAddress,
+    ) {
+        let amount_mapper = self.claimable_amount(&creator, &token_id, token_nonce);
+        let amount = amount_mapper.get();
+
+        if amount > 0 {
+            amount_mapper.clear();
+            let caller = self.blockchain().get_caller();
+            self.send().direct(&caller, &token_id, token_nonce, &amount);
+        }
+    }
+
+    #[only_owner]
+    #[endpoint(addBlackListWallet)]
+    fn add_blacklist(&self, wallet: ManagedAddress) -> bool {
+        self.blacklist_wallets().insert(wallet)
+    }
+
+    #[only_owner]
+    #[endpoint(removeBlackListWallet)]
+    fn remove_blacklist(&self, wallet: ManagedAddress) -> bool {
+        self.blacklist_wallets().remove(&wallet)
     }
 }

@@ -132,12 +132,10 @@ pub trait ViewsModule: crate::storage::StorageModule {
         }
         return results;
     }
+
     #[allow(clippy::too_many_arguments)]
     #[view(getBulkOffers)]
-    fn get_bulk_offers(
-        &self,
-        offers: MultiValueEncoded<u64>,
-    ) -> ManagedVec<BulkOffers<Self::Api>> {
+    fn get_bulk_offers(&self, offers: MultiValueEncoded<u64>) -> ManagedVec<BulkOffers<Self::Api>> {
         let mut results = ManagedVec::new();
         for offer_id in offers.into_iter() {
             if !self.offer_by_id(offer_id).is_empty() {
@@ -184,6 +182,16 @@ pub trait ViewsModule: crate::storage::StorageModule {
         !self.auction_by_id(auction_id).is_empty()
     }
 
+    #[view(doesGlobalOfferExist)]
+    fn does_global_offer_exist(&self, auction_id: u64) -> bool {
+        !self.global_offer(auction_id).is_empty()
+    }
+
+    #[view(doesOfferExist)]
+    fn does_offer_exist(&self, offer_id: u64) -> bool {
+        !self.offer_by_id(offer_id).is_empty()
+    }
+
     #[view(isSCWl)]
     fn is_sc_wl(&self, sc: ManagedAddress) -> bool {
         self.whitelisted_contracts().contains(&sc)
@@ -211,24 +219,10 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
 
     #[view(getAuctionedTokenAndOwner)]
-    fn get_auctioned_token_and_owner(
-        &self,
-        auction_id: u64,
-    ) -> OptionalValue<MultiValue5<TokenIdentifier, u64, BigUint, ManagedAddress, AuctionType>>
-    {
+    fn get_auctioned_token_and_owner(&self, auction_id: u64) -> OptionalValue<Auction<Self::Api>> {
         if self.does_auction_exist(auction_id) {
             let auction = self.auction_by_id(auction_id).get();
-
-            OptionalValue::Some(
-                (
-                    auction.auctioned_token_type,
-                    auction.auctioned_token_nonce,
-                    auction.nr_auctioned_tokens,
-                    auction.original_owner,
-                    auction.auction_type,
-                )
-                    .into(),
-            )
+            OptionalValue::Some(auction)
         } else {
             OptionalValue::None
         }

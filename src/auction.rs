@@ -2,7 +2,7 @@ elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 use elrond_wasm::elrond_codec::NestedDecodeInput;
 
-#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct Auction<M: ManagedTypeApi> {
     pub auctioned_token_type: TokenIdentifier<M>,
     pub auctioned_token_nonce: u64,
@@ -52,7 +52,15 @@ pub struct BulkOffers<M: ManagedTypeApi> {
 }
 
 #[derive(
-    ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, PartialEq, Debug,
+    ManagedVecItem,
+    TopEncode,
+    TopDecode,
+    NestedEncode,
+    NestedDecode,
+    TypeAbi,
+    PartialEq,
+    Debug,
+    Clone,
 )]
 pub enum AuctionType {
     None,
@@ -72,6 +80,7 @@ pub enum AuctionType {
     PartialEq,
     Debug,
     Clone,
+    Copy,
 )]
 pub enum OfferStatus {
     Pending,
@@ -80,18 +89,11 @@ pub enum OfferStatus {
     Withdraw,
 }
 
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
-pub struct EsdtToken<M: ManagedTypeApi> {
-    pub token_type: TokenIdentifier<M>,
-    pub nonce: u64,
-}
-
 pub struct BidSplitAmounts<M: ManagedTypeApi> {
     pub creator: BigUint<M>,
     pub marketplace: BigUint<M>,
     pub seller: BigUint<M>,
 }
-
 
 #[derive(TopEncode, TypeAbi)]
 pub struct GlobalOffer<M: ManagedTypeApi> {
@@ -103,7 +105,7 @@ pub struct GlobalOffer<M: ManagedTypeApi> {
     pub price: BigUint<M>,
     pub timestamp: u64,
     pub owner: ManagedAddress<M>,
-    pub attributes: Option<ManagedBuffer<M>>
+    pub attributes: Option<ManagedBuffer<M>>,
 }
 
 impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
@@ -136,7 +138,7 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
             price,
             timestamp,
             owner,
-            attributes
+            attributes,
         })
     }
 }

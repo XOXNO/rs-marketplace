@@ -4,12 +4,14 @@ elrond_wasm::derive_imports!();
 use core::convert::TryInto;
 
 use crate::{
-    auction::{Auction, AuctionType, BidSplitAmounts, GlobalOffer, Offer},
-    NFT_AMOUNT, PERCENTAGE_TOTAL,
+    auction::{Auction, BidSplitAmounts, GlobalOffer, Offer},
+    PERCENTAGE_TOTAL,
 };
 
 #[elrond_wasm::module]
-pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModule {
+pub trait HelpersModule:
+    crate::storage::StorageModule + crate::views::ViewsModule + crate::events::EventsModule
+{
     fn transfer_or_save_payment(
         &self,
         to: &ManagedAddress,
@@ -26,12 +28,7 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
             self.claimable_amount(to, token_id, nonce)
                 .update(|amt| *amt += amount);
         } else {
-            self.send().direct(
-                to,
-                token_id,
-                nonce,
-                amount,
-            );
+            self.send().direct(to, token_id, nonce, amount);
         }
     }
 
@@ -67,6 +64,22 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
             "Auction does not exist!"
         );
         self.auction_by_id(auction_id).get()
+    }
+
+    fn try_get_global_offer(&self, offer_id: u64) -> GlobalOffer<Self::Api> {
+        require!(
+            self.does_global_offer_exist(offer_id),
+            "Auction does not exist!"
+        );
+        self.global_offer(offer_id).get()
+    }
+
+    fn try_get_offer(&self, offer_id: u64) -> Offer<Self::Api> {
+        require!(
+            self.does_offer_exist(offer_id),
+            "Auction does not exist!"
+        );
+        self.offer_by_id(offer_id).get()
     }
 
     fn calculate_cut_amount(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
@@ -122,8 +135,7 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
             &cut_fee + &nft_info.royalties < PERCENTAGE_TOTAL,
             "Marketplace cut plus royalties exceeds 100%"
         );
-        let creator_royalties =
-            self.calculate_cut_amount(&offer.price, &nft_info.royalties);
+        let creator_royalties = self.calculate_cut_amount(&offer.price, &nft_info.royalties);
         let bid_cut_amount = self.calculate_cut_amount(&offer.price, &cut_fee);
         let mut seller_amount_to_send = offer.price.clone();
         seller_amount_to_send -= &creator_royalties;
@@ -133,151 +145,6 @@ pub trait HelpersModule: crate::storage::StorageModule + crate::views::ViewsModu
             creator: creator_royalties,
             marketplace: bid_cut_amount,
             seller: seller_amount_to_send,
-        }
-    }
-
-    fn distribute_tokens(&self, auction: &Auction<Self::Api>, opt_sft_amount: Option<&BigUint>) {
-        let nft_type = &auction.auctioned_token_type;
-        let nft_nonce = auction.auctioned_token_nonce;
-        if !auction.current_winner.is_zero() {
-            let nft_info = self.get_nft_info(&nft_type, nft_nonce);
-            let token_id = &auction.payment_token_type;
-            let nonce = auction.payment_token_nonce;
-            let bid_split_amounts = self.calculate_winning_bid_split(auction);
-
-            // send part as cut for contract owner
-            let owner = self.blockchain().get_owner_address();
-            self.transfer_or_save_payment(
-                &owner,
-                token_id,
-                nonce,
-                &bid_split_amounts.marketplace,
-            );
-
-            self.transfer_or_save_payment(
-                &nft_info.creator,
-                token_id,
-                nonce,
-                &bid_split_amounts.creator,
-            );
-
-            // send rest of the bid to original owner
-            self.transfer_or_save_payment(
-                &auction.original_owner,
-                token_id,
-                nonce,
-                &bid_split_amounts.seller,
-            );
-            if !self.reward_ticker().is_empty() {
-                if self.special_reward_amount(nft_type).is_empty() {
-                    if self.reward_balance().get().gt(&BigUint::from(0u32))
-                        && self
-                            .reward_balance()
-                            .get()
-                            .ge(&self.reward_amount().get().mul(2u32))
-                    {
-                        self.transfer_or_save_payment(
-                            &auction.original_owner,
-                            &self.reward_ticker().get(),
-                            0u64,
-                            &self.reward_amount().get(),
-                        );
-
-                        self.transfer_or_save_payment(
-                            &auction.current_winner,
-                            &self.reward_ticker().get(),
-                            0u64,
-                            &self.reward_amount().get(),
-                        );
-                        self.reward_balance()
-                            .update(|qt| *qt -= self.reward_amount().get().mul(2u32));
-                    }
-                } else {
-                    if self.reward_balance().get().gt(&BigUint::from(0u32))
-                        && self
-                            .reward_balance()
-                            .get()
-                            .ge(&self.special_reward_amount(nft_type).get().mul(2u32))
-                    {
-                        self.transfer_or_save_payment(
-                            &auction.original_owner,
-                            &self.reward_ticker().get(),
-                            0u64,
-                            &self.special_reward_amount(nft_type).get(),
-                        );
-
-                        self.transfer_or_save_payment(
-                            &auction.current_winner,
-                            &self.reward_ticker().get(),
-                            0u64,
-                            &self.special_reward_amount(nft_type).get(),
-                        );
-
-                        self.reward_balance().update(|qt| {
-                            *qt -= self.special_reward_amount(nft_type).get().mul(2u32)
-                        });
-                    }
-                }
-            }
-            // send NFT to auction winner
-            let nft_amount = BigUint::from(NFT_AMOUNT);
-            let nft_amount_to_send = match auction.auction_type {
-                AuctionType::Nft => &nft_amount,
-                AuctionType::NftBid => &nft_amount,
-                AuctionType::SftOnePerPayment => match opt_sft_amount {
-                    Some(amt) => amt,
-                    None => &nft_amount,
-                },
-                _ => &auction.nr_auctioned_tokens,
-            };
-            self.token_items_quantity_for_sale(nft_type, nft_nonce)
-                .update(|qt| *qt -= nft_amount_to_send);
-
-            if self
-                .token_items_quantity_for_sale(nft_type, nft_nonce)
-                .get()
-                .eq(&BigUint::from(0u32))
-            {
-                self.token_items_for_sale(nft_type)
-                    .remove(&nft_nonce);
-                self.token_items_quantity_for_sale(nft_type, nft_nonce)
-                    .clear();
-            }
-            if self.token_items_for_sale(nft_type).len() == 0 {
-                self.collections_listed().remove(&nft_type);
-            }
-
-            self.transfer_or_save_payment(
-                &auction.current_winner,
-                &EgldOrEsdtTokenIdentifier::esdt(nft_type.clone()),
-                nft_nonce,
-                nft_amount_to_send,
-            );
-        } else {
-            // return to original owner
-
-            self.token_items_quantity_for_sale(nft_type, nft_nonce)
-                .update(|qt| *qt -= &auction.nr_auctioned_tokens);
-            let quantity_token = self
-                .token_items_quantity_for_sale(nft_type, nft_nonce)
-                .get();
-            if quantity_token.eq(&BigUint::from(0u32)) {
-                self.token_items_for_sale(nft_type)
-                    .remove(&nft_nonce);
-                self.token_items_quantity_for_sale(nft_type, nft_nonce)
-                    .clear();
-            }
-
-            if self.token_items_for_sale(nft_type).len() == 0 {
-                self.collections_listed().remove(&nft_type);
-            }
-
-            self.transfer_or_save_payment(
-                &auction.original_owner,
-                &EgldOrEsdtTokenIdentifier::esdt(nft_type.clone()),
-                nft_nonce,
-                &auction.nr_auctioned_tokens,
-            );
         }
     }
 

@@ -27,6 +27,7 @@ pub trait EventsModule {
             current_time,
         )
     }
+    
     fn emit_out_bid_event(
         self,
         auction_id: u64,
@@ -85,7 +86,7 @@ pub trait EventsModule {
         )
     }
 
-    fn emit_withdraw_offer_event(self, offer_id: u64, offer: Offer<Self::Api>) {
+    fn emit_withdraw_offer_event(self, offer_id: u64, offer: &Offer<Self::Api>) {
         self.withdraw_offer_token_event(
             &offer.token_type,
             offer.token_nonce,
@@ -145,7 +146,7 @@ pub trait EventsModule {
     fn emit_end_auction_event(
         self,
         auction_id: u64,
-        auction: Auction<Self::Api>,
+        auction: &Auction<Self::Api>,
         current_time: u64,
     ) {
         self.end_auction_event(
@@ -187,7 +188,7 @@ pub trait EventsModule {
         )
     }
 
-    fn emit_withdraw_event(self, auction_id: u64, auction: Auction<Self::Api>) {
+    fn emit_withdraw_event(self, auction_id: u64, auction: &Auction<Self::Api>) {
         let current_time = self.blockchain().get_block_timestamp();
         self.withdraw_event(
             &auction.auctioned_token_type,

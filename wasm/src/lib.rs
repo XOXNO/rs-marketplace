@@ -27,6 +27,7 @@ elrond_wasm_node::wasm_endpoints! {
         defaultRewardAmount
         deleteOffersByWallet
         doesAuctionExist
+        doesGlobalOfferExist
         doesOfferExist
         endAuction
         expiredOffersCount
