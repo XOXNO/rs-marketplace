@@ -38,6 +38,29 @@ pub trait AdminModule:
     }
 
     #[only_owner]
+    #[endpoint(cleanExpiredOffers)]
+    fn clean_expired_offers(&self) -> i32 {
+        let timestamp = self.blockchain().get_block_timestamp();
+        let mut found = 0;
+        for offer_id in self.offers().iter() {
+            let offer = self.offer_by_id(offer_id);
+            if !offer.is_empty() {
+                let main_offer = offer.get();
+                if main_offer.deadline < timestamp {
+                    found += 1;
+                    self.common_withdraw_offer(offer_id, &main_offer);
+                }
+                if found == 150 {
+                    break;
+                }
+            } else {
+                self.offers().remove(&offer_id);
+            }
+        }
+        found
+    }
+
+    #[only_owner]
     #[payable("*")]
     #[endpoint(addRewardBalance)]
     fn add_reward_balance(

@@ -161,25 +161,10 @@ pub trait CustomOffersModule:
             let auction_id = iter.next().unwrap();
             let auction = self.try_get_auction(auction_id);
             require!(
-                auction.auction_type == AuctionType::Nft,
-                "Cannot decline offers for auctions, just for listings with a fixed price!"
-            );
-            require!(
                 owner == auction.original_owner,
                 "Just the owner of the NFT can decline the offer!"
             );
-            require!(
-                auction.nr_auctioned_tokens == offer.quantity,
-                "The quantity sent is not matching the offer!"
-            );
-            require!(
-                auction.auctioned_token_nonce == offer.token_nonce,
-                "The nonce used is not matching the offer!"
-            );
-            require!(
-                auction.auctioned_token_type == offer.token_type,
-                "The token sent is not matching the offer!"
-            );
+            self.common_offer_auction_check(&offer, &auction);
         }
         self.common_withdraw_offer(offer_id, &offer);
     }
@@ -199,42 +184,18 @@ pub trait CustomOffersModule:
         self.emit_withdraw_offer_event(offer_id, &offer);
     }
 
-    #[endpoint(cleanExpiredOffers)]
-    fn clean_expired_offers(&self) -> i32 {
-        let timestamp = self.blockchain().get_block_timestamp();
-        let mut found = 0;
-        for offer_id in self.offers().iter() {
-            let offer = self.offer_by_id(offer_id);
-            if !offer.is_empty() {
-                let main_offer = offer.get();
-                if main_offer.deadline < timestamp {
-                    found += 1;
-                    self.common_withdraw_offer(offer_id, &main_offer);
-                }
-                if found == 150 {
-                    break;
-                }
-            } else {
-                self.offers().remove(&offer_id);
-            }
-        }
-        found
-    }
-
     #[payable("EGLD")]
     #[endpoint(sendOffer)]
     fn send_offer(
         &self,
-        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
-        #[payment_nonce] payment_token_nonce: u64,
-        #[payment_amount] payment_amount: BigUint,
         nft_type: TokenIdentifier,
         nft_nonce: u64,
         nft_amount: BigUint,
         deadline: u64,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
-
+        let (payment_token, payment_token_nonce, payment_amount) =
+            self.call_value().egld_or_single_esdt().into_tuple();
         require!(
             self.accepted_tokens().contains(&payment_token),
             "The payment token is not whitelisted!"
@@ -372,14 +333,12 @@ pub trait CustomOffersModule:
     #[endpoint(acceptGlobalOffer)]
     fn accept_global_offer(
         &self,
-        #[payment_token] collection: EgldOrEsdtTokenIdentifier,
-        #[payment_nonce] c_nonce: u64,
-        #[payment_amount] amount: BigUint,
         offer_id: u64,
         auction_id_opt: OptionalValue<u64>,
         signature: OptionalValue<Signature<Self::Api>>,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
+        let (collection, c_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
         let offer_map = self.global_offer(offer_id);
         require!(!offer_map.is_empty(), "This offer is already removed!");
         let seller = self.blockchain().get_caller();

@@ -205,7 +205,7 @@ pub trait CommonModule:
     fn common_offer_auction_check(&self, offer: &Offer<Self::Api>, auction: &Auction<Self::Api>) {
         require!(
             auction.auction_type == AuctionType::Nft,
-            "Cannot accept offers for auctions, just for listings with a fixed price!"
+            "Cannot accept or decline offers for auctions, just for listings with a fixed price!"
         );
 
         require!(

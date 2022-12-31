@@ -159,15 +159,15 @@ getTokenBalanceDifference() {
 }
 
 getTokenItemsForSale() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSale" --arguments 0x4b42422d316339353733 --proxy=${PROXY}
+    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSale" --arguments str:COMPANIONS-71cb7c --proxy=${PROXY}
 }
 
 getTokenItemsQuantityForSale() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsQuantityForSale" --arguments str:MICE-f17a5e 188 --proxy=${PROXY}
+    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsQuantityForSale" --arguments str:COMPANIONS-71cb7c 15 --proxy=${PROXY}
 }
 
 getTokenItemsForSaleCount() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSaleCount" --arguments 0x4b42422d316339353733 --proxy=${PROXY}
+    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSaleCount" --arguments str:COMPANIONS-71cb7c --proxy=${PROXY}
 }
 
 doesAuctionExist() {
