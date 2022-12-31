@@ -46,7 +46,7 @@ setStatusOn() {
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqgfjw2kddg8z3e36shhgsfmvlyhndqhclfcmqukmsx7 --send --proxy=${PROXY} --chain=D
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqe752yyef0m3wnqh5q6dpxd6m6f0zk2npd8ssev5kz2 --send --proxy=${PROXY} --chain=D
 }
 
 setStatusOff() {
