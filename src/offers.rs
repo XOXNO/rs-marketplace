@@ -8,6 +8,7 @@ use crate::common;
 use crate::events;
 use crate::helpers;
 use crate::views;
+use crate::wrapping;
 use crate::{storage, NFT_AMOUNT, PERCENTAGE_TOTAL};
 use elrond_wasm::api::ED25519_SIGNATURE_BYTE_LEN;
 
@@ -23,6 +24,7 @@ pub trait CustomOffersModule:
     + events::EventsModule
     + views::ViewsModule
     + common::CommonModule
+    + wrapping::WrappingModule
 {
     #[payable("*")]
     #[endpoint(acceptOffer)]
@@ -114,6 +116,7 @@ pub trait CustomOffersModule:
             &seller,
             &offer.offer_owner,
             &self.calculate_offer_bid_split(&offer, &creator_royalties_percentage),
+            false,
         );
         self.common_offer_remove(offer_id, &offer);
         self.emit_accept_offer_event(offer_id, offer, &seller, auction_removed);
@@ -420,6 +423,7 @@ pub trait CustomOffersModule:
             &seller,
             &offer.owner,
             &self.calculate_global_offer_split(&offer, &nft_info),
+            false
         );
         self.emit_accept_global_offer_event(
             &offer,

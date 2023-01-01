@@ -8,6 +8,7 @@ pub trait AdminModule:
     + crate::views::ViewsModule
     + crate::events::EventsModule
     + crate::common::CommonModule
+    + crate::wrapping::WrappingModule
 {
     #[only_owner]
     #[endpoint(returnListing)]

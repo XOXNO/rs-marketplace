@@ -142,3 +142,17 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
         })
     }
 }
+
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct BulkListing<M: ManagedTypeApi> {
+    pub min_bid: BigUint<M>,
+    pub max_bid: BigUint<M>,
+    pub deadline: u64,
+    pub accepted_payment_token: EgldOrEsdtTokenIdentifier<M>,
+    pub bid: bool,
+    pub opt_sft_max_one_per_payment: bool,
+    pub opt_start_time: u64,
+    pub collection: EgldOrEsdtTokenIdentifier<M>,
+    pub nonce: u64,
+    pub nft_amount: BigUint<M>,
+}

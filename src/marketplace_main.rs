@@ -12,6 +12,7 @@ pub mod helpers;
 pub mod offers;
 pub mod storage;
 pub mod views;
+pub mod wrapping;
 
 const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
@@ -26,11 +27,20 @@ pub trait EsdtNftMarketplace:
     + admin::AdminModule
     + creator::CreatorModule
     + common::CommonModule
+    + wrapping::WrappingModule
 {
     #[init]
-    fn init(&self, bid_cut_percentage: u64, signer: ManagedAddress) {
+    fn init(
+        &self,
+        bid_cut_percentage: u64,
+        signer: ManagedAddress,
+        wrapping_sc: ManagedAddress,
+        wrapping_token: TokenIdentifier,
+    ) {
         self.try_set_bid_cut_percentage(bid_cut_percentage);
         self.signer().set_if_empty(&signer);
+        self.wrapping().set(wrapping_sc);
+        self.wrapping_token().set(wrapping_token);
     }
 
     #[payable("*")]
@@ -183,6 +193,152 @@ pub trait EsdtNftMarketplace:
     }
 
     #[payable("*")]
+    #[endpoint(bulkListing)]
+    fn bulk_listings(&self, listings: MultiValueEncoded<BulkListing<Self::Api>>) {
+        require!(self.status().get(), "Global operation enabled!");
+        let payments = self.call_value().all_esdt_transfers();
+        let marketplace_cut_percentage = &self.bid_cut_percentage().get();
+        let current_time = self.blockchain().get_block_timestamp();
+        let caller = self.blockchain().get_caller();
+
+        let mut map_listings = self.listings();
+        let mut map_caller_listings = self.listings_by_wallet(&caller);
+        let mut map_collections = self.collections_listed();
+
+        require!(listings.len() == payments.len(), "Invalid body sent!");
+        for (index, listing) in listings.to_vec().iter().enumerate() {
+            let (nft_type, nft_nonce, nft_amount) = payments.get(index).into_tuple();
+            require!(
+                nft_amount >= BigUint::from(NFT_AMOUNT),
+                "Must tranfer at least one"
+            );
+            require!(
+                nft_nonce == listing.nonce
+                    && nft_type == listing.collection
+                    && nft_amount == listing.nft_amount,
+                "The payment item is not matching the listing item"
+            );
+            let start_time = listing.opt_start_time;
+
+            let sft_max_one_per_payment = listing.opt_sft_max_one_per_payment;
+
+            if sft_max_one_per_payment || !listing.bid {
+                require!(
+                    listing.min_bid == listing.max_bid,
+                    "Price must be fixed for this type of auction (min bid equal to max bid)"
+                );
+            }
+            if !listing.accepted_payment_token.is_egld() {
+                require!(
+                    listing.accepted_payment_token.is_esdt(),
+                    "The payment token is not valid!"
+                );
+            }
+
+            let opt_max_bid = if listing.max_bid > 0u32 {
+                require!(
+                    listing.min_bid <= listing.max_bid,
+                    "Min bid can't higher than max bid"
+                );
+
+                Some(&listing.max_bid)
+            } else {
+                None
+            };
+
+            require!(listing.min_bid > 0u32, "Min bid must be higher than 0!");
+            require!(
+                nft_nonce > 0,
+                "Only Semi-Fungible and Non-Fungible tokens can be auctioned"
+            );
+            require!(
+                listing.deadline > current_time || listing.deadline == 0,
+                "Deadline can't be in the past"
+            );
+            if listing.deadline != 0 {
+                require!(
+                    start_time >= current_time && start_time < listing.deadline,
+                    "Invalid start time"
+                );
+            }
+
+            let creator_royalties_percentage = self.get_nft_info(&nft_type, nft_nonce).royalties;
+
+            require!(
+                marketplace_cut_percentage + &creator_royalties_percentage < PERCENTAGE_TOTAL,
+                "Marketplace cut plus royalties exceeds 100%"
+            );
+
+            let accepted_payment_nft_nonce = 0;
+
+            let auction_id = self.last_valid_auction_id().get() + 1;
+            self.last_valid_auction_id().set(&auction_id);
+
+            let auction_type = if nft_amount > BigUint::from(NFT_AMOUNT) {
+                match sft_max_one_per_payment {
+                    true => AuctionType::SftOnePerPayment,
+                    false => AuctionType::SftAll,
+                }
+            } else {
+                match listing.bid {
+                    true => AuctionType::NftBid,
+                    false => AuctionType::Nft,
+                }
+            };
+
+            if listing.deadline == 0 {
+                require!(
+                    auction_type == AuctionType::Nft
+                        || auction_type == AuctionType::SftOnePerPayment
+                        || (auction_type == AuctionType::SftAll
+                            && &listing.min_bid == &listing.max_bid),
+                    "Deadline is mandatory for this auction type!"
+                );
+            }
+
+            let auction = Auction {
+                auctioned_token_type: nft_type.clone(),
+                auctioned_token_nonce: nft_nonce,
+
+                nr_auctioned_tokens: nft_amount.clone(),
+                auction_type,
+
+                payment_token_type: listing.accepted_payment_token,
+                payment_token_nonce: accepted_payment_nft_nonce,
+
+                min_bid: listing.min_bid,
+                max_bid: opt_max_bid.cloned(),
+                start_time,
+                deadline: listing.deadline,
+                original_owner: caller.clone(),
+                current_bid: BigUint::zero(),
+                current_winner: ManagedAddress::zero(),
+                marketplace_cut_percentage: marketplace_cut_percentage.clone(),
+                creator_royalties_percentage,
+            };
+
+            // Map ID with Auction Struct
+            self.auction_by_id(auction_id).set(&auction);
+            map_listings.insert(auction_id); // Push ID to the auctions list
+
+            // Add to the owner wallet the new Auction ID
+            map_caller_listings.insert(auction_id);
+            // Insert nonce for sale per collection
+            self.token_items_for_sale(&nft_type).insert(nft_nonce);
+            // Insert auction ID per token and nonce
+            self.token_auction_ids(&nft_type, nft_nonce)
+                .insert(auction_id);
+
+            self.token_items_quantity_for_sale(&nft_type, nft_nonce)
+                .update(|qt| *qt += &nft_amount);
+
+            map_collections.insert(nft_type);
+            //Emit event for new listed token
+            self.emit_auction_token_event(auction_id, auction);
+        }
+    }
+
+    #[payable("*")]
     #[endpoint]
     fn bid(&self, auction_id: u64, nft_type: TokenIdentifier, nft_nonce: u64) {
         require!(self.status().get(), "Global operation enabled!");
@@ -192,7 +348,7 @@ pub trait EsdtNftMarketplace:
         let mut auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
         let current_time = self.blockchain().get_block_timestamp();
-
+        let wegld = self.wrapping_token().get();
         self.common_bid_checks(
             &auction,
             &nft_type,
@@ -200,6 +356,7 @@ pub trait EsdtNftMarketplace:
             &payment_token,
             payment_token_nonce,
             &payment_amount,
+            &wegld,
         );
 
         require!(
@@ -229,9 +386,19 @@ pub trait EsdtNftMarketplace:
                 .remove(&auction_id);
             self.emit_out_bid_event(auction_id, &auction, &caller, &payment_amount, current_time);
         }
-
-        // update auction bid and winner
-        auction.current_bid = payment_amount;
+        let wrapping = self.require_egld_conversion(&auction, &payment_token, &wegld);
+        if wrapping {
+            // update auction bid and winner
+            auction.current_bid = payment_amount.clone();
+            if auction.payment_token_type.is_egld() {
+                self.unwrap_egld(payment_amount);
+            } else if auction.payment_token_type.is_esdt() {
+                self.wrap_egld(payment_amount);
+            }
+        } else {
+            // update auction bid and winner
+            auction.current_bid = payment_amount;
+        }
         auction.current_winner = caller;
         self.auction_by_id(auction_id).set(&auction);
         self.listings_bids(&auction.current_winner)
@@ -344,6 +511,8 @@ pub trait EsdtNftMarketplace:
         };
 
         let total_value = &buy_amount * &auction.min_bid;
+
+        let wegld = self.wrapping_token().get();
         self.common_bid_checks(
             &auction,
             &nft_type,
@@ -351,6 +520,7 @@ pub trait EsdtNftMarketplace:
             &payment_token,
             payment_token_nonce,
             &payment_amount,
+            &wegld,
         );
 
         require!(buy_amount > 0, "Must buy more than 0");
@@ -371,7 +541,8 @@ pub trait EsdtNftMarketplace:
 
         auction.current_winner = buyer.clone();
         auction.current_bid = payment_amount;
-        self.distribute_tokens(&auction, Option::Some(&buy_amount));
+        let wrapping = self.require_egld_conversion(&auction, &payment_token, &wegld);
+        self.distribute_tokens(&auction, Option::Some(&buy_amount), wrapping);
         auction.nr_auctioned_tokens -= &buy_amount;
         if auction.nr_auctioned_tokens == 0 {
             self.remove_auction_common(auction_id, &auction);

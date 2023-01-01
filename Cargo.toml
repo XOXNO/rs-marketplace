@@ -11,6 +11,9 @@ path = "src/marketplace_main.rs"
 [dependencies.elrond-wasm]
 version = "0.38.0"
 
+[dependencies.elrond-sc-wegld-swap]
+version = "0.38.0"
+
 [dependencies.elrond-wasm-modules]
 version = "0.38.0"
 

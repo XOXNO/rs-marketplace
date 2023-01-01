@@ -16,6 +16,7 @@ EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
 ADDRESS=erd1qqqqqqqqqqqqqpgqn4fnwl43hhchz9emdy66eh5azzhl599zd8ssxjdyh3
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-devnet)
 PROXY=https://devnet-gateway.elrond.com
+SHARD1WrappingWEGLD=erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnlr88dpfw06677lxe9w0n4suz00uh
 
 deploy() {
     echo ${PROJECT}
@@ -33,7 +34,7 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    erdpy --verbose contract upgrade ${ADDRESS} --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" --project=${PROJECT} --recall-nonce --pem=${ALICE} \
+    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD1WrappingWEGLD} str:WEGLD-d7c6bb --project=${PROJECT} --recall-nonce --pem=${ALICE} \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 
@@ -54,7 +55,7 @@ setStatusOff() {
 }
 
 setAcceptedTokens() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=10500000 --function="setAcceptedTokens" --arguments 0x45474c44 --send --proxy=${PROXY} --chain=D
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=10500000 --function="setAcceptedTokens" --arguments str:WEGLD-d7c6bb --send --proxy=${PROXY} --chain=D
 }
 removeAcceptedTokens() {
     erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=D

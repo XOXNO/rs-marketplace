@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           93
+// Endpoints:                           96
 // Async Callback (empty):               1
-// Total number of exported functions:  95
+// Total number of exported functions:  98
 
 #![no_std]
 
@@ -15,6 +15,7 @@ elrond_wasm_node::wasm_endpoints! {
     esdt_nft_marketplace
     (
         listing
+        bulkListing
         bid
         endAuction
         buy
@@ -23,6 +24,8 @@ elrond_wasm_node::wasm_endpoints! {
         withdraw
         changePrice
         getSigner
+        wrappingSC
+        wrappingToken
         getMarketplaceCutPercentage
         getOffersByWallet
         checkOfferSent

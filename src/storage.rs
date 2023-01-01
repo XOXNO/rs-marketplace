@@ -8,6 +8,14 @@ pub trait StorageModule {
     #[storage_mapper("signer")]
     fn signer(&self) -> SingleValueMapper<ManagedAddress>;
 
+    #[view(wrappingSC)]
+    #[storage_mapper("wrappingSC")]
+    fn wrapping(&self) -> SingleValueMapper<ManagedAddress>;
+
+    #[view(wrappingToken)]
+    #[storage_mapper("wrappingToken")]
+    fn wrapping_token(&self) -> SingleValueMapper<TokenIdentifier>;
+
     #[view(getMarketplaceCutPercentage)]
     #[storage_mapper("bidCutPercentage")]
     fn bid_cut_percentage(&self) -> SingleValueMapper<BigUint>;
