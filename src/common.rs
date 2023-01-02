@@ -395,6 +395,7 @@ pub trait CommonModule:
             bid_split_amounts.marketplace.clone(),
             payment_token_nonce,
             wegld,
+            wrapping,
         );
     }
 
@@ -440,12 +441,13 @@ pub trait CommonModule:
         amount: BigUint,
         payment_token_nonce: u64,
         wegld: TokenIdentifier,
+        wrapping: bool,
     ) {
         let sc_owner = self.blockchain().get_owner_address();
-        if payment_token_id.is_egld() {
-            self.wrap_egld(amount.clone());
-            self.swap_wegld_for_xoxno(&sc_owner, EsdtTokenPayment::new(wegld, 0, amount));
-        } else if payment_token_id.eq(&wegld) {
+        if payment_token_id.is_egld() ||  payment_token_id.eq(&wegld) {
+            if !wrapping {
+                self.wrap_egld(amount.clone());
+            }
             self.swap_wegld_for_xoxno(&sc_owner, EsdtTokenPayment::new(wegld, 0, amount));
         } else {
             self.transfer_or_save_payment(

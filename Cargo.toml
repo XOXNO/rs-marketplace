@@ -6,7 +6,7 @@ edition = "2021"
 publish = false
 
 [lib]
-path = "src/main.rs"
+path = "src/init.rs"
 
 [dependencies.elrond-wasm]
 version = "0.38.0"

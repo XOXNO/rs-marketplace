@@ -19,7 +19,7 @@ const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
 
 #[elrond_wasm::contract]
-pub trait EsdtNftMarketplace:
+pub trait XOXNOProtocol:
     storage::StorageModule
     + views::ViewsModule
     + events::EventsModule
@@ -571,6 +571,7 @@ pub trait EsdtNftMarketplace:
                 marketplace_fees,
                 payment_token_nonce,
                 wegld,
+                false,
             );
         }
     }
