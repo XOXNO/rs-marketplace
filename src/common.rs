@@ -13,6 +13,7 @@ pub trait CommonModule:
     + crate::views::ViewsModule
     + crate::events::EventsModule
     + crate::wrapping::WrappingModule
+    + crate::dex::DexModule
 {
     fn withdraw_auction_common(&self, auction_id: u64, auction: &Auction<Self::Api>) {
         require!(
@@ -29,10 +30,10 @@ pub trait CommonModule:
     }
 
     fn end_auction_common(&self, auction_id: u64, auction: &Auction<Self::Api>, current_time: u64) {
-        self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens), false);
         self.update_or_remove_items_quantity(&auction, &auction.nr_auctioned_tokens);
         self.remove_auction_common(auction_id, &auction);
         self.emit_end_auction_event(auction_id, auction, current_time);
+        self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens), false);
     }
 
     fn common_bid_checks(
@@ -106,16 +107,96 @@ pub trait CommonModule:
         );
     }
 
+    fn common_buy(
+        &self,
+        auction_id: u64,
+        nft_type: TokenIdentifier,
+        nft_nonce: u64,
+        opt_sft_buy_amount: OptionalValue<BigUint>,
+        buy_for: OptionalValue<ManagedAddress>,
+        message: OptionalValue<ManagedBuffer>,
+    ) {
+        require!(self.status().get(), "Global operation enabled!");
+        let (payment_token, payment_token_nonce, payment_amount) =
+            self.call_value().egld_or_single_esdt().into_tuple();
+        let mut auction = self.try_get_auction(auction_id);
+        let caller = self.blockchain().get_caller();
+
+        let buy_amount = match opt_sft_buy_amount {
+            OptionalValue::Some(amt) => amt,
+            OptionalValue::None => BigUint::from(NFT_AMOUNT),
+        };
+
+        let buyer = match &buy_for {
+            OptionalValue::Some(bu) => bu,
+            OptionalValue::None => &caller,
+        };
+
+        let total_value = &buy_amount * &auction.min_bid;
+
+        let wegld = self.wrapping_token().get();
+        self.common_bid_checks(
+            &auction,
+            &nft_type,
+            nft_nonce,
+            &payment_token,
+            payment_token_nonce,
+            &payment_amount,
+            &wegld,
+        );
+
+        require!(buy_amount > 0, "Must buy more than 0");
+
+        require!(
+            auction.auction_type == AuctionType::SftOnePerPayment
+                || auction.auction_type == AuctionType::Nft,
+            "Cannot buy for this type of auction!"
+        );
+        require!(
+            buy_amount <= auction.nr_auctioned_tokens,
+            "Not enough quantity available!"
+        );
+        require!(
+            total_value == payment_amount,
+            "Wrong amount paid, must pay equal to the selling price!"
+        );
+
+        auction.current_winner = buyer.clone();
+        auction.current_bid = payment_amount;
+        let wrapping = self.require_egld_conversion(&auction, &payment_token, &wegld);
+        auction.nr_auctioned_tokens -= &buy_amount;
+        if auction.nr_auctioned_tokens == 0 {
+            self.remove_auction_common(auction_id, &auction);
+        } else {
+            self.auction_by_id(auction_id).set(&auction);
+        }
+        self.update_or_remove_items_quantity(&auction, &buy_amount);
+
+        let current_time = self.blockchain().get_block_timestamp();
+        self.emit_buy_event(
+            auction_id,
+            &auction,
+            &buy_amount,
+            current_time,
+            message,
+            if buy_for.into_option().is_some() {
+                OptionalValue::Some(caller)
+            } else {
+                OptionalValue::None
+            },
+        );
+        self.distribute_tokens(&auction, Option::Some(&buy_amount), wrapping);
+    }
+
     fn distribute_tokens(
         &self,
         auction: &Auction<Self::Api>,
         opt_sft_amount: Option<&BigUint>,
         wrapping: bool,
     ) {
-        let nft_type = &auction.auctioned_token_type;
-        let nft_nonce = auction.auctioned_token_nonce;
         if !auction.current_winner.is_zero() {
-            let nft_info = self.get_nft_info(nft_type, nft_nonce);
+            let nft_info =
+                self.get_nft_info(&auction.auctioned_token_type, auction.auctioned_token_nonce);
             let bid_split_amounts = self.calculate_winning_bid_split(auction);
 
             // send NFT to auction winner
@@ -131,8 +212,8 @@ pub trait CommonModule:
             };
 
             self.distribute_tokens_common(
-                &EgldOrEsdtTokenIdentifier::esdt(nft_type.clone()),
-                nft_nonce,
+                &EgldOrEsdtTokenIdentifier::esdt(auction.auctioned_token_type.clone()),
+                auction.auctioned_token_nonce,
                 nft_amount_to_send,
                 &auction.payment_token_type,
                 auction.payment_token_nonce,
@@ -281,30 +362,15 @@ pub trait CommonModule:
         bid_split_amounts: &BidSplitAmounts<Self::Api>,
         wrapping: bool,
     ) {
+        // send part as cut for contract owner
+        let wegld = self.wrapping_token().get();
         if wrapping {
             if payment_token_id.is_egld() {
-                self.unwrap_egld(
-                    &bid_split_amounts.seller
-                        + &bid_split_amounts.creator
-                        + &bid_split_amounts.marketplace,
-                );
+                self.unwrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator);
             } else if payment_token_id.is_esdt() {
-                self.wrap_egld(
-                    &bid_split_amounts.seller
-                        + &bid_split_amounts.creator
-                        + &bid_split_amounts.marketplace,
-                );
+                self.wrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator);
             }
         }
-        // send part as cut for contract owner
-        let sc_owner = self.blockchain().get_owner_address();
-        self.transfer_or_save_payment(
-            &sc_owner,
-            payment_token_id,
-            payment_token_nonce,
-            &bid_split_amounts.marketplace,
-        );
-
         // send part as royalties to creator
         self.transfer_or_save_payment(
             creator,
@@ -323,5 +389,71 @@ pub trait CommonModule:
 
         // send NFT to new owner
         self.transfer_or_save_payment(new_owner, nft_type, nft_nonce, nft_amount_to_send);
+
+        self.share_marketplace_fees(
+            payment_token_id,
+            bid_split_amounts.marketplace.clone(),
+            payment_token_nonce,
+            wegld,
+        );
+    }
+
+    fn distribute_tokens_bulk_buy(
+        &self,
+        payment_token_id: &EgldOrEsdtTokenIdentifier,
+        payment_token_nonce: u64,
+        creator: &ManagedAddress,
+        original_owner: &ManagedAddress,
+        bid_split_amounts: &BidSplitAmounts<Self::Api>,
+        wrapping: bool,
+    ) {
+        if wrapping {
+            if payment_token_id.is_egld() {
+                // A platit cu WEGLD trebuie transformat in EGLD, nu adaugam si marketplace deoarece avem nevoie de el in WEGLD anyway
+                self.unwrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator);
+            } else if payment_token_id.is_esdt() {
+                // A platit cu EGLD trebuie transformat in WEGLD
+                self.wrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator);
+            }
+        }
+
+        // send part as royalties to creator
+        self.transfer_or_save_payment(
+            creator,
+            payment_token_id,
+            payment_token_nonce,
+            &bid_split_amounts.creator,
+        );
+
+        // send rest of the bid to original owner
+        self.transfer_or_save_payment(
+            original_owner,
+            payment_token_id,
+            payment_token_nonce,
+            &bid_split_amounts.seller,
+        );
+    }
+
+    fn share_marketplace_fees(
+        &self,
+        payment_token_id: &EgldOrEsdtTokenIdentifier,
+        amount: BigUint,
+        payment_token_nonce: u64,
+        wegld: TokenIdentifier,
+    ) {
+        let sc_owner = self.blockchain().get_owner_address();
+        if payment_token_id.is_egld() {
+            self.wrap_egld(amount.clone());
+            self.swap_wegld_for_xoxno(&sc_owner, EsdtTokenPayment::new(wegld, 0, amount));
+        } else if payment_token_id.eq(&wegld) {
+            self.swap_wegld_for_xoxno(&sc_owner, EsdtTokenPayment::new(wegld, 0, amount));
+        } else {
+            self.transfer_or_save_payment(
+                &sc_owner,
+                payment_token_id,
+                payment_token_nonce,
+                &amount,
+            );
+        }
     }
 }

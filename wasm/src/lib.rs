@@ -5,14 +5,14 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           96
-// Async Callback (empty):               1
-// Total number of exported functions:  98
+// Endpoints:                           98
+// Async Callback:                       1
+// Total number of exported functions: 100
 
 #![no_std]
 
 elrond_wasm_node::wasm_endpoints! {
-    esdt_nft_marketplace
+    xoxno_protocol
     (
         listing
         bulkListing
@@ -22,10 +22,12 @@ elrond_wasm_node::wasm_endpoints! {
         buyFor
         bulkBuy
         withdraw
-        changePrice
+        changeListing
         getSigner
         wrappingSC
         wrappingToken
+        dexXOPair
+        xoxnoToken
         getMarketplaceCutPercentage
         getOffersByWallet
         checkOfferSent
@@ -110,7 +112,6 @@ elrond_wasm_node::wasm_endpoints! {
         addBlackListWallet
         removeBlackListWallet
         claimTokens
+        callBack
     )
 }
-
-elrond_wasm_node::wasm_empty_callback! {}

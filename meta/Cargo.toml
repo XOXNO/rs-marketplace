@@ -1,15 +1,16 @@
 [package]
-name = "esdt-nft-marketplace-meta"
-version = "0.0.0"
-authors = ["Dorin Iancu <dorin.iancu@elrond.com>"]
-edition = "2018"
+name = "xoxno-protocol-meta"
+version = "1.0.0"
+authors = ["Mihai Daniel <mihai@xoxno.com>"]
+edition = "2021"
 publish = false
 
-[dependencies.esdt-nft-marketplace]
+[dependencies.xoxno-protocol]
 path = ".."
 
 [dependencies.elrond-wasm]
 version = "0.38.0"
+# features = ["promises"]
 
 [dependencies.elrond-wasm-debug]
 version = "0.38.0"

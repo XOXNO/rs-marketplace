@@ -156,3 +156,11 @@ pub struct BulkListing<M: ManagedTypeApi> {
     pub nonce: u64,
     pub nft_amount: BigUint<M>,
 }
+
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct BulkUpdateListing<M: ManagedTypeApi> {
+    pub payment_token_type: EgldOrEsdtTokenIdentifier<M>,
+    pub new_price: BigUint<M>,
+    pub auction_id: u64,
+    pub deadline: u64,
+}

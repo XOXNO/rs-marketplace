@@ -1,5 +1,5 @@
 [package]
-name = "esdt-nft-marketplace-wasm"
+name = "xoxno-protocol-wasm"
 version = "0.0.0"
 authors = ["Dorin Iancu <dorin.iancu@elrond.com>"]
 edition = "2018"
@@ -15,7 +15,7 @@ lto = true
 debug = false
 panic = "abort"
 
-[dependencies.esdt-nft-marketplace]
+[dependencies.xoxno-protocol]
 path = ".."
 
 [dependencies.elrond-wasm-node]

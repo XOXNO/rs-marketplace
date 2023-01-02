@@ -17,6 +17,7 @@ ADDRESS=erd1qqqqqqqqqqqqqpgqn4fnwl43hhchz9emdy66eh5azzhl599zd8ssxjdyh3
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-devnet)
 PROXY=https://devnet-gateway.elrond.com
 SHARD1WrappingWEGLD=erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnlr88dpfw06677lxe9w0n4suz00uh
+XOXNOPairSwap=erd1qqqqqqqqqqqqqpgqae44n6t0fhg40zmtq3lzjk58f8t7envn0n4sj7x6pl
 
 deploy() {
     echo ${PROJECT}
@@ -34,8 +35,8 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD1WrappingWEGLD} str:WEGLD-d7c6bb --project=${PROJECT} --recall-nonce --pem=${ALICE} \
-    --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
+    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD1WrappingWEGLD} str:WEGLD-d7c6bb ${XOXNOPairSwap} str:XOXNO-2d9386 --project=${PROJECT} --recall-nonce --pem=${ALICE} \
+    --gas-limit=350000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 
 getDustAmountLeft() {

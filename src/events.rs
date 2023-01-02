@@ -1,33 +1,17 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
-use crate::auction::GlobalOffer;
+use crate::auction::{BulkUpdateListing, GlobalOffer};
 
 use super::auction::{Auction, AuctionType, Offer, OfferStatus};
 
 #[allow(clippy::too_many_arguments)]
 #[elrond_wasm::module]
 pub trait EventsModule {
-    fn emit_change_price_event(
-        self,
-        auction_id: u64,
-        auction: &Auction<Self::Api>,
-        new_amount: &BigUint,
-        current_time: u64,
-    ) {
-        self.change_price_event(
-            &auction.auctioned_token_type,
-            auction.auctioned_token_nonce,
-            auction_id,
-            &auction.original_owner,
-            &auction.min_bid,
-            new_amount,
-            &auction.payment_token_type,
-            auction.payment_token_nonce,
-            current_time,
-        )
+    fn emit_change_listing_event(self, update: &BulkUpdateListing<Self::Api>) {
+        self.change_listing_event(update);
     }
-    
+
     fn emit_out_bid_event(
         self,
         auction_id: u64,
@@ -69,6 +53,7 @@ pub trait EventsModule {
             current_time,
         )
     }
+    
     fn emit_offer_token_event(self, offer_id: u64, offer: Offer<Self::Api>) {
         self.offer_token_event(
             &offer.token_type,
@@ -106,7 +91,7 @@ pub trait EventsModule {
     fn emit_accept_offer_event(
         self,
         offer_id: u64,
-        offer: Offer<Self::Api>,
+        offer: &Offer<Self::Api>,
         seller: &ManagedAddress,
         auction_removed: u64,
     ) {
@@ -166,8 +151,8 @@ pub trait EventsModule {
     fn emit_buy_event(
         self,
         auction_id: u64,
-        auction: Auction<Self::Api>,
-        nr_bought_tokens: BigUint,
+        auction: &Auction<Self::Api>,
+        nr_bought_tokens: &BigUint,
         current_time: u64,
         message: OptionalValue<ManagedBuffer>,
         buy_by: OptionalValue<ManagedAddress>,
@@ -176,11 +161,11 @@ pub trait EventsModule {
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
             auction_id,
-            &nr_bought_tokens,
+            nr_bought_tokens,
             &auction.current_winner,
             &auction.min_bid,
             &auction.original_owner,
-            auction.payment_token_type,
+            &auction.payment_token_type,
             auction.payment_token_nonce,
             current_time,
             message.into_option().unwrap_or(ManagedBuffer::new()),
@@ -246,6 +231,7 @@ pub trait EventsModule {
     fn emit_remove_global_offer_event(self, offer_id: u64) {
         self.remove_global_offer_event(offer_id);
     }
+    
     #[event("remove_global_offer")]
     fn remove_global_offer_event(&self, #[indexed] offer_id: u64);
 
@@ -259,6 +245,7 @@ pub trait EventsModule {
     ) {
         self.accept_global_offer_event(offer, seller, nonce, amount, auction_id);
     }
+    
     #[event("accept_global_offer")]
     fn accept_global_offer_event(
         &self,
@@ -335,19 +322,8 @@ pub trait EventsModule {
         #[indexed] timestamp: u64,
     );
 
-    #[event("change_price_event")]
-    fn change_price_event(
-        &self,
-        #[indexed] auction_token_id: &TokenIdentifier,
-        #[indexed] auctioned_token_nonce: u64,
-        #[indexed] auction_id: u64,
-        #[indexed] owner: &ManagedAddress,
-        #[indexed] old_price: &BigUint,
-        #[indexed] new_price: &BigUint,
-        #[indexed] payment_type: &EgldOrEsdtTokenIdentifier,
-        #[indexed] payment_nonce: u64,
-        #[indexed] timestamp: u64,
-    );
+    #[event("change_listing_event")]
+    fn change_listing_event(&self, #[indexed] update: &BulkUpdateListing<Self::Api>);
 
     #[event("out_bid_event")]
     fn out_bid_event(
@@ -374,7 +350,7 @@ pub trait EventsModule {
         #[indexed] buyer: &ManagedAddress,
         #[indexed] bid_sft_amount: &BigUint,
         #[indexed] seller: &ManagedAddress,
-        #[indexed] accepted_payment_token: EgldOrEsdtTokenIdentifier,
+        #[indexed] accepted_payment_token: &EgldOrEsdtTokenIdentifier,
         #[indexed] accepted_payment_token_nonce: u64,
         #[indexed] timestamp: u64,
         #[indexed] message: ManagedBuffer,

@@ -16,6 +16,14 @@ pub trait StorageModule {
     #[storage_mapper("wrappingToken")]
     fn wrapping_token(&self) -> SingleValueMapper<TokenIdentifier>;
 
+    #[view(dexXOPair)]
+    #[storage_mapper("dexXOPair")]
+    fn swap_pair_xoxno(&self) -> SingleValueMapper<ManagedAddress>;
+
+    #[view(xoxnoToken)]
+    #[storage_mapper("xoxnoToken")]
+    fn xoxno_token(&self) -> SingleValueMapper<TokenIdentifier>;
+
     #[view(getMarketplaceCutPercentage)]
     #[storage_mapper("bidCutPercentage")]
     fn bid_cut_percentage(&self) -> SingleValueMapper<BigUint>;

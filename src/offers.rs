@@ -5,6 +5,7 @@ use core::convert::TryInto;
 
 use crate::auction::GlobalOffer;
 use crate::common;
+use crate::dex;
 use crate::events;
 use crate::helpers;
 use crate::views;
@@ -25,6 +26,7 @@ pub trait CustomOffersModule:
     + views::ViewsModule
     + common::CommonModule
     + wrapping::WrappingModule
+    + dex::DexModule
 {
     #[payable("*")]
     #[endpoint(acceptOffer)]
@@ -106,6 +108,8 @@ pub trait CustomOffersModule:
             "Marketplace cut plus royalties exceeds 100%"
         );
 
+        self.common_offer_remove(offer_id, &offer);
+        self.emit_accept_offer_event(offer_id, &offer, &seller, auction_removed);
         self.distribute_tokens_common(
             &EgldOrEsdtTokenIdentifier::esdt(offer.token_type.clone()),
             offer.token_nonce,
@@ -118,8 +122,6 @@ pub trait CustomOffersModule:
             &self.calculate_offer_bid_split(&offer, &creator_royalties_percentage),
             false,
         );
-        self.common_offer_remove(offer_id, &offer);
-        self.emit_accept_offer_event(offer_id, offer, &seller, auction_removed);
     }
 
     #[payable("*")]
@@ -339,7 +341,7 @@ pub trait CustomOffersModule:
         offer_id: u64,
         auction_id_opt: OptionalValue<u64>,
         signature: OptionalValue<Signature<Self::Api>>,
-    ) -> u64 {
+    ) {
         require!(self.status().get(), "Global operation enabled!");
         let (collection, c_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
         let offer_map = self.global_offer(offer_id);
@@ -413,6 +415,13 @@ pub trait CustomOffersModule:
         self.common_global_offer_remove(&offer, false);
         let nft_info = self.get_nft_info(&offer.collection, collection_nonce);
 
+        self.emit_accept_global_offer_event(
+            &offer,
+            &seller,
+            collection_nonce,
+            &offer.quantity,
+            auction_id_option.unwrap_or(0u64),
+        );
         self.distribute_tokens_common(
             &EgldOrEsdtTokenIdentifier::esdt(offer.collection.clone()),
             collection_nonce,
@@ -423,15 +432,7 @@ pub trait CustomOffersModule:
             &seller,
             &offer.owner,
             &self.calculate_global_offer_split(&offer, &nft_info),
-            false
+            false,
         );
-        self.emit_accept_global_offer_event(
-            &offer,
-            &seller,
-            collection_nonce,
-            &offer.quantity,
-            auction_id_option.unwrap_or(0u64),
-        );
-        offer_id
     }
 }

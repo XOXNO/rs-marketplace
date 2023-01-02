@@ -9,6 +9,7 @@ pub trait AdminModule:
     + crate::events::EventsModule
     + crate::common::CommonModule
     + crate::wrapping::WrappingModule
+    + crate::dex::DexModule
 {
     #[only_owner]
     #[endpoint(returnListing)]
