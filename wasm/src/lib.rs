@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           98
+// Endpoints:                           97
 // Async Callback:                       1
-// Total number of exported functions: 100
+// Total number of exported functions:  99
 
 #![no_std]
 
@@ -15,7 +15,6 @@ elrond_wasm_node::wasm_endpoints! {
     xoxno_protocol
     (
         listing
-        bulkListing
         bid
         endAuction
         buy

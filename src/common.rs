@@ -29,10 +29,10 @@ pub trait CommonModule:
         self.emit_withdraw_event(auction_id, auction);
     }
 
-    fn end_auction_common(&self, auction_id: u64, auction: &Auction<Self::Api>, current_time: u64) {
+    fn end_auction_common(&self, auction_id: u64, auction: &Auction<Self::Api>) {
         self.update_or_remove_items_quantity(&auction, &auction.nr_auctioned_tokens);
         self.remove_auction_common(auction_id, &auction);
-        self.emit_end_auction_event(auction_id, auction, current_time);
+        self.emit_end_auction_event(auction_id, auction);
         self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens), false);
     }
 

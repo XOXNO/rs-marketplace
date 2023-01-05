@@ -1,15 +1,29 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
 
-use crate::auction::{BulkUpdateListing, GlobalOffer};
+use crate::auction::GlobalOffer;
 
 use super::auction::{Auction, AuctionType, Offer, OfferStatus};
 
 #[allow(clippy::too_many_arguments)]
 #[elrond_wasm::module]
 pub trait EventsModule {
-    fn emit_change_listing_event(self, update: &BulkUpdateListing<Self::Api>) {
-        self.change_listing_event(update);
+    fn emit_change_listing_event(
+        self,
+        auction_id: u64,
+        auction: &Auction<Self::Api>,
+        new_amount: &BigUint,
+    ) {
+        self.change_listing_event(
+            &auction.auctioned_token_type,
+            auction.auctioned_token_nonce,
+            auction_id,
+            &auction.original_owner,
+            &auction.min_bid,
+            new_amount,
+            &auction.payment_token_type,
+            auction.payment_token_nonce,
+        )
     }
 
     fn emit_out_bid_event(
@@ -18,7 +32,6 @@ pub trait EventsModule {
         auction: &Auction<Self::Api>,
         bidder: &ManagedAddress,
         new_amount: &BigUint,
-        current_time: u64,
     ) {
         self.out_bid_event(
             &auction.auctioned_token_type,
@@ -30,12 +43,10 @@ pub trait EventsModule {
             new_amount,
             &auction.payment_token_type,
             auction.payment_token_nonce,
-            current_time,
         )
     }
 
     fn emit_auction_token_event(self, auction_id: u64, auction: Auction<Self::Api>) {
-        let current_time = self.blockchain().get_block_timestamp();
         self.auction_token_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -50,10 +61,9 @@ pub trait EventsModule {
             auction.payment_token_nonce,
             auction.auction_type,
             auction.creator_royalties_percentage,
-            current_time,
         )
     }
-    
+
     fn emit_offer_token_event(self, offer_id: u64, offer: Offer<Self::Api>) {
         self.offer_token_event(
             &offer.token_type,
@@ -113,7 +123,7 @@ pub trait EventsModule {
         )
     }
 
-    fn emit_bid_event(self, auction_id: u64, auction: Auction<Self::Api>, current_time: u64) {
+    fn emit_bid_event(self, auction_id: u64, auction: Auction<Self::Api>) {
         self.bid_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -124,16 +134,10 @@ pub trait EventsModule {
             &auction.original_owner,
             &auction.payment_token_type,
             auction.payment_token_nonce,
-            current_time,
         );
     }
 
-    fn emit_end_auction_event(
-        self,
-        auction_id: u64,
-        auction: &Auction<Self::Api>,
-        current_time: u64,
-    ) {
+    fn emit_end_auction_event(self, auction_id: u64, auction: &Auction<Self::Api>) {
         self.end_auction_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
@@ -144,7 +148,6 @@ pub trait EventsModule {
             &auction.original_owner,
             &auction.payment_token_type,
             auction.payment_token_nonce,
-            current_time,
         );
     }
 
@@ -174,14 +177,12 @@ pub trait EventsModule {
     }
 
     fn emit_withdraw_event(self, auction_id: u64, auction: &Auction<Self::Api>) {
-        let current_time = self.blockchain().get_block_timestamp();
         self.withdraw_event(
             &auction.auctioned_token_type,
             auction.auctioned_token_nonce,
             auction_id,
             &auction.nr_auctioned_tokens,
             &auction.original_owner,
-            current_time,
         );
     }
 
@@ -201,7 +202,6 @@ pub trait EventsModule {
         #[indexed] accepted_payment_token_nonce: u64,
         #[indexed] auction_type: AuctionType,
         creator_royalties_percentage: BigUint, // between 0 and 10,000
-        #[indexed] timestamp: u64,
     );
 
     #[event("offer_token_event")]
@@ -231,7 +231,7 @@ pub trait EventsModule {
     fn emit_remove_global_offer_event(self, offer_id: u64) {
         self.remove_global_offer_event(offer_id);
     }
-    
+
     #[event("remove_global_offer")]
     fn remove_global_offer_event(&self, #[indexed] offer_id: u64);
 
@@ -245,7 +245,7 @@ pub trait EventsModule {
     ) {
         self.accept_global_offer_event(offer, seller, nonce, amount, auction_id);
     }
-    
+
     #[event("accept_global_offer")]
     fn accept_global_offer_event(
         &self,
@@ -304,7 +304,6 @@ pub trait EventsModule {
         #[indexed] seller: &ManagedAddress,
         #[indexed] token_payment_type: &EgldOrEsdtTokenIdentifier,
         #[indexed] token_payment_nonce: u64,
-        #[indexed] timestamp: u64,
     );
 
     #[event("end_auction_event")]
@@ -319,11 +318,20 @@ pub trait EventsModule {
         #[indexed] auction_seller: &ManagedAddress,
         #[indexed] token_payment_type: &EgldOrEsdtTokenIdentifier,
         #[indexed] token_payment_nonce: u64,
-        #[indexed] timestamp: u64,
     );
 
     #[event("change_listing_event")]
-    fn change_listing_event(&self, #[indexed] update: &BulkUpdateListing<Self::Api>);
+    fn change_listing_event(
+        &self,
+        #[indexed] auction_token_id: &TokenIdentifier,
+        #[indexed] auctioned_token_nonce: u64,
+        #[indexed] auction_id: u64,
+        #[indexed] owner: &ManagedAddress,
+        #[indexed] old_price: &BigUint,
+        #[indexed] new_price: &BigUint,
+        #[indexed] payment_type: &EgldOrEsdtTokenIdentifier,
+        #[indexed] payment_nonce: u64,
+    );
 
     #[event("out_bid_event")]
     fn out_bid_event(
@@ -337,7 +345,6 @@ pub trait EventsModule {
         #[indexed] new_amount: &BigUint,
         #[indexed] refund_payment_type: &EgldOrEsdtTokenIdentifier,
         #[indexed] refund_payment_nonce: u64,
-        #[indexed] timestamp: u64,
     );
 
     #[event("buy_event")]
@@ -365,6 +372,5 @@ pub trait EventsModule {
         #[indexed] auction_id: u64,
         #[indexed] nr_auctioned_tokens: &BigUint,
         #[indexed] seller: &ManagedAddress,
-        #[indexed] timestamp: u64,
     );
 }

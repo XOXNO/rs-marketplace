@@ -49,155 +49,155 @@ pub trait XOXNOProtocol:
         self.xoxno_token().set(xoxno_token);
     }
 
+    // #[payable("*")]
+    // #[endpoint(listing)]
+    // #[allow(clippy::too_many_arguments)]
+    // fn listing(
+    //     &self,
+    //     min_bid: BigUint,
+    //     max_bid: BigUint,
+    //     deadline: u64,
+    //     accepted_payment_token: EgldOrEsdtTokenIdentifier,
+    //     bid: bool,
+    //     opt_sft_max_one_per_payment: OptionalValue<bool>,
+    //     opt_start_time: OptionalValue<u64>,
+    // ) {
+    //     require!(self.status().get(), "Global operation enabled!");
+
+    //     require!(
+    //         self.accepted_tokens().contains(&accepted_payment_token),
+    //         "The payment token is not whitelisted!"
+    //     );
+
+    //     let (nft_type, nft_nonce, nft_amount) = self.call_value().single_esdt().into_tuple();
+
+    //     require!(
+    //         nft_amount >= BigUint::from(NFT_AMOUNT),
+    //         "Must tranfer at least one"
+    //     );
+    //     let current_time = self.blockchain().get_block_timestamp();
+    //     let start_time = match opt_start_time {
+    //         OptionalValue::Some(st) => st,
+    //         OptionalValue::None => current_time,
+    //     };
+
+    //     let sft_max_one_per_payment = opt_sft_max_one_per_payment
+    //         .into_option()
+    //         .unwrap_or_default();
+
+    //     if sft_max_one_per_payment || !bid {
+    //         require!(
+    //             min_bid == max_bid,
+    //             "Price must be fixed for this type of auction (min bid equal to max bid)"
+    //         );
+    //     }
+    //     if !accepted_payment_token.is_egld() {
+    //         require!(
+    //             accepted_payment_token.is_esdt(),
+    //             "The payment token is not valid!"
+    //         );
+    //     }
+
+    //     let opt_max_bid = if max_bid > 0u32 {
+    //         require!(min_bid <= max_bid, "Min bid can't higher than max bid");
+
+    //         Some(&max_bid)
+    //     } else {
+    //         None
+    //     };
+
+    //     require!(min_bid > 0u32, "Min bid must be higher than 0!");
+    //     require!(
+    //         nft_nonce > 0,
+    //         "Only Semi-Fungible and Non-Fungible tokens can be auctioned"
+    //     );
+    //     require!(
+    //         deadline > current_time || deadline == 0,
+    //         "Deadline can't be in the past"
+    //     );
+    //     if deadline != 0 {
+    //         require!(
+    //             start_time >= current_time && start_time < deadline,
+    //             "Invalid start time"
+    //         );
+    //     }
+
+    //     let marketplace_cut_percentage = self.bid_cut_percentage().get();
+    //     let creator_royalties_percentage = self.get_nft_info(&nft_type, nft_nonce).royalties;
+
+    //     require!(
+    //         &marketplace_cut_percentage + &creator_royalties_percentage < PERCENTAGE_TOTAL,
+    //         "Marketplace cut plus royalties exceeds 100%"
+    //     );
+
+    //     let accepted_payment_nft_nonce = 0;
+
+    //     let auction_id = self.last_valid_auction_id().get() + 1;
+    //     self.last_valid_auction_id().set(&auction_id);
+
+    //     let auction_type = if nft_amount > BigUint::from(NFT_AMOUNT) {
+    //         match sft_max_one_per_payment {
+    //             true => AuctionType::SftOnePerPayment,
+    //             false => AuctionType::SftAll,
+    //         }
+    //     } else {
+    //         match bid {
+    //             true => AuctionType::NftBid,
+    //             false => AuctionType::Nft,
+    //         }
+    //     };
+
+    //     if deadline == 0 {
+    //         require!(
+    //             auction_type == AuctionType::Nft
+    //                 || auction_type == AuctionType::SftOnePerPayment
+    //                 || (auction_type == AuctionType::SftAll && &min_bid == &max_bid),
+    //             "Deadline is mandatory for this auction type!"
+    //         );
+    //     }
+
+    //     let auction = Auction {
+    //         auctioned_token_type: nft_type.clone(),
+    //         auctioned_token_nonce: nft_nonce,
+
+    //         nr_auctioned_tokens: nft_amount.clone(),
+    //         auction_type,
+
+    //         payment_token_type: accepted_payment_token,
+    //         payment_token_nonce: accepted_payment_nft_nonce,
+
+    //         min_bid,
+    //         max_bid: opt_max_bid.cloned(),
+    //         start_time,
+    //         deadline,
+    //         original_owner: self.blockchain().get_caller(),
+    //         current_bid: BigUint::zero(),
+    //         current_winner: ManagedAddress::zero(),
+    //         marketplace_cut_percentage,
+    //         creator_royalties_percentage,
+    //     };
+    //     // Map ID with Auction Struct
+    //     self.auction_by_id(auction_id).set(&auction);
+    //     self.listings().insert(auction_id); // Push ID to the auctions list
+    //                                         // Add to the owner wallet the new Auction ID
+    //     self.listings_by_wallet(&auction.original_owner)
+    //         .insert(auction_id);
+    //     // Insert nonce for sale per collection
+    //     self.token_items_for_sale(&nft_type).insert(nft_nonce);
+    //     // Insert auction ID per token and nonce
+    //     self.token_auction_ids(&nft_type, nft_nonce)
+    //         .insert(auction_id);
+
+    //     self.token_items_quantity_for_sale(&nft_type, nft_nonce)
+    //         .update(|qt| *qt += &nft_amount);
+
+    //     self.collections_listed().insert(nft_type);
+    //     //Emit event for new listed token
+    //     self.emit_auction_token_event(auction_id, auction);
+    // }
+
     #[payable("*")]
     #[endpoint(listing)]
-    #[allow(clippy::too_many_arguments)]
-    fn listing(
-        &self,
-        min_bid: BigUint,
-        max_bid: BigUint,
-        deadline: u64,
-        accepted_payment_token: EgldOrEsdtTokenIdentifier,
-        bid: bool,
-        opt_sft_max_one_per_payment: OptionalValue<bool>,
-        opt_start_time: OptionalValue<u64>,
-    ) {
-        require!(self.status().get(), "Global operation enabled!");
-
-        require!(
-            self.accepted_tokens().contains(&accepted_payment_token),
-            "The payment token is not whitelisted!"
-        );
-
-        let (nft_type, nft_nonce, nft_amount) = self.call_value().single_esdt().into_tuple();
-
-        require!(
-            nft_amount >= BigUint::from(NFT_AMOUNT),
-            "Must tranfer at least one"
-        );
-        let current_time = self.blockchain().get_block_timestamp();
-        let start_time = match opt_start_time {
-            OptionalValue::Some(st) => st,
-            OptionalValue::None => current_time,
-        };
-
-        let sft_max_one_per_payment = opt_sft_max_one_per_payment
-            .into_option()
-            .unwrap_or_default();
-
-        if sft_max_one_per_payment || !bid {
-            require!(
-                min_bid == max_bid,
-                "Price must be fixed for this type of auction (min bid equal to max bid)"
-            );
-        }
-        if !accepted_payment_token.is_egld() {
-            require!(
-                accepted_payment_token.is_esdt(),
-                "The payment token is not valid!"
-            );
-        }
-
-        let opt_max_bid = if max_bid > 0u32 {
-            require!(min_bid <= max_bid, "Min bid can't higher than max bid");
-
-            Some(&max_bid)
-        } else {
-            None
-        };
-
-        require!(min_bid > 0u32, "Min bid must be higher than 0!");
-        require!(
-            nft_nonce > 0,
-            "Only Semi-Fungible and Non-Fungible tokens can be auctioned"
-        );
-        require!(
-            deadline > current_time || deadline == 0,
-            "Deadline can't be in the past"
-        );
-        if deadline != 0 {
-            require!(
-                start_time >= current_time && start_time < deadline,
-                "Invalid start time"
-            );
-        }
-
-        let marketplace_cut_percentage = self.bid_cut_percentage().get();
-        let creator_royalties_percentage = self.get_nft_info(&nft_type, nft_nonce).royalties;
-
-        require!(
-            &marketplace_cut_percentage + &creator_royalties_percentage < PERCENTAGE_TOTAL,
-            "Marketplace cut plus royalties exceeds 100%"
-        );
-
-        let accepted_payment_nft_nonce = 0;
-
-        let auction_id = self.last_valid_auction_id().get() + 1;
-        self.last_valid_auction_id().set(&auction_id);
-
-        let auction_type = if nft_amount > BigUint::from(NFT_AMOUNT) {
-            match sft_max_one_per_payment {
-                true => AuctionType::SftOnePerPayment,
-                false => AuctionType::SftAll,
-            }
-        } else {
-            match bid {
-                true => AuctionType::NftBid,
-                false => AuctionType::Nft,
-            }
-        };
-
-        if deadline == 0 {
-            require!(
-                auction_type == AuctionType::Nft
-                    || auction_type == AuctionType::SftOnePerPayment
-                    || (auction_type == AuctionType::SftAll && &min_bid == &max_bid),
-                "Deadline is mandatory for this auction type!"
-            );
-        }
-
-        let auction = Auction {
-            auctioned_token_type: nft_type.clone(),
-            auctioned_token_nonce: nft_nonce,
-
-            nr_auctioned_tokens: nft_amount.clone(),
-            auction_type,
-
-            payment_token_type: accepted_payment_token,
-            payment_token_nonce: accepted_payment_nft_nonce,
-
-            min_bid,
-            max_bid: opt_max_bid.cloned(),
-            start_time,
-            deadline,
-            original_owner: self.blockchain().get_caller(),
-            current_bid: BigUint::zero(),
-            current_winner: ManagedAddress::zero(),
-            marketplace_cut_percentage,
-            creator_royalties_percentage,
-        };
-        // Map ID with Auction Struct
-        self.auction_by_id(auction_id).set(&auction);
-        self.listings().insert(auction_id); // Push ID to the auctions list
-                                            // Add to the owner wallet the new Auction ID
-        self.listings_by_wallet(&auction.original_owner)
-            .insert(auction_id);
-        // Insert nonce for sale per collection
-        self.token_items_for_sale(&nft_type).insert(nft_nonce);
-        // Insert auction ID per token and nonce
-        self.token_auction_ids(&nft_type, nft_nonce)
-            .insert(auction_id);
-
-        self.token_items_quantity_for_sale(&nft_type, nft_nonce)
-            .update(|qt| *qt += &nft_amount);
-
-        self.collections_listed().insert(nft_type);
-        //Emit event for new listed token
-        self.emit_auction_token_event(auction_id, auction);
-    }
-
-    #[payable("*")]
-    #[endpoint(bulkListing)]
     fn bulk_listings(&self, listings: MultiValueEncoded<BulkListing<Self::Api>>) {
         require!(self.status().get(), "Global operation enabled!");
         let payments = self.call_value().all_esdt_transfers();
@@ -208,10 +208,15 @@ pub trait XOXNOProtocol:
         let mut map_listings = self.listings();
         let mut map_caller_listings = self.listings_by_wallet(&caller);
         let mut map_collections = self.collections_listed();
+        let map_acc_tokens = self.accepted_tokens();
 
         require!(listings.len() == payments.len(), "Invalid body sent!");
         for (index, listing) in listings.to_vec().iter().enumerate() {
             let (nft_type, nft_nonce, nft_amount) = payments.get(index).into_tuple();
+            require!(
+                map_acc_tokens.contains(&listing.accepted_payment_token),
+                "The payment token is not whitelisted!"
+            );
             require!(
                 nft_amount >= BigUint::from(NFT_AMOUNT),
                 "Must tranfer at least one"
@@ -351,7 +356,6 @@ pub trait XOXNOProtocol:
 
         let mut auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
-        let current_time = self.blockchain().get_block_timestamp();
         let wegld = self.wrapping_token().get();
         self.common_bid_checks(
             &auction,
@@ -388,7 +392,7 @@ pub trait XOXNOProtocol:
             );
             self.listings_bids(&auction.current_winner)
                 .remove(&auction_id);
-            self.emit_out_bid_event(auction_id, &auction, &caller, &payment_amount, current_time);
+            self.emit_out_bid_event(auction_id, &auction, &caller, &payment_amount);
         }
         let wrapping = self.require_egld_conversion(&auction, &payment_token, &wegld);
         if wrapping {
@@ -409,9 +413,9 @@ pub trait XOXNOProtocol:
             .insert(auction_id);
 
         if max_bid_reached {
-            self.end_auction_common(auction_id, &auction, current_time);
+            self.end_auction_common(auction_id, &auction);
         } else {
-            self.emit_bid_event(auction_id, auction, current_time);
+            self.emit_bid_event(auction_id, auction);
         }
     }
 
@@ -445,8 +449,7 @@ pub trait XOXNOProtocol:
             deadline_reached || max_bid_reached,
             "Auction deadline has not passed or the current bid is not equal to the max bid!"
         );
-        let current_time = self.blockchain().get_block_timestamp();
-        self.end_auction_common(auction_id, &auction, current_time);
+        self.end_auction_common(auction_id, &auction);
     }
 
     #[payable("*")]
@@ -618,7 +621,7 @@ pub trait XOXNOProtocol:
                     || listing.auction_type == AuctionType::SftOnePerPayment,
                 "You can not change the price of bids!"
             );
-            self.emit_change_listing_event(&update);
+            self.emit_change_listing_event(update.auction_id, &listing, &update.new_price);
             listing.min_bid = update.new_price.clone();
             listing.max_bid = Some(update.new_price.clone());
             listing.payment_token_type = update.payment_token_type;
