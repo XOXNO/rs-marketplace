@@ -415,7 +415,7 @@ pub trait XOXNOProtocol:
                 listing.nr_auctioned_tokens,
             ));
         }
-        if total_available > BigUint::zero() {
+        if total_available.gt(&BigUint::zero()) {
             self.send().direct(
                 &caller,
                 &payment_token,
@@ -435,7 +435,6 @@ pub trait XOXNOProtocol:
                 false,
             );
         }
-
     }
 
     #[endpoint]
