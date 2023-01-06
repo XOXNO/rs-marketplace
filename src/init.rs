@@ -360,6 +360,7 @@ pub trait XOXNOProtocol:
     ) {
         let mut total_available = payment_amount.clone();
         let mut bought_nfts: ManagedVec<EsdtTokenPayment<Self::Api>> = ManagedVec::new();
+        let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
         let wegld = self.wrapping_token().get();
         let mut marketplace_fees = BigUint::zero();
@@ -408,7 +409,16 @@ pub trait XOXNOProtocol:
             marketplace_fees += bid_split_amounts.marketplace;
             self.update_or_remove_items_quantity(&listing, &listing.nr_auctioned_tokens);
             self.remove_auction_common(auction_id, &listing);
+            self.emit_buy_event(
+                auction_id,
+                &listing,
+                &listing.nr_auctioned_tokens,
+                current_time,
+                OptionalValue::None,
+                OptionalValue::None,
+            );
             total_available -= listing.min_bid;
+
             bought_nfts.push(EsdtTokenPayment::new(
                 listing.auctioned_token_type,
                 listing.auctioned_token_nonce,
