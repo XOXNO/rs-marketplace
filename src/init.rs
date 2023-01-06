@@ -490,12 +490,12 @@ pub trait XOXNOProtocol:
                 listing.auction_type == AuctionType::Nft
                     || listing.auction_type == AuctionType::SftOnePerPayment,
                 "You can not change the price of bids!"
-            );
+            );    
+            listing.payment_token_type = update.payment_token_type;
+            listing.deadline = update.deadline;
             self.emit_change_listing_event(update.auction_id, &listing, &update.new_price);
             listing.min_bid = update.new_price.clone();
             listing.max_bid = Some(update.new_price.clone());
-            listing.payment_token_type = update.payment_token_type;
-            listing.deadline = update.deadline;
             listing_map.set(listing);
         }
     }
