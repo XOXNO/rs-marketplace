@@ -368,7 +368,7 @@ pub trait XOXNOProtocol:
             if listing_map.is_empty() {
                 continue;
             }
-            let listing = listing_map.get();
+            let mut listing = listing_map.get();
             require!(
                 listing.auction_type == AuctionType::Nft,
                 "You can bulk buy just NFTs on sell with a fixed price!"
@@ -385,7 +385,7 @@ pub trait XOXNOProtocol:
                 listing.auctioned_token_nonce,
                 &payment_token,
                 payment_token_nonce,
-                &payment_amount,
+                &total_available,
                 &wegld,
             );
 
@@ -393,6 +393,7 @@ pub trait XOXNOProtocol:
             let nft_info =
                 self.get_nft_info(&listing.auctioned_token_type, listing.auctioned_token_nonce);
 
+            listing.current_bid = listing.min_bid.clone();
             let bid_split_amounts = self.calculate_winning_bid_split(&listing);
 
             self.distribute_tokens_bulk_buy(
@@ -405,17 +406,14 @@ pub trait XOXNOProtocol:
             );
 
             marketplace_fees += bid_split_amounts.marketplace;
-            self.remove_auction_common(auction_id, &listing);
             self.update_or_remove_items_quantity(&listing, &listing.nr_auctioned_tokens);
+            self.remove_auction_common(auction_id, &listing);
             total_available -= listing.min_bid;
             bought_nfts.push(EsdtTokenPayment::new(
                 listing.auctioned_token_type,
                 listing.auctioned_token_nonce,
                 listing.nr_auctioned_tokens,
             ));
-        }
-        if bought_nfts.len() > 0 {
-            self.send().direct_multi(&caller, &bought_nfts)
         }
         if total_available > BigUint::zero() {
             self.send().direct(
@@ -433,6 +431,10 @@ pub trait XOXNOProtocol:
                 wegld,
                 false,
             );
+        }
+
+        if bought_nfts.len() > 0 {
+            self.send().direct_multi(&caller, &bought_nfts)
         }
     }
 
