@@ -366,9 +366,17 @@ pub trait CommonModule:
         let wegld = self.wrapping_token().get();
         if wrapping {
             if payment_token_id.is_egld() {
-                self.unwrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator);
+                self.unwrap_egld(
+                    &bid_split_amounts.seller
+                        + &bid_split_amounts.creator
+                        + &bid_split_amounts.marketplace,
+                );
             } else if payment_token_id.is_esdt() {
-                self.wrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator + &bid_split_amounts.marketplace);
+                self.wrap_egld(
+                    &bid_split_amounts.seller
+                        + &bid_split_amounts.creator
+                        + &bid_split_amounts.marketplace,
+                );
             }
         }
         // send part as royalties to creator
@@ -411,10 +419,18 @@ pub trait CommonModule:
         if wrapping {
             if payment_token_id.is_egld() {
                 // A platit cu WEGLD trebuie transformat in EGLD, nu adaugam si marketplace deoarece avem nevoie de el in WEGLD anyway
-                self.unwrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator);
+                self.unwrap_egld(
+                    &bid_split_amounts.seller
+                        + &bid_split_amounts.creator
+                        + &bid_split_amounts.marketplace,
+                );
             } else if payment_token_id.is_esdt() {
                 // A platit cu EGLD trebuie transformat in WEGLD
-                self.wrap_egld(&bid_split_amounts.seller + &bid_split_amounts.creator);
+                self.wrap_egld(
+                    &bid_split_amounts.seller
+                        + &bid_split_amounts.creator
+                        + &bid_split_amounts.marketplace,
+                );
             }
         }
 
@@ -440,22 +456,17 @@ pub trait CommonModule:
         payment_token_id: &EgldOrEsdtTokenIdentifier,
         amount: BigUint,
         payment_token_nonce: u64,
-        wegld: TokenIdentifier,
-        wrapping: bool,
+        _wegld: TokenIdentifier,
+        _wrapping: bool,
     ) {
         let sc_owner = self.blockchain().get_owner_address();
-        if payment_token_id.is_egld() ||  payment_token_id.eq(&wegld) {
-            if !wrapping && payment_token_id.is_egld() {
-                self.wrap_egld(amount.clone());
-            }
-            self.swap_wegld_for_xoxno(&sc_owner, EsdtTokenPayment::new(wegld, 0, amount));
-        } else {
-            self.transfer_or_save_payment(
-                &sc_owner,
-                payment_token_id,
-                payment_token_nonce,
-                &amount,
-            );
-        }
+        // if payment_token_id.is_egld() ||  payment_token_id.eq(&wegld) {
+        //     if !wrapping && payment_token_id.is_egld() {
+        //         self.wrap_egld(amount.clone());
+        //     }
+        //     self.swap_wegld_for_xoxno(&sc_owner, EsdtTokenPayment::new(wegld, 0, amount));
+        // } else {
+        self.transfer_or_save_payment(&sc_owner, payment_token_id, payment_token_nonce, &amount);
+        // }
     }
 }

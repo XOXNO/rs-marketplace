@@ -423,6 +423,9 @@ pub trait XOXNOProtocol:
                 &total_available,
             )
         }
+        if bought_nfts.len() > 0 {
+            self.send().direct_multi(&caller, &bought_nfts)
+        }
         if marketplace_fees > BigUint::zero() {
             self.share_marketplace_fees(
                 &payment_token,
@@ -433,9 +436,6 @@ pub trait XOXNOProtocol:
             );
         }
 
-        if bought_nfts.len() > 0 {
-            self.send().direct_multi(&caller, &bought_nfts)
-        }
     }
 
     #[endpoint]
