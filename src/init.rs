@@ -38,15 +38,15 @@ pub trait XOXNOProtocol:
         signer: ManagedAddress,
         wrapping_sc: ManagedAddress,
         wrapping_token: TokenIdentifier,
-        xoxno_pair: ManagedAddress,
-        xoxno_token: TokenIdentifier,
+        // xoxno_pair: ManagedAddress,
+        // xoxno_token: TokenIdentifier,
     ) {
         self.try_set_bid_cut_percentage(bid_cut_percentage);
         self.signer().set_if_empty(&signer);
         self.wrapping().set(wrapping_sc);
         self.wrapping_token().set(wrapping_token);
-        self.swap_pair_xoxno().set(xoxno_pair);
-        self.xoxno_token().set(xoxno_token);
+        // self.swap_pair_xoxno().set(xoxno_pair);
+        // self.xoxno_token().set(xoxno_token);
     }
 
     #[payable("*")]
@@ -395,6 +395,7 @@ pub trait XOXNOProtocol:
                 self.get_nft_info(&listing.auctioned_token_type, listing.auctioned_token_nonce);
 
             listing.current_bid = listing.min_bid.clone();
+            listing.current_winner = caller.clone();
             let bid_split_amounts = self.calculate_winning_bid_split(&listing);
 
             self.distribute_tokens_bulk_buy(

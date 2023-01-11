@@ -19,6 +19,8 @@ ADDRESS=erd1qqqqqqqqqqqqqpgq6wegs2xkypfpync8mn2sa5cmpqjlvrhwz5nqgepyg8
 DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-mainnet)
 PROXY=https://gateway.elrond.com
 
+SHARD2WrappingWEGLD=erd1qqqqqqqqqqqqqpgqmuk0q2saj0mgutxm4teywre6dl8wqf58xamqdrukln
+
 deploy() {
     echo ${PROJECT}
     erdpy --verbose contract deploy --project=${PROJECT} --recall-nonce --pem=${OWNER} --gas-limit=125000000 --arguments 0x64 --send --outfile="deploy-mainnet.interaction.json" --proxy=${PROXY} --chain=1 || return
@@ -34,12 +36,12 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    erdpy --verbose contract upgrade ${ADDRESS} --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" --project=${PROJECT} --recall-nonce --pem=${OWNER} \
+    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"  ${SHARD2WrappingWEGLD} str:WEGLD-bd4d79 --project=${PROJECT} --recall-nonce --pem=${OWNER} \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=40000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqengxksed64chl3zrxc5fjl97cz9nunmkys5sxf69aa --send --proxy=${PROXY} --chain=1
+    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=40000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqn88rvpgghdaw6z5rf8c58cqnws79s39xz4lqf6ygrx --send --proxy=${PROXY} --chain=1
 }
 
 removeWitelistedSC() {
