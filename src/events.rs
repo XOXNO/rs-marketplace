@@ -23,6 +23,7 @@ pub trait EventsModule {
             new_amount,
             &auction.payment_token_type,
             auction.payment_token_nonce,
+            auction.deadline,
         )
     }
 
@@ -331,6 +332,7 @@ pub trait EventsModule {
         #[indexed] new_price: &BigUint,
         #[indexed] payment_type: &EgldOrEsdtTokenIdentifier,
         #[indexed] payment_nonce: u64,
+        #[indexed] deadline: u64,
     );
 
     #[event("out_bid_event")]
