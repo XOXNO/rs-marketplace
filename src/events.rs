@@ -174,6 +174,7 @@ pub trait EventsModule {
             current_time,
             message.into_option().unwrap_or(ManagedBuffer::new()),
             buy_by.into_option().unwrap_or(ManagedAddress::default()),
+            &auction.nr_auctioned_tokens,
         )
     }
 
@@ -364,6 +365,7 @@ pub trait EventsModule {
         #[indexed] timestamp: u64,
         #[indexed] message: ManagedBuffer,
         #[indexed] buy_by: ManagedAddress,
+        #[indexed] nr_auctioned_tokens: &BigUint,
     );
 
     #[event("withdraw_event")]

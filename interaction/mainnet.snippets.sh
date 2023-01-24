@@ -16,129 +16,129 @@ EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
 ADDRESS=erd1qqqqqqqqqqqqqpgq6wegs2xkypfpync8mn2sa5cmpqjlvrhwz5nqgepyg8
-DEPLOY_TRANSACTION=$(erdpy data load --key=deployTransaction-mainnet)
-PROXY=https://gateway.elrond.com
+DEPLOY_TRANSACTION=$(mxpy data load --key=deployTransaction-mainnet)
+PROXY=https://gateway.multiversx.com
 
 SHARD2WrappingWEGLD=erd1qqqqqqqqqqqqqpgqmuk0q2saj0mgutxm4teywre6dl8wqf58xamqdrukln
 
 deploy() {
     echo ${PROJECT}
-    erdpy --verbose contract deploy --project=${PROJECT} --recall-nonce --pem=${OWNER} --gas-limit=125000000 --arguments 0x64 --send --outfile="deploy-mainnet.interaction.json" --proxy=${PROXY} --chain=1 || return
+    mxpy --verbose contract deploy --project=${PROJECT} --recall-nonce --pem=${OWNER} --gas-limit=125000000 --arguments 0x64 --send --outfile="deploy-mainnet.interaction.json" --proxy=${PROXY} --chain=1 || return
 
-    TRANSACTION=$(erdpy data parse --file="deploy-mainnet.interaction.json" --expression="data['emitted_tx']['hash']")
-    ADDRESS=$(erdpy data parse --file="deploy-mainnet.interaction.json" --expression="data['emitted_tx']['address']")
+    TRANSACTION=$(mxpy data parse --file="deploy-mainnet.interaction.json" --expression="data['emitted_tx']['hash']")
+    ADDRESS=$(mxpy data parse --file="deploy-mainnet.interaction.json" --expression="data['emitted_tx']['address']")
 
-    erdpy data store --key=address-mainnet --value=${ADDRESS}
-    erdpy data store --key=deployTransaction-mainnet --value=${TRANSACTION}
+    mxpy data store --key=address-mainnet --value=${ADDRESS}
+    mxpy data store --key=deployTransaction-mainnet --value=${TRANSACTION}
 
     echo ""
 }
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    erdpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"  ${SHARD2WrappingWEGLD} str:WEGLD-bd4d79 --project=${PROJECT} --recall-nonce --pem=${OWNER} \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"  ${SHARD2WrappingWEGLD} str:WEGLD-bd4d79 --project=${PROJECT} --recall-nonce --pem=${OWNER} \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
 addWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=40000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqn88rvpgghdaw6z5rf8c58cqnws79s39xz4lqf6ygrx --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=40000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqte3ntwhq8xcspmqf0q5sveh5rhv3ng8pu76ss8mv96 --send --proxy=${PROXY} --chain=1
 }
 
 removeWitelistedSC() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="removeWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgq7xafv9j6cr29vjhwduvlqharxxe2vjzaaxfsw8d4pm --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="removeWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgq75w3kkazfdvfxrl3mvwd3cp7yhzucnuv92rsjq304j --send --proxy=${PROXY} --chain=1
 }
 setStatusOn() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=1
 }
 
 setStatusOff() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x00 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setStatus" --arguments 0x00 --send --proxy=${PROXY} --chain=1
 }
 
 setRewardTicker() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setRewardTicker" --arguments 0x57415445522d396564343030 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setRewardTicker" --arguments 0x57415445522d396564343030 --send --proxy=${PROXY} --chain=1
 }
 
 setDefaultRewardAmount() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setDefaultRewardAmount" --arguments 0x8AC7230489E80000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setDefaultRewardAmount" --arguments 0x8AC7230489E80000 --send --proxy=${PROXY} --chain=1
 }
 
 setSpecialRewardAmount() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setSpecialRewardAmount" --arguments 0x475541524449414e2d336436363335 0x2B5E3AF16B1880000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setSpecialRewardAmount" --arguments 0x475541524449414e2d336436363335 0x2B5E3AF16B1880000 --send --proxy=${PROXY} --chain=1
 }
 
 setCutPercentage() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setCutPercentage" --arguments 0x64 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="setCutPercentage" --arguments 0x64 --send --proxy=${PROXY} --chain=1
 }
 
 setAcceptedTokens() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:QWT-46ac01 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:QWT-46ac01 --send --proxy=${PROXY} --chain=1
 }
 
 removeAcceptedTokens() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=1
 }
 
 deleteOffersByWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1vkk9dc4tu4j8wacykqy3fduereaa0qlxutk08ueklhvf6pvgjgasvfwc7h --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1vkk9dc4tu4j8wacykqy3fduereaa0qlxutk08ueklhvf6pvgjgasvfwc7h --send --proxy=${PROXY} --chain=1
 }
 addBlackListWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd15vmr3zvyf30xuu9xechrsk2cag38ywcztpd0rxgqr45486g0w3hquz9sxu --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd15vmr3zvyf30xuu9xechrsk2cag38ywcztpd0rxgqr45486g0w3hquz9sxu --send --proxy=${PROXY} --chain=1
 }
 
 removeBlackListWallet() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="removeBlackListWallet" --arguments erd1mz4px3nttcvvx54xdpqma9catskmdcajw2xd82eal22dhvh3kx0qul42gd --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="removeBlackListWallet" --arguments erd1mz4px3nttcvvx54xdpqma9catskmdcajw2xd82eal22dhvh3kx0qul42gd --send --proxy=${PROXY} --chain=1
 }
 
 withdraw() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="withdraw" --arguments 0x05 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="withdraw" --arguments 0x05 --send --proxy=${PROXY} --chain=1
 }
 
 endAuction() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="endAuction" --arguments 0x05 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="endAuction" --arguments 0x05 --send --proxy=${PROXY} --chain=1
 }
 
 bidCarol() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="bid" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="bid" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
 }
 
 bidBob() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${BOB} --gas-limit=35000000 --function="bid" --arguments 0x05 0x4b42422d316339353733 0x05 --value=1000000000000000000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${BOB} --gas-limit=35000000 --function="bid" --arguments 0x05 0x4b42422d316339353733 0x05 --value=1000000000000000000 --send --proxy=${PROXY} --chain=1
 }
 
 bidEve() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="bid" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="bid" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
 }
 
 bidESDTEve() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x00D529AE9E860000 0x626964 0x05 0x4b42422d316339353733 0x04 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x00D529AE9E860000 0x626964 0x05 0x4b42422d316339353733 0x04 --send --proxy=${PROXY} --chain=1
 }
 
 bidESDTBob() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${BOB} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x016345785d8a0000 0x626964 0x05 0x4b42422d316339353733 0x04 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${BOB} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x016345785d8a0000 0x626964 0x05 0x4b42422d316339353733 0x04 --send --proxy=${PROXY} --chain=1
 }
 
 bidESDTCarol() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x00D529AE9E860000 0x626964 0x05 0x4b42422d316339353733 0x04 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x00D529AE9E860000 0x626964 0x05 0x4b42422d316339353733 0x04 --send --proxy=${PROXY} --chain=1
 }
 buyEve() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="buy" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="buy" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
 }
 
 buyCarol() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="buy" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="buy" --arguments 0x05 0x4b42422d316339353733 0x05 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
 }
 
 buyESDTEve() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="ESDTNFTTransfer" --arguments 0x05 0x45474c442d633365323066 0x01 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="ESDTNFTTransfer" --arguments 0x05 0x45474c442d633365323066 0x01 --value=100000000000000000 --send --proxy=${PROXY} --chain=1
 }
 
 buyESDTCarol() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x016345785D8A0000 0x627579 0x01 0x4b42422d316339353733 0x01 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${EVE} --gas-limit=35000000 --function="ESDTTransfer" --arguments 0x45474c442d633365323066 0x016345785D8A0000 0x627579 0x01 0x4b42422d316339353733 0x01 --send --proxy=${PROXY} --chain=1
 }
 
 listNFT() {
-    erdpy --verbose contract call ${CAROLWALLET} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="ESDTNFTTransfer" \
+    mxpy --verbose contract call ${CAROLWALLET} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="ESDTNFTTransfer" \
     --arguments \
     0x4b42422d316339353733 \
     0x05 \
@@ -154,136 +154,136 @@ listNFT() {
 }
 
 getListingsCount() {
-    erdpy --verbose contract query ${ADDRESS} --function="getListingsCount" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getListingsCount" --proxy=${PROXY}
 }
 
 getOffersCount() {
-    erdpy --verbose contract query ${ADDRESS} --function="getOffersCount" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getOffersCount" --proxy=${PROXY}
 }
 
 getListings() {
-    erdpy --verbose contract query ${ADDRESS} --function="getListings" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getListings" --proxy=${PROXY}
 }
 
 getStatus() {
-    erdpy --verbose contract query ${ADDRESS} --function="getStatus" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getStatus" --proxy=${PROXY}
 }
 
 getLastValidAuctionId() {
-    erdpy --verbose contract query ${ADDRESS} --function="getLastValidAuctionId" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getLastValidAuctionId" --proxy=${PROXY}
 }
 
 getAcceptedTokens() {
-    erdpy --verbose contract query ${ADDRESS} --function="getAcceptedTokens" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getAcceptedTokens" --proxy=${PROXY}
 }
 
 getMarketplaceCutPercentage() {
-    erdpy --verbose contract query ${ADDRESS} --function="getMarketplaceCutPercentage" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getMarketplaceCutPercentage" --proxy=${PROXY}
 }
 
 getListingsByWallet() {
-    erdpy --verbose contract query ${ADDRESS} --function="getListingsByWallet" --arguments ${EVEHEX} --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getListingsByWallet" --arguments ${EVEHEX} --proxy=${PROXY}
 }
 
 getActiveListingsBids() {
-    erdpy --verbose contract query ${ADDRESS} --function="getActiveListingsBids" --arguments ${BOBHEX} --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getActiveListingsBids" --arguments ${BOBHEX} --proxy=${PROXY}
 }
 
 getTokenBalanceDifference() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenBalanceDifference" --arguments 0x45474c44 0x00 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getTokenBalanceDifference" --arguments 0x45474c44 0x00 --proxy=${PROXY}
 }
 
 getTokenItemsForSale() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSale" --arguments str:MICE-a0c447 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSale" --arguments str:MICE-a0c447 --proxy=${PROXY}
 }
 
 getTokenItemsQuantityForSale() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsQuantityForSale" --arguments 0x4b42422d316339353733 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getTokenItemsQuantityForSale" --arguments 0x4b42422d316339353733 0x05 --proxy=${PROXY}
 }
 
 getTokenItemsForSaleCount() {
-    erdpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSaleCount" --arguments str:MICE-a0c447 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getTokenItemsForSaleCount" --arguments str:MICE-a0c447 --proxy=${PROXY}
 }
 
 doesAuctionExist() {
-    erdpy --verbose contract query ${ADDRESS} --function="doesAuctionExist" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="doesAuctionExist" --arguments 0x05 --proxy=${PROXY}
 }
 
 getAuctionedToken() {
-    erdpy --verbose contract query ${ADDRESS} --function="getAuctionedToken" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getAuctionedToken" --arguments 0x05 --proxy=${PROXY}
 }
 
 getAuctionType() {
-    erdpy --verbose contract query ${ADDRESS} --function="getAuctionType" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getAuctionType" --arguments 0x05 --proxy=${PROXY}
 }
 
 getPaymentTokenForAuction() {
-    erdpy --verbose contract query ${ADDRESS} --function="getPaymentTokenForAuction" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getPaymentTokenForAuction" --arguments 0x05 --proxy=${PROXY}
 }
 
 getMinMaxBid() {
-    erdpy --verbose contract query ${ADDRESS} --function="getMinMaxBid" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getMinMaxBid" --arguments 0x05 --proxy=${PROXY}
 }
 
 getStartTime() {
-    erdpy --verbose contract query ${ADDRESS} --function="getStartTime" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getStartTime" --arguments 0x05 --proxy=${PROXY}
 }
 
 getDeadline() {
-    erdpy --verbose contract query ${ADDRESS} --function="getDeadline" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getDeadline" --arguments 0x05 --proxy=${PROXY}
 }
 
 getOriginalOwner() {
-    erdpy --verbose contract query ${ADDRESS} --function="getOriginalOwner" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getOriginalOwner" --arguments 0x05 --proxy=${PROXY}
 }
 
 getCurrentWinningBid() {
-    erdpy --verbose contract query ${ADDRESS} --function="getCurrentWinningBid" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getCurrentWinningBid" --arguments 0x05 --proxy=${PROXY}
 }
 
 getCurrentWinner() {
-    erdpy --verbose contract query ${ADDRESS} --function="getCurrentWinner" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getCurrentWinner" --arguments 0x05 --proxy=${PROXY}
 }
 
 getFullAuctionData() {
-    erdpy --verbose contract query ${ADDRESS} --function="getFullAuctionData" --arguments 0x05 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getFullAuctionData" --arguments 0x05 --proxy=${PROXY}
 }
 
 getRewardBalance() {
-    erdpy --verbose contract query ${ADDRESS} --function="getRewardBalance" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getRewardBalance" --proxy=${PROXY}
 }
 
 specialRewardAmount() {
-    erdpy --verbose contract query ${ADDRESS} --function="specialRewardAmount" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="specialRewardAmount" --proxy=${PROXY}
 }
 
 defaultRewardAmount() {
-    erdpy --verbose contract query ${ADDRESS} --function="defaultRewardAmount" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="defaultRewardAmount" --proxy=${PROXY}
 }
 
 getRewardTicker() {
-    erdpy --verbose contract query ${ADDRESS} --function="getRewardTicker" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getRewardTicker" --proxy=${PROXY}
 }
 
 offerById() {
-    erdpy --verbose contract query ${ADDRESS} --function="offerById" --arguments 0x0114e5 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="offerById" --arguments 0x0114e5 --proxy=${PROXY}
 }
 
 getLastValidGlobalOfferId() {
-    erdpy --verbose contract query ${ADDRESS} --function="getLastValidGlobalOfferId" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getLastValidGlobalOfferId" --proxy=${PROXY}
 }
 getGlobalOffers() {
-    erdpy --verbose contract query ${ADDRESS} --function="getGlobalOffers" --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getGlobalOffers" --proxy=${PROXY}
 }
 
 getOffersByWallet() {
-    erdpy --verbose contract query ${ADDRESS} --function="getOffersByWallet" --arguments erd1wrr0gvvgpevwg2plphsqzw022wppf726ja94fw8dkrv84vslaarsdqpyt4 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getOffersByWallet" --arguments erd1wrr0gvvgpevwg2plphsqzw022wppf726ja94fw8dkrv84vslaarsdqpyt4 --proxy=${PROXY}
 }
 
 returnListing() {
-    erdpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="returnListing" --arguments 163493 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="returnListing" --arguments 163493 --send --proxy=${PROXY} --chain=1
 }
 
 getGlobalOffer() {
-    erdpy --verbose contract query ${ADDRESS} --function="getGlobalOffer" --arguments 5612 --proxy=${PROXY}
+    mxpy --verbose contract query ${ADDRESS} --function="getGlobalOffer" --arguments 5612 --proxy=${PROXY}
 }
