@@ -22,7 +22,11 @@ pub trait AdminModule:
     fn return_listing(&self, auction_ids: MultiValueEncoded<u64>) {
         self.require_admin();
         for auction_id in auction_ids {
-        let mut auction = self.try_get_auction(auction_id);
+        let map_auction = self.auction_by_id(auction_id);
+        if map_auction.is_empty() {
+            continue;
+        }
+        let mut auction = map_auction.get();
         if auction.auction_type == AuctionType::SftOnePerPayment
             || auction.auction_type == AuctionType::Nft
         {
