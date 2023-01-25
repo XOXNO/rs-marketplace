@@ -17,7 +17,7 @@ SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
 ADDRESS=erd1qqqqqqqqqqqqqpgq6wegs2xkypfpync8mn2sa5cmpqjlvrhwz5nqgepyg8
 DEPLOY_TRANSACTION=$(mxpy data load --key=deployTransaction-mainnet)
-PROXY=https://gateway.multiversx.com
+PROXY=https://xoxnogateway.livelysmoke-45e2a824.westeurope.azurecontainerapps.io
 
 SHARD2WrappingWEGLD=erd1qqqqqqqqqqqqqpgqmuk0q2saj0mgutxm4teywre6dl8wqf58xamqdrukln
 
@@ -76,7 +76,7 @@ setAcceptedTokens() {
 }
 
 removeAcceptedTokens() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="removeAcceptedTokens" --arguments str:MEX-455c57 --send --proxy=${PROXY} --chain=1
 }
 
 deleteOffersByWallet() {
@@ -281,7 +281,7 @@ getOffersByWallet() {
 }
 
 returnListing() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=15000000 --function="returnListing" --arguments 163493 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=35000000 --function="returnListing" --arguments 538990 --send --proxy=${PROXY} --chain=1
 }
 
 getGlobalOffer() {

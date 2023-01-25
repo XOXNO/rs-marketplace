@@ -1,6 +1,6 @@
 elrond_wasm::imports!();
 elrond_wasm::derive_imports!();
-
+use crate::{auction::{AuctionType}};
 #[elrond_wasm::module]
 pub trait AdminModule:
     crate::storage::StorageModule
@@ -11,26 +11,55 @@ pub trait AdminModule:
     + crate::wrapping::WrappingModule
     + crate::dex::DexModule
 {
-    #[only_owner]
-    #[endpoint(returnListing)]
-    fn return_listing(&self, auction_id: u64) {
-        let auction = self.try_get_auction(auction_id);
-        self.withdraw_auction_common(auction_id, &auction);
-        self.emit_withdraw_event(auction_id, &auction);
+    fn require_admin(&self) {
+        let signer: ManagedAddress = self.signer().get();
+        let caller = self.blockchain().get_caller();
+        let sc_owner = self.blockchain().get_owner_address();
+        require!(caller.eq(&sc_owner) || caller.eq(&signer), "You are not an admin!");
     }
 
-    #[only_owner]
+    #[endpoint(returnListing)]
+    fn return_listing(&self, auction_ids: MultiValueEncoded<u64>) {
+        self.require_admin();
+        for auction_id in auction_ids {
+        let mut auction = self.try_get_auction(auction_id);
+        if auction.auction_type == AuctionType::SftOnePerPayment
+            || auction.auction_type == AuctionType::Nft
+        {
+            self.withdraw_auction_common(auction_id, &auction);
+        } else if auction.current_winner.is_zero() {
+            self.end_auction_common(auction_id, &auction);
+        } else {
+            if auction.current_winner != ManagedAddress::zero() {
+                self.transfer_or_save_payment(
+                    &auction.current_winner,
+                    &auction.payment_token_type,
+                    auction.payment_token_nonce,
+                    &auction.current_bid,
+                );
+                self.listings_bids(&auction.current_winner)
+                    .remove(&auction_id);
+
+                auction.current_winner = ManagedAddress::zero();
+                self.end_auction_common(auction_id, &auction);
+            }
+        }
+    }
+    }
+
+
     #[endpoint(withdrawGlobalOffers)]
     fn withdraw_global_offers(&self, offer_id: u64) {
+        self.require_admin();
         require!(self.status().get(), "Global operation enabled!");
         let offer = self.try_get_global_offer(offer_id);
         self.common_global_offer_remove(&offer, true);
         self.emit_remove_global_offer_event(offer_id);
     }
 
-    #[only_owner]
     #[endpoint(deleteOffersByWallet)]
     fn delete_user_offers(&self, user: &ManagedAddress) {
+        self.require_admin();
         let offers_root = self.offers_by_wallet(user);
         if offers_root.len() > 0 {
             for offer in offers_root.iter().take(80) {
@@ -39,9 +68,9 @@ pub trait AdminModule:
         }
     }
 
-    #[only_owner]
     #[endpoint(cleanExpiredOffers)]
     fn clean_expired_offers(&self) -> i32 {
+        self.require_admin();
         let timestamp = self.blockchain().get_block_timestamp();
         let mut found = 0;
         for offer_id in self.offers().iter() {
@@ -111,9 +140,9 @@ pub trait AdminModule:
         self.accepted_tokens().remove(&token)
     }
 
-    #[only_owner]
     #[endpoint(addWitelistedSC)]
     fn add_whitelisted_sc(&self, sc: ManagedAddress) {
+        self.require_admin();
         require!(
             self.blockchain().is_smart_contract(&sc),
             "The address is not a smart contract!"
@@ -135,9 +164,9 @@ pub trait AdminModule:
         tokens.clear();
     }
 
-    #[only_owner]
     #[endpoint(removeWitelistedSC)]
     fn remove_wl_sc(&self, sc: ManagedAddress) {
+        self.require_admin();
         require!(
             self.blockchain().is_smart_contract(&sc),
             "The address is not a smart contract!"
@@ -145,9 +174,9 @@ pub trait AdminModule:
         self.whitelisted_contracts().remove(&sc);
     }
 
-    #[only_owner]
     #[endpoint(setStatus)]
     fn set_status(&self, status: bool) {
+        self.require_admin();
         self.status().set(&status);
     }
 
@@ -157,7 +186,6 @@ pub trait AdminModule:
         self.try_set_bid_cut_percentage(new_cut_percentage)
     }
 
-    #[only_owner]
     #[endpoint(claimTokensForCreator)]
     fn claim_tokens_for_creator(
         &self,
@@ -165,6 +193,7 @@ pub trait AdminModule:
         token_nonce: u64,
         creator: ManagedAddress,
     ) {
+        self.require_admin();
         let amount_mapper = self.claimable_amount(&creator, &token_id, token_nonce);
         let amount = amount_mapper.get();
 
@@ -175,15 +204,15 @@ pub trait AdminModule:
         }
     }
 
-    #[only_owner]
     #[endpoint(addBlackListWallet)]
     fn add_blacklist(&self, wallet: ManagedAddress) -> bool {
+        self.require_admin();
         self.blacklist_wallets().insert(wallet)
     }
 
-    #[only_owner]
     #[endpoint(removeBlackListWallet)]
     fn remove_blacklist(&self, wallet: ManagedAddress) -> bool {
+        self.require_admin();
         self.blacklist_wallets().remove(&wallet)
     }
 }
