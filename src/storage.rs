@@ -1,8 +1,8 @@
-elrond_wasm::imports!();
+multiversx_sc::imports!();
 
 use crate::auction::*;
 
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait StorageModule {
     #[view(getSigner)]
     #[storage_mapper("signer")]

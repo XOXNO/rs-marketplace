@@ -1,7 +1,7 @@
 #![no_std]
 
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 pub mod auction;
 use auction::*;
 pub mod admin;
@@ -18,7 +18,7 @@ pub mod wrapping;
 const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
 
-#[elrond_wasm::contract]
+#[multiversx_sc::contract]
 pub trait XOXNOProtocol:
     storage::StorageModule
     + views::ViewsModule

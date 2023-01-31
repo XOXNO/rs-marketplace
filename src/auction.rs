@@ -1,6 +1,7 @@
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
-use elrond_wasm::elrond_codec::NestedDecodeInput;
+use multiversx_sc::codec::NestedDecodeInput;
+
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 
 #[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct Auction<M: ManagedTypeApi> {
@@ -111,7 +112,7 @@ pub struct GlobalOffer<M: ManagedTypeApi> {
 impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
     fn top_decode<I>(input: I) -> Result<Self, DecodeError>
     where
-        I: elrond_codec::TopDecodeInput,
+        I: multiversx_sc::codec::TopDecodeInput,
     {
         let mut input = input.into_nested_buffer();
         let offer_id = u64::dep_decode(&mut input)?;

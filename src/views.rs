@@ -1,8 +1,8 @@
-elrond_wasm::imports!();
+multiversx_sc::imports!();
 
 use crate::auction::*;
 
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait ViewsModule: crate::storage::StorageModule {
     #[view(getListingsCount)]
     fn get_listings_count(&self) -> usize {

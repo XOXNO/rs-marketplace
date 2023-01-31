@@ -1,5 +1,5 @@
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 
 use core::convert::TryInto;
 
@@ -8,7 +8,7 @@ use crate::{
     PERCENTAGE_TOTAL,
 };
 
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait HelpersModule:
     crate::storage::StorageModule + crate::views::ViewsModule + crate::events::EventsModule
 {

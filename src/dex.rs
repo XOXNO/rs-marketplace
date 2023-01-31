@@ -1,8 +1,8 @@
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 use pair::ProxyTrait as _;
 
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait DexModule: crate::storage::StorageModule {
     #[proxy]
     fn dex_proxy(&self, sc_address: ManagedAddress) -> pair::Proxy<Self::Api>;

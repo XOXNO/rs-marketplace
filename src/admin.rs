@@ -1,7 +1,7 @@
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 use crate::{auction::{AuctionType}};
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait AdminModule:
     crate::storage::StorageModule
     + crate::helpers::HelpersModule
@@ -151,7 +151,6 @@ pub trait AdminModule:
             self.blockchain().is_smart_contract(&sc),
             "The address is not a smart contract!"
         );
-        self.whitelisted_contracts().insert(sc.clone());
         let mut tokens = self.claimable_tokens(&sc);
         for token in tokens.iter() {
             let mut nonces = self.claimable_token_nonces(&sc, &token);
@@ -166,6 +165,7 @@ pub trait AdminModule:
             nonces.clear();
         }
         tokens.clear();
+        self.whitelisted_contracts().insert(sc);
     }
 
     #[endpoint(removeWitelistedSC)]

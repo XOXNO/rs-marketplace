@@ -1,12 +1,11 @@
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 
 use crate::auction::GlobalOffer;
 
 use super::auction::{Auction, AuctionType, Offer, OfferStatus};
 
-#[allow(clippy::too_many_arguments)]
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait EventsModule {
     fn emit_change_listing_event(
         self,

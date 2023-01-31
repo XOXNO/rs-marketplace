@@ -7,19 +7,18 @@ publish = false
 
 [lib]
 path = "src/init.rs"
+[dependencies.multiversx-sc]
+version = "0.39.4"
 
-[dependencies.elrond-wasm]
-version = "0.38.0"
-# features = ["promises"]
+[dependencies.multiversx-sc-modules]
+version = "0.39.4"
 
-[dependencies.elrond-sc-wegld-swap]
-version = "0.38.0"
+[dev-dependencies.multiversx-sc-scenario]
+version = "0.39.4"
 
-[dependencies.elrond-wasm-modules]
-version = "0.38.0"
+[dependencies.pair]
+git = "https://github.com/multiversx/mx-exchange-sc"
+branch = "feat/dex_v2"
 
-[dev-dependencies.elrond-wasm-debug]
-version = "0.38.0"
-
-[dependencies]
-pair = { git = "https://github.com/ElrondNetwork/sc-dex-rs", branch = "feat/dex_v2" }
+[dependencies.multiversx-wegld-swap-sc ]
+version = "0.39.4"

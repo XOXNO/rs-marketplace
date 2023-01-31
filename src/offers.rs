@@ -1,5 +1,5 @@
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 
 use core::convert::TryInto;
 
@@ -11,14 +11,14 @@ use crate::helpers;
 use crate::views;
 use crate::wrapping;
 use crate::{storage, NFT_AMOUNT, PERCENTAGE_TOTAL};
-use elrond_wasm::api::ED25519_SIGNATURE_BYTE_LEN;
+use multiversx_sc::api::ED25519_SIGNATURE_BYTE_LEN;
 
 use super::auction::{AuctionType, Offer, OfferStatus};
 
 const MAX_DATA_LEN: usize = 15000;
 
 pub type Signature<M> = ManagedByteArray<M, ED25519_SIGNATURE_BYTE_LEN>;
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait CustomOffersModule:
     storage::StorageModule
     + helpers::HelpersModule

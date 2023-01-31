@@ -3,10 +3,10 @@ use crate::{
     NFT_AMOUNT,
 };
 
-elrond_wasm::imports!();
-elrond_wasm::derive_imports!();
+multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
 
-#[elrond_wasm::module]
+#[multiversx_sc::module]
 pub trait CommonModule:
     crate::storage::StorageModule
     + crate::helpers::HelpersModule

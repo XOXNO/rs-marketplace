@@ -4,13 +4,8 @@ version = "1.0.0"
 authors = ["Mihai Daniel <mihai@xoxno.com>"]
 edition = "2021"
 publish = false
-
 [dependencies.xoxno-protocol]
 path = ".."
 
-[dependencies.elrond-wasm]
-version = "0.38.0"
-# features = ["promises"]
-
-[dependencies.elrond-wasm-debug]
-version = "0.38.0"
+[dependencies.multiversx-sc-meta]
+version = "0.39.4"
