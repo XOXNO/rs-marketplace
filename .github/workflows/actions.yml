@@ -17,5 +17,6 @@ jobs:
     with:
       rust-toolchain: nightly-2022-12-08
       vmtools-version: v1.4.60
+      create_release: true
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
