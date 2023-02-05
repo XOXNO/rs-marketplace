@@ -186,7 +186,6 @@ pub trait CustomOffersModule:
         );
 
         self.common_withdraw_offer(offer_id, &offer);
-        self.emit_withdraw_offer_event(offer_id, &offer);
     }
 
     #[payable("EGLD")]
