@@ -51,7 +51,6 @@ pub trait AdminModule:
     }
     }
 
-
     #[endpoint(withdrawGlobalOffers)]
     fn withdraw_global_offers(&self, offer_id: u64) {
         self.require_admin();
@@ -188,6 +187,16 @@ pub trait AdminModule:
     #[endpoint(setCutPercentage)]
     fn set_percentage_cut(&self, new_cut_percentage: u64) {
         self.try_set_bid_cut_percentage(new_cut_percentage)
+    }
+
+    #[only_owner]
+    #[endpoint(sendLostRoyalties)]
+    fn send_lost_royalties(&self, amount: &BigUint, creator: &ManagedAddress) {
+        require!(
+            self.blockchain().is_smart_contract(creator),
+            "The address is not a smart contract!"
+        );
+        self.send().direct_egld(creator, amount);
     }
 
     #[endpoint(claimTokensForCreator)]
