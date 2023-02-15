@@ -293,8 +293,8 @@ pub trait CustomOffersModule:
         );
         let mut user_map = self.user_collection_global_offers(&caller, &collection);
         require!(
-            user_map.len() <= 5,
-            "You have a limit of 5 offers per collection!"
+            user_map.len() <= 25,
+            "You have a limit of 25 offers per collection!"
         );
 
         let offer_id = self.last_valid_global_offer_id().get() + 1;

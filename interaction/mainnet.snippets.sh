@@ -86,12 +86,13 @@ removeAcceptedTokens() {
 deleteOffersByWallet() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=600000000 --function="deleteOffersByWallet" --arguments erd1vkk9dc4tu4j8wacykqy3fduereaa0qlxutk08ueklhvf6pvgjgasvfwc7h --send --proxy=${PROXY} --chain=1
 }
+
 addBlackListWallet() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="addBlackListWallet" --arguments erd15vmr3zvyf30xuu9xechrsk2cag38ywcztpd0rxgqr45486g0w3hquz9sxu --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce  --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="addBlackListWallet" --arguments erd15kgvfgxepluq4y95dcfrl9azqsjr3dhpmmz85anj0a9lxhrz569skmjmkx --send --proxy=${PROXY} --chain=1
 }
 
 removeBlackListWallet() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="removeBlackListWallet" --arguments erd1mz4px3nttcvvx54xdpqma9catskmdcajw2xd82eal22dhvh3kx0qul42gd --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="removeBlackListWallet" --arguments erd15kgvfgxepluq4y95dcfrl9azqsjr3dhpmmz85anj0a9lxhrz569skmjmkx --send --proxy=${PROXY} --chain=1
 }
 
 withdraw() {
