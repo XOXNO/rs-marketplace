@@ -1,6 +1,6 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
-use crate::{auction::{AuctionType}};
+use crate::auction::AuctionType;
 #[multiversx_sc::module]
 pub trait AdminModule:
     crate::storage::StorageModule
@@ -15,40 +15,43 @@ pub trait AdminModule:
         let signer: ManagedAddress = self.signer().get();
         let caller = self.blockchain().get_caller();
         let sc_owner = self.blockchain().get_owner_address();
-        require!(caller.eq(&sc_owner) || caller.eq(&signer), "You are not an admin!");
+        require!(
+            caller.eq(&sc_owner) || caller.eq(&signer),
+            "You are not an admin!"
+        );
     }
 
     #[endpoint(returnListing)]
     fn return_listing(&self, auction_ids: MultiValueEncoded<u64>) {
         self.require_admin();
         for auction_id in auction_ids {
-        let map_auction = self.auction_by_id(auction_id);
-        if map_auction.is_empty() {
-            continue;
-        }
-        let mut auction = map_auction.get();
-        if auction.auction_type == AuctionType::SftOnePerPayment
-            || auction.auction_type == AuctionType::Nft
-        {
-            self.withdraw_auction_common(auction_id, &auction);
-        } else if auction.current_winner.is_zero() {
-            self.end_auction_common(auction_id, &auction);
-        } else {
-            if auction.current_winner != ManagedAddress::zero() {
-                self.transfer_or_save_payment(
-                    &auction.current_winner,
-                    &auction.payment_token_type,
-                    auction.payment_token_nonce,
-                    &auction.current_bid,
-                );
-                self.listings_bids(&auction.current_winner)
-                    .remove(&auction_id);
-
-                auction.current_winner = ManagedAddress::zero();
+            let map_auction = self.auction_by_id(auction_id);
+            if map_auction.is_empty() {
+                continue;
+            }
+            let mut auction = map_auction.get();
+            if auction.auction_type == AuctionType::SftOnePerPayment
+                || auction.auction_type == AuctionType::Nft
+            {
+                self.withdraw_auction_common(auction_id, &auction);
+            } else if auction.current_winner.is_zero() {
                 self.end_auction_common(auction_id, &auction);
+            } else {
+                if auction.current_winner != ManagedAddress::zero() {
+                    self.transfer_or_save_payment(
+                        &auction.current_winner,
+                        &auction.payment_token_type,
+                        auction.payment_token_nonce,
+                        &auction.current_bid,
+                    );
+                    self.listings_bids(&auction.current_winner)
+                        .remove(&auction_id);
+
+                    auction.current_winner = ManagedAddress::zero();
+                    self.end_auction_common(auction_id, &auction);
+                }
             }
         }
-    }
     }
 
     #[endpoint(withdrawGlobalOffers)]
@@ -72,26 +75,18 @@ pub trait AdminModule:
     }
 
     #[endpoint(cleanExpiredOffers)]
-    fn clean_expired_offers(&self) -> i32 {
+    fn clean_expired_offers(&self, offer_ids: MultiValueEncoded<u64>) {
         self.require_admin();
         let timestamp = self.blockchain().get_block_timestamp();
-        let mut found = 0;
-        for offer_id in self.offers().iter() {
+        for offer_id in offer_ids {
             let offer = self.offer_by_id(offer_id);
             if !offer.is_empty() {
                 let main_offer = offer.get();
-                if main_offer.deadline < timestamp {
-                    found += 1;
+                if main_offer.deadline <= timestamp {
                     self.common_withdraw_offer(offer_id, &main_offer);
                 }
-                if found == 100 {
-                    break;
-                }
-            } else {
-                self.offers().remove(&offer_id);
             }
         }
-        found
     }
 
     #[only_owner]
