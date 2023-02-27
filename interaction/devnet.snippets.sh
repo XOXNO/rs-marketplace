@@ -15,7 +15,7 @@ SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
 ADDRESS=erd1qqqqqqqqqqqqqpgqn4fnwl43hhchz9emdy66eh5azzhl599zd8ssxjdyh3
 DEPLOY_TRANSACTION=$(mxpy data load --key=deployTransaction-devnet)
-PROXY=https://devnet-multiversx.elrond.com
+PROXY=https://devnet-gateway.multiversx.com
 SHARD1WrappingWEGLD=erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnlr88dpfw06677lxe9w0n4suz00uh
 XOXNOPairSwap=erd1qqqqqqqqqqqqqpgqae44n6t0fhg40zmtq3lzjk58f8t7envn0n4sj7x6pl
 
@@ -48,7 +48,7 @@ setStatusOn() {
 }
 
 addWitelistedSC() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqe752yyef0m3wnqh5q6dpxd6m6f0zk2npd8ssev5kz2 --send --proxy=${PROXY} --chain=D
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=100000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqn8qgd8redqt0lx6sn2p0rwcmvals870t03as9g0m9h --send --proxy=${PROXY} --chain=D
 }
 
 setStatusOff() {

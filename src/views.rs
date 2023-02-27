@@ -14,6 +14,11 @@ pub trait ViewsModule: crate::storage::StorageModule {
         self.offers().len()
     }
 
+    #[view(getGlobalOffersCount)]
+    fn get_global_offers_count(&self) -> usize {
+        self.global_offer_ids().len()
+    }
+
     #[view(getListings)]
     fn get_listings(&self, from: usize, to: usize) -> MultiValueEncoded<u64> {
         let mut results = MultiValueEncoded::new();
@@ -108,7 +113,6 @@ pub trait ViewsModule: crate::storage::StorageModule {
         results
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[view(checkTokenOffers)]
     fn check_token_offers(
         &self,
@@ -133,7 +137,6 @@ pub trait ViewsModule: crate::storage::StorageModule {
         return results;
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[view(getBulkOffers)]
     fn get_bulk_offers(&self, offers: MultiValueEncoded<u64>) -> ManagedVec<BulkOffers<Self::Api>> {
         let mut results = ManagedVec::new();
@@ -151,7 +154,6 @@ pub trait ViewsModule: crate::storage::StorageModule {
         return results;
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[view(getBulkListings)]
     fn get_bulk_listings(
         &self,

@@ -76,7 +76,7 @@ setCutPercentage() {
 }
 
 setAcceptedTokens() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:QWT-46ac01 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:USDT-f8c08c --send --proxy=${PROXY} --chain=1
 }
 
 removeAcceptedTokens() {

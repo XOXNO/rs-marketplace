@@ -64,6 +64,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         userCollectionGlobalOffers
         getListingsCount
         getOffersCount
+        getGlobalOffersCount
         getListings
         getCollectionsCount
         isCollectionListed
@@ -111,7 +112,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         removeWitelistedSC
         setStatus
         setCutPercentage
-        sendLostRoyalties
         claimTokensForCreator
         addBlackListWallet
         removeBlackListWallet

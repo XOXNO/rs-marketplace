@@ -84,7 +84,7 @@ pub trait AdminModule:
                     found += 1;
                     self.common_withdraw_offer(offer_id, &main_offer);
                 }
-                if found == 150 {
+                if found == 100 {
                     break;
                 }
             } else {
@@ -189,15 +189,15 @@ pub trait AdminModule:
         self.try_set_bid_cut_percentage(new_cut_percentage)
     }
 
-    #[only_owner]
-    #[endpoint(sendLostRoyalties)]
-    fn send_lost_royalties(&self, amount: &BigUint, creator: &ManagedAddress) {
-        require!(
-            self.blockchain().is_smart_contract(creator),
-            "The address is not a smart contract!"
-        );
-        self.send().direct_egld(creator, amount);
-    }
+    // #[only_owner]
+    // #[endpoint(sendLostRoyalties)]
+    // fn send_lost_royalties(&self, amount: &BigUint, creator: &ManagedAddress) {
+    //     require!(
+    //         self.blockchain().is_smart_contract(creator),
+    //         "The address is not a smart contract!"
+    //     );
+    //     self.send().direct_egld(creator, amount);
+    // }
 
     #[endpoint(claimTokensForCreator)]
     fn claim_tokens_for_creator(
