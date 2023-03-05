@@ -32,10 +32,10 @@ deploy() {
     echo ""
     echo "Smart contract address: ${ADDRESS}"
 }
-
+# ${XOXNOPairSwap} str:XOXNO-2d9386
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD1WrappingWEGLD} str:WEGLD-d7c6bb ${XOXNOPairSwap} str:XOXNO-2d9386 --project=${PROJECT} --recall-nonce --pem=${ALICE} \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD1WrappingWEGLD} str:WEGLD-d7c6bb --project=${PROJECT} --recall-nonce --pem=${ALICE} \
     --gas-limit=350000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 

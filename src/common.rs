@@ -279,7 +279,7 @@ pub trait CommonModule:
     }
 
     fn common_global_offer_remove(&self, offer: &GlobalOffer<Self::Api>, return_offer: bool) {
-        if return_offer {
+        if return_offer && !offer.new_version {
             self.transfer_or_save_payment(
                 &offer.owner,
                 &offer.payment_token,
@@ -298,12 +298,14 @@ pub trait CommonModule:
     }
 
     fn common_withdraw_offer(&self, offer_id: u64, offer: &Offer<Self::Api>) {
-        self.send().direct(
-            &offer.offer_owner,
-            &offer.payment_token_type,
-            offer.payment_token_nonce,
-            &offer.price,
-        );
+        if !offer.new_version {
+            self.send().direct(
+                &offer.offer_owner,
+                &offer.payment_token_type,
+                offer.payment_token_nonce,
+                &offer.price,
+            );
+        }
 
         self.common_offer_remove(offer_id, offer);
         self.emit_withdraw_offer_event(offer_id, offer);

@@ -8,6 +8,7 @@ use crate::common;
 use crate::dex;
 use crate::events;
 use crate::helpers;
+use crate::pools;
 use crate::views;
 use crate::wrapping;
 use crate::{storage, NFT_AMOUNT, PERCENTAGE_TOTAL};
@@ -27,6 +28,7 @@ pub trait CustomOffersModule:
     + common::CommonModule
     + wrapping::WrappingModule
     + dex::DexModule
+    + pools::PoolsModule
 {
     #[payable("*")]
     #[endpoint(acceptOffer)]
@@ -42,6 +44,14 @@ pub trait CustomOffersModule:
         );
         let seller = self.blockchain().get_caller();
         require!(offer.offer_owner != seller, "Cannot accept your own offer!");
+        if offer.new_version {
+            self.has_balance_and_deduct(
+                &offer.offer_owner,
+                &offer.payment_token_type,
+                offer.payment_token_nonce,
+                &offer.price,
+            );
+        }
         let token_auction_ids_instance =
             self.token_auction_ids(&offer.token_type, offer.token_nonce);
         let mut found_match = false;
@@ -192,18 +202,23 @@ pub trait CustomOffersModule:
     #[endpoint(sendOffer)]
     fn send_offer(
         &self,
+        payment_token: EgldOrEsdtTokenIdentifier,
+        payment_token_nonce: u64,
+        payment_amount: BigUint,
         nft_type: TokenIdentifier,
         nft_nonce: u64,
         nft_amount: BigUint,
         deadline: u64,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
-        let (payment_token, payment_token_nonce, payment_amount) =
-            self.call_value().egld_or_single_esdt().into_tuple();
+
         require!(
             self.accepted_tokens().contains(&payment_token),
             "The payment token is not whitelisted!"
         );
+
+        require!(payment_token.is_egld(), "The payment token is not EGLD!");
+        require!(payment_token_nonce == 0, "The payment nonce is not 0!");
         require!(
             nft_nonce > 0,
             "Only Semi-Fungible and Non-Fungible tokens can have offers"
@@ -212,9 +227,16 @@ pub trait CustomOffersModule:
             nft_amount == BigUint::from(NFT_AMOUNT),
             "The quantity has to be 1!"
         );
-
+        self.deposit();
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
+        self.has_balance(
+            &caller,
+            &payment_token,
+            payment_token_nonce,
+            &payment_amount,
+        );
+
         require!(
             !self.blacklist_wallets().contains(&caller),
             "Your address was blacklisted, all your SCAM offers are lost!"
@@ -252,6 +274,7 @@ pub trait CustomOffersModule:
             timestamp: current_time,
             offer_owner: caller.clone(),
             marketplace_cut_percentage,
+            new_version: true,
         };
         // Map ID with Offer Struct
         self.offer_by_id(offer_id).set(&offer);
@@ -272,29 +295,36 @@ pub trait CustomOffersModule:
     #[endpoint(sendGlobalOffer)]
     fn send_global_offer(
         &self,
-        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
-        #[payment_nonce] payment_nonce: u64,
-        #[payment_amount] price: BigUint,
+        payment_token: EgldOrEsdtTokenIdentifier,
+        payment_nonce: u64,
+        price: BigUint,
         collection: TokenIdentifier,
         attributes: OptionalValue<ManagedBuffer>,
     ) -> u64 {
         require!(self.status().get(), "Global operation enabled!");
-
+        require!(payment_token.is_egld(), "The payment token is not EGLD!");
+        require!(payment_nonce == 0, "The payment nonce is not 0!");
         require!(
             self.accepted_tokens().contains(&payment_token),
             "The payment token is not whitelisted!"
         );
-
+        self.deposit();
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
+        self.has_balance(&caller, &payment_token, payment_nonce, &price);
+        let mut map_count_user_offers = self.user_global_offers(&caller);
+        require!(
+            map_count_user_offers.len() <= 100,
+            "You can not place over 100 global offers per wallet!"
+        );
         require!(
             !self.blacklist_wallets().contains(&caller),
             "Your address was blacklisted!"
         );
         let mut user_map = self.user_collection_global_offers(&caller, &collection);
         require!(
-            user_map.len() <= 25,
-            "You have a limit of 25 offers per collection!"
+            user_map.len() <= 10,
+            "You have a limit of 10 offers per collection!"
         );
 
         let offer_id = self.last_valid_global_offer_id().get() + 1;
@@ -308,11 +338,12 @@ pub trait CustomOffersModule:
             timestamp: current_time,
             owner: caller.clone(),
             attributes: attributes.into_option(),
+            new_version: true,
         };
         self.last_valid_global_offer_id().set(&offer_id);
 
         self.collection_global_offers(&collection).insert(offer_id);
-        self.user_global_offers(&caller).insert(offer_id);
+        map_count_user_offers.insert(offer_id);
         user_map.insert(offer_id);
         self.emit_send_global_offer_event(&offer);
         self.global_offer_ids().insert(offer_id);
@@ -347,6 +378,14 @@ pub trait CustomOffersModule:
         require!(!offer_map.is_empty(), "This offer is already removed!");
         let seller = self.blockchain().get_caller();
         let offer = offer_map.get();
+        if offer.new_version {
+            self.has_balance_and_deduct(
+                &offer.owner,
+                &offer.payment_token,
+                offer.payment_nonce,
+                &offer.price,
+            );
+        }
         let mut collection_nonce = c_nonce;
         let auction_id_option = auction_id_opt.into_option();
         if auction_id_option.is_some() && auction_id_option.unwrap() > 0 {

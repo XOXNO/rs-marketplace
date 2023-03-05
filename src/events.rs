@@ -376,4 +376,11 @@ pub trait EventsModule {
         #[indexed] nr_auctioned_tokens: &BigUint,
         #[indexed] seller: &ManagedAddress,
     );
+
+    #[event("user_deposit")]
+    fn emit_deposit_balance(
+        &self,
+        #[indexed] owner: &ManagedAddress,
+        #[indexed] payment: &EgldOrEsdtTokenPayment,
+    );
 }

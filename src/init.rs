@@ -14,6 +14,7 @@ pub mod offers;
 pub mod storage;
 pub mod views;
 pub mod wrapping;
+pub mod pools;
 
 const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
@@ -30,6 +31,7 @@ pub trait XOXNOProtocol:
     + common::CommonModule
     + wrapping::WrappingModule
     + dex::DexModule
+    + pools::PoolsModule
 {
     #[init]
     fn init(

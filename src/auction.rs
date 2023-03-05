@@ -23,7 +23,7 @@ pub struct Auction<M: ManagedTypeApi> {
     pub creator_royalties_percentage: BigUint<M>,
 }
 
-#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[derive(ManagedVecItem, TopEncode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct Offer<M: ManagedTypeApi> {
     pub token_type: TokenIdentifier<M>,
     pub token_nonce: u64,
@@ -36,6 +36,47 @@ pub struct Offer<M: ManagedTypeApi> {
     pub timestamp: u64,
     pub offer_owner: ManagedAddress<M>,
     pub marketplace_cut_percentage: BigUint<M>,
+    pub new_version: bool,
+}
+impl<M: ManagedTypeApi> TopDecode for Offer<M> {
+    fn top_decode<I>(input: I) -> Result<Self, DecodeError>
+    where
+        I: multiversx_sc::codec::TopDecodeInput,
+    {
+        let mut input = input.into_nested_buffer();
+        let token_type = TokenIdentifier::dep_decode(&mut input)?;
+        let token_nonce = u64::dep_decode(&mut input)?;
+        let quantity = BigUint::dep_decode(&mut input)?;
+        let status = OfferStatus::dep_decode(&mut input)?;
+        let payment_token_type = EgldOrEsdtTokenIdentifier::dep_decode(&mut input)?;
+        let payment_token_nonce = u64::dep_decode(&mut input)?;
+        let price = BigUint::dep_decode(&mut input)?;
+        let deadline = u64::dep_decode(&mut input)?;
+        let timestamp = u64::dep_decode(&mut input)?;
+        let offer_owner =  ManagedAddress::dep_decode(&mut input)?;
+        let marketplace_cut_percentage = BigUint::dep_decode(&mut input)?;
+
+        let new_version = if input.is_depleted() {
+            false
+        } else {
+            bool::dep_decode(&mut input)?
+        };
+
+        Result::Ok(Offer {
+            token_type,
+            token_nonce,
+            quantity,
+            status,
+            payment_token_type,
+            payment_token_nonce,
+            price,
+            deadline,
+            timestamp,
+            offer_owner,
+            marketplace_cut_percentage,
+            new_version
+        })
+    }
 }
 
 #[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
@@ -107,6 +148,7 @@ pub struct GlobalOffer<M: ManagedTypeApi> {
     pub timestamp: u64,
     pub owner: ManagedAddress<M>,
     pub attributes: Option<ManagedBuffer<M>>,
+    pub new_version: bool,
 }
 
 impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
@@ -130,6 +172,13 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
             Option::<ManagedBuffer<M>>::dep_decode(&mut input)?
         };
 
+
+        let new_version = if input.is_depleted() {
+            false
+        } else {
+            bool::dep_decode(&mut input)?
+        };
+
         Result::Ok(GlobalOffer {
             offer_id,
             collection,
@@ -140,6 +189,7 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
             timestamp,
             owner,
             attributes,
+            new_version
         })
     }
 }
