@@ -489,11 +489,6 @@ pub trait XOXNOProtocol:
                 listing.original_owner == caller,
                 "Only the original owner can change the listing info!"
             );
-            require!(
-                listing.auction_type == AuctionType::Nft
-                    || listing.auction_type == AuctionType::SftOnePerPayment,
-                "You can not change the price of bids!"
-            );    
             listing.payment_token_type = update.payment_token_type;
             listing.deadline = update.deadline;
             self.emit_change_listing_event(update.auction_id, &listing, &update.new_price);

@@ -1,7 +1,6 @@
 
    
-ALICE="${USERS}/alice.pem"  
-OWNER="${USERS}/marketplace.pem"  
+ALICE="/Users/truststaking/Desktop/PEM/marketplace.pem"
 ALICEWALET=erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3zpz3hypefsdd8ssycr6th
 ALICEHEX=0x0139472eff6886771a982f3083da5d421f24c29181e63888228dc81ca60d69e1
 BOB="${USERS}/bob.pem"

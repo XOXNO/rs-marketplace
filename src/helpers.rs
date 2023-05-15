@@ -61,7 +61,7 @@ pub trait HelpersModule:
     fn try_get_auction(&self, auction_id: u64) -> Auction<Self::Api> {
         require!(
             self.does_auction_exist(auction_id),
-            "Auction does not exist!"
+            "Auction {} does not exist!", auction_id
         );
         self.auction_by_id(auction_id).get()
     }
@@ -69,7 +69,7 @@ pub trait HelpersModule:
     fn try_get_global_offer(&self, offer_id: u64) -> GlobalOffer<Self::Api> {
         require!(
             self.does_global_offer_exist(offer_id),
-            "Auction does not exist!"
+            "Global Offer {} does not exist!", offer_id
         );
         self.global_offer(offer_id).get()
     }
@@ -77,7 +77,7 @@ pub trait HelpersModule:
     fn try_get_offer(&self, offer_id: u64) -> Offer<Self::Api> {
         require!(
             self.does_offer_exist(offer_id),
-            "Auction does not exist!"
+            "Offer {} does not exist!", offer_id
         );
         self.offer_by_id(offer_id).get()
     }

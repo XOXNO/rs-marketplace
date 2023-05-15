@@ -420,7 +420,7 @@ pub trait CommonModule:
     ) {
         if wrapping {
             if payment_token_id.is_egld() {
-                // A platit cu WEGLD trebuie transformat in EGLD, nu adaugam si marketplace deoarece avem nevoie de el in WEGLD anyway
+                // A platit cu WEGLD trebuie transformat in EGLD
                 self.unwrap_egld(
                     &bid_split_amounts.seller
                         + &bid_split_amounts.creator

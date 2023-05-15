@@ -1,5 +1,5 @@
 
-ALICE="${USERS}/alice.pem"  
+ALICE="/Users/truststaking/Desktop/PEM/alice.pem"
 ALICEWALET=erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3zpz3hypefsdd8ssycr6th
 ALICEHEX=0x0139472eff6886771a982f3083da5d421f24c29181e63888228dc81ca60d69e1
 BOB="${USERS}/bob.pem"
@@ -56,7 +56,7 @@ setStatusOff() {
 }
 
 setAcceptedTokens() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=10500000 --function="setAcceptedTokens" --arguments str:WEGLD-d7c6bb --send --proxy=${PROXY} --chain=D
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=10500000 --function="setAcceptedTokens" --arguments str:HSEGLD-8f2360 --send --proxy=${PROXY} --chain=D
 }
 removeAcceptedTokens() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=D
