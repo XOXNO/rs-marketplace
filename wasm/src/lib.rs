@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                          101
+// Endpoints:                          104
 // Async Callback:                       1
-// Total number of exported functions: 103
+// Total number of exported functions: 106
 
 #![no_std]
 #![feature(lang_items)]
@@ -18,107 +18,112 @@ multiversx_sc_wasm_adapter::panic_handler!();
 multiversx_sc_wasm_adapter::endpoints! {
     xoxno_protocol
     (
-        listing
-        bid
-        endAuction
-        buy
-        buyFor
-        bulkBuy
-        withdraw
-        changeListing
-        getSigner
-        wrappingSC
-        wrappingToken
-        dexXOPair
-        xoxnoToken
-        getMarketplaceCutPercentage
-        getOffersByWallet
-        checkOfferSent
-        getListingsByWallet
-        getActiveListingsBids
-        getTokenItemsForSale
-        getTokenAuctionIds
-        getTokenOffersIds
-        getTokenItemsQuantityForSale
-        getAcceptedTokens
-        blackListWallets
-        whitelistedContracts
-        getClaimableAmount
-        getClaimableTokens
-        getClaimableTokenNonces
-        getCollectionsListed
-        getOffers
-        getStatus
-        offerById
-        getLastValidAuctionId
-        getRewardBalance
-        getRewardTicker
-        specialRewardAmount
-        defaultRewardAmount
-        getLastValidOfferId
-        getLastValidGlobalOfferId
-        getGlobalOffers
-        getGlobalOffer
-        getCollectionGlobalOffers
-        userGlobalOffers
-        userCollectionGlobalOffers
-        getListingsCount
-        getOffersCount
-        getGlobalOffersCount
-        getListings
-        getCollectionsCount
-        isCollectionListed
-        expiredOffersCount
-        getAcceptedTokensCount
-        getTokenItemsForSaleCount
-        getOnSaleTokensForTicker
-        getAuctionsForTicker
-        checkTokenOffers
-        getBulkOffers
-        getBulkListings
-        doesAuctionExist
-        doesGlobalOfferExist
-        doesOfferExist
-        isSCWl
-        getAuctionedToken
-        getAuctionedTokenAndOwner
-        getAuctionType
-        getPaymentTokenForAuction
-        getMinMaxBid
-        getStartTime
-        getDeadline
-        getOriginalOwner
-        getCurrentWinningBid
-        getCurrentWinner
-        getFullAuctionData
-        acceptOffer
-        declineOffer
-        withdrawOffer
-        sendOffer
-        sendGlobalOffer
-        withdrawGlobalOffer
-        acceptGlobalOffer
-        returnListing
-        withdrawGlobalOffers
-        deleteOffersByWallet
-        cleanExpiredOffers
-        addRewardBalance
-        setRewardTicker
-        setSpecialRewardAmount
-        setDefaultRewardAmount
-        setAcceptedTokens
-        removeAcceptedTokens
-        addWitelistedSC
-        removeWitelistedSC
-        setStatus
-        setCutPercentage
-        claimTokensForCreator
-        addBlackListWallet
-        removeBlackListWallet
-        claimTokens
-        deposit
-        withdrawDeposit
-        userDeposit
-        callBack
+        init => init
+        listing => listing
+        bid => bid
+        endAuction => end_auction
+        buy => buy
+        buyFor => buy_for
+        bulkBuy => bulk_buy
+        withdraw => withdraw
+        changeListing => bulk_change_listing
+        getSigner => signer
+        wrappingSC => wrapping
+        wrappingToken => wrapping_token
+        dexXOPair => swap_pair_xoxno
+        xoxnoToken => xoxno_token
+        getMarketplaceCutPercentage => bid_cut_percentage
+        getOffersByWallet => offers_by_wallet
+        checkOfferSent => check_offer_sent
+        getListingsByWallet => listings_by_wallet
+        getActiveListingsBids => listings_bids
+        getTokenItemsForSale => token_items_for_sale
+        getTokenAuctionIds => token_auction_ids
+        getTokenOffersIds => token_offers_ids
+        getTokenItemsQuantityForSale => token_items_quantity_for_sale
+        getAcceptedTokens => accepted_tokens
+        blackListWallets => blacklist_wallets
+        whitelistedContracts => whitelisted_contracts
+        getClaimableAmount => claimable_amount
+        getClaimableTokens => claimable_tokens
+        getClaimableTokenNonces => claimable_token_nonces
+        getCollectionsListed => collections_listed
+        getOffers => offers
+        getStatus => status
+        offerById => offer_by_id
+        getLastValidAuctionId => last_valid_auction_id
+        getRewardBalance => reward_balance
+        getRewardTicker => reward_ticker
+        specialRewardAmount => special_reward_amount
+        defaultRewardAmount => reward_amount
+        getLastValidOfferId => last_valid_offer_id
+        getLastValidGlobalOfferId => last_valid_global_offer_id
+        getGlobalOffers => global_offer_ids
+        getGlobalOffer => global_offer
+        getCollectionGlobalOffers => collection_global_offers
+        userGlobalOffers => user_global_offers
+        userCollectionGlobalOffers => user_collection_global_offers
+        getCollectionsRoyaltiesReverted => royalties_reverted
+        getListingsCount => get_listings_count
+        getOffersCount => get_offers_count
+        getGlobalOffersCount => get_global_offers_count
+        getListings => get_listings
+        getCollectionsCount => get_collections_count
+        isCollectionListed => is_collection_listed
+        expiredOffersCount => expired_offers_count
+        getAcceptedTokensCount => get_accepted_tokens_count
+        getTokenItemsForSaleCount => get_token_items_for_sale_count
+        getOnSaleTokensForTicker => get_on_sale_tokens_for_ticker
+        getAuctionsForTicker => get_auctions_for_ticker
+        checkTokenOffers => check_token_offers
+        getBulkOffers => get_bulk_offers
+        getBulkListings => get_bulk_listings
+        doesAuctionExist => does_auction_exist
+        doesGlobalOfferExist => does_global_offer_exist
+        doesOfferExist => does_offer_exist
+        isSCWl => is_sc_wl
+        getAuctionedToken => get_auctioned_token
+        getAuctionedTokenAndOwner => get_auctioned_token_and_owner
+        getAuctionType => get_auction_type
+        getPaymentTokenForAuction => get_payment_token_for_auction
+        getMinMaxBid => get_min_max_bid
+        getStartTime => get_start_time
+        getDeadline => get_deadline
+        getOriginalOwner => get_original_owner
+        getCurrentWinningBid => get_current_winning_bid
+        getCurrentWinner => get_current_winner
+        getFullAuctionData => get_full_auction_data
+        acceptOffer => accept_offer
+        declineOffer => decline_offer
+        withdrawOffer => withdraw_offer
+        sendOffer => send_offer
+        sendGlobalOffer => send_global_offer
+        withdrawGlobalOffer => withdraw_global_offer
+        acceptGlobalOffer => accept_global_offer
+        returnListing => return_listing
+        withdrawGlobalOffers => withdraw_global_offers
+        deleteOffersByWallet => delete_user_offers
+        cleanExpiredOffers => clean_expired_offers
+        addRewardBalance => add_reward_balance
+        setRewardTicker => set_reward_ticker
+        setSpecialRewardAmount => set_special_reward_amount
+        setDefaultRewardAmount => set_default_reward_amount
+        setAcceptedTokens => set_accepted_tokens
+        removeAcceptedTokens => remove_accepted_tokens
+        addWitelistedSC => add_whitelisted_sc
+        removeWitelistedSC => remove_wl_sc
+        setStatus => set_status
+        setCutPercentage => set_percentage_cut
+        claimTokensForCreator => claim_tokens_for_creator
+        addBlackListWallet => add_blacklist
+        removeBlackListWallet => remove_blacklist
+        enableRoyaltiesReverted => add_collection_for_reverted_royalties
+        removeRoyaltiesReverted => remove_collection_for_reverted_royalties
+        claimTokens => claim_tokens
+        deposit => deposit
+        withdrawDeposit => withdraw_deposit
+        userDeposit => user_funds
     )
 }
+
+multiversx_sc_wasm_adapter::async_callback! { xoxno_protocol }

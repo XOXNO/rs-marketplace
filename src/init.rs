@@ -401,10 +401,12 @@ pub trait XOXNOProtocol:
             let bid_split_amounts = self.calculate_winning_bid_split(&listing);
 
             self.distribute_tokens_bulk_buy(
+                &EgldOrEsdtTokenIdentifier::esdt(listing.auctioned_token_type.clone()),
                 &listing.payment_token_type,
                 listing.payment_token_nonce,
                 &nft_info.creator,
                 &listing.original_owner,
+                &caller,
                 &bid_split_amounts,
                 wrapping,
             );

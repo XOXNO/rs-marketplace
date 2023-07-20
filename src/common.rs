@@ -381,13 +381,23 @@ pub trait CommonModule:
                 );
             }
         }
-        // send part as royalties to creator
-        self.transfer_or_save_payment(
-            creator,
-            payment_token_id,
-            payment_token_nonce,
-            &bid_split_amounts.creator,
-        );
+
+        if self.royalties_reverted().contains(nft_type) {
+            self.transfer_or_save_payment(
+                new_owner,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.creator,
+            );
+        } else {
+            // send part as royalties to creator
+            self.transfer_or_save_payment(
+                creator,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.creator,
+            );
+        }
 
         // send rest of the bid to original owner
         self.transfer_or_save_payment(
@@ -411,10 +421,12 @@ pub trait CommonModule:
 
     fn distribute_tokens_bulk_buy(
         &self,
+        nft_type: &EgldOrEsdtTokenIdentifier,
         payment_token_id: &EgldOrEsdtTokenIdentifier,
         payment_token_nonce: u64,
         creator: &ManagedAddress,
         original_owner: &ManagedAddress,
+        new_owner: &ManagedAddress,
         bid_split_amounts: &BidSplitAmounts<Self::Api>,
         wrapping: bool,
     ) {
@@ -436,13 +448,22 @@ pub trait CommonModule:
             }
         }
 
-        // send part as royalties to creator
-        self.transfer_or_save_payment(
-            creator,
-            payment_token_id,
-            payment_token_nonce,
-            &bid_split_amounts.creator,
-        );
+        if self.royalties_reverted().contains(nft_type) {
+            self.transfer_or_save_payment(
+                new_owner,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.creator,
+            );
+        } else {
+            // send part as royalties to creator
+            self.transfer_or_save_payment(
+                creator,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.creator,
+            );
+        }
 
         // send rest of the bid to original owner
         self.transfer_or_save_payment(

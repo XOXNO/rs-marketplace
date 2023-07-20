@@ -223,4 +223,16 @@ pub trait AdminModule:
         self.require_admin();
         self.blacklist_wallets().remove(&wallet)
     }
+
+    #[endpoint(enableRoyaltiesReverted)]
+    fn add_collection_for_reverted_royalties(&self, token_id: EgldOrEsdtTokenIdentifier) {
+        self.require_admin();
+        self.royalties_reverted().insert(token_id);
+    }
+
+    #[endpoint(removeRoyaltiesReverted)]
+    fn remove_collection_for_reverted_royalties(&self, token_id: &EgldOrEsdtTokenIdentifier) {
+        self.require_admin();
+        self.royalties_reverted().swap_remove(token_id);
+    }
 }

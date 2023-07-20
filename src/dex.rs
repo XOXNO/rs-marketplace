@@ -7,14 +7,14 @@ pub trait DexModule: crate::storage::StorageModule {
     // #[proxy]
     // fn dex_proxy(&self, sc_address: ManagedAddress) -> pair::Proxy<Self::Api>;
 
-    fn swap_wegld_for_xoxno(&self, destination: &ManagedAddress, payment: EsdtTokenPayment) {
-        // self.dex_proxy(self.swap_pair_xoxno().get())
-            // .swap_tokens_fixed_input(self.xoxno_token().get(), BigUint::from(1u64))
-            // .with_esdt_transfer(payment)
-            // .async_call()
-            // .with_callback(self.callbacks().forward_xoxno(destination))
-            // .call_and_exit();
-    }
+    // fn swap_wegld_for_xoxno(&self, destination: &ManagedAddress, payment: EsdtTokenPayment) {
+    // self.dex_proxy(self.swap_pair_xoxno().get())
+    // .swap_tokens_fixed_input(self.xoxno_token().get(), BigUint::from(1u64))
+    // .with_esdt_transfer(payment)
+    // .async_call()
+    // .with_callback(self.callbacks().forward_xoxno(destination))
+    // .call_and_exit();
+    // }
 
     #[callback]
     fn forward_xoxno(

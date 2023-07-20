@@ -3,6 +3,7 @@ multiversx_sc::derive_imports!();
 
 use core::convert::TryInto;
 
+use super::auction::{AuctionType, Offer, OfferStatus};
 use crate::auction::GlobalOffer;
 use crate::common;
 use crate::dex;
@@ -12,13 +13,7 @@ use crate::pools;
 use crate::views;
 use crate::wrapping;
 use crate::{storage, NFT_AMOUNT, PERCENTAGE_TOTAL};
-use multiversx_sc::api::ED25519_SIGNATURE_BYTE_LEN;
 
-use super::auction::{AuctionType, Offer, OfferStatus};
-
-const MAX_DATA_LEN: usize = 15000;
-
-pub type Signature<M> = ManagedByteArray<M, ED25519_SIGNATURE_BYTE_LEN>;
 #[multiversx_sc::module]
 pub trait CustomOffersModule:
     storage::StorageModule
@@ -370,7 +365,7 @@ pub trait CustomOffersModule:
         &self,
         offer_id: u64,
         auction_id_opt: OptionalValue<u64>,
-        signature: OptionalValue<Signature<Self::Api>>,
+        signature: OptionalValue<ManagedBuffer>,
     ) {
         require!(self.status().get(), "Global operation enabled!");
         let (collection, c_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
@@ -442,12 +437,8 @@ pub trait CustomOffersModule:
             data.append(&offer.attributes.as_ref().unwrap());
 
             let signer: ManagedAddress = self.signer().get();
-            let valid_signature = self.crypto().verify_ed25519_legacy_managed::<MAX_DATA_LEN>(
-                signer.as_managed_byte_array(),
-                &data,
-                &sign.unwrap(),
-            );
-            require!(valid_signature, "Invalid signature");
+            self.crypto()
+                .verify_ed25519(signer.as_managed_buffer(), &data, &sign.unwrap());
         }
 
         self.common_global_offer_remove(&offer, false);

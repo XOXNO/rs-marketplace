@@ -149,7 +149,6 @@ pub trait StorageModule {
     #[storage_mapper("lastValidOfferId")]
     fn last_valid_offer_id(&self) -> SingleValueMapper<u64>;
 
-
     #[view(getLastValidGlobalOfferId)]
     #[storage_mapper("lastValidGlobalOfferId")]
     fn last_valid_global_offer_id(&self) -> SingleValueMapper<u64>;
@@ -173,4 +172,8 @@ pub trait StorageModule {
     #[view(userCollectionGlobalOffers)]
     #[storage_mapper("userCollectionGlobalOffers")]
     fn user_collection_global_offers(&self, address: &ManagedAddress, collection: &TokenIdentifier) -> UnorderedSetMapper<u64>;
+
+    #[view(getCollectionsRoyaltiesReverted)]
+    #[storage_mapper("getCollectionsRoyaltiesReverted")]
+    fn royalties_reverted(&self) -> UnorderedSetMapper<EgldOrEsdtTokenIdentifier>;
 }

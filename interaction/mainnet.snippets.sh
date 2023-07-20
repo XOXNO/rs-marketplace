@@ -35,7 +35,7 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"  ${SHARD2WrappingWEGLD} str:WEGLD-bd4d79 --project=${PROJECT} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"  ${SHARD2WrappingWEGLD} str:WEGLD-bd4d79 --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
@@ -75,7 +75,15 @@ setCutPercentage() {
 }
 
 setAcceptedTokens() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:USDT-f8c08c --send --proxy=${PROXY} --chain=1
+    mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:SEGLD-3ad2d0 --send --proxy=${PROXY} --chain=1
+}
+
+enableRoyaltiesReverted() {
+    mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="enableRoyaltiesReverted" --arguments str:COW-cd463d --send --proxy=${PROXY} --chain=1
+}
+
+removeRoyaltiesReverted() {
+    mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="removeRoyaltiesReverted" --arguments str:COW-cd463d --send --proxy=${PROXY} --chain=1
 }
 
 removeAcceptedTokens() {
