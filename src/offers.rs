@@ -82,12 +82,7 @@ pub trait CustomOffersModule:
             found_match = true;
         } else {
             for auction_id in token_auction_ids_instance.iter() {
-                let auction = match self.get_auctioned_token_and_owner(auction_id) {
-                    OptionalValue::Some(auc) => auc,
-                    OptionalValue::None => {
-                        sc_panic!("The auction should have values!")
-                    }
-                };
+                let auction =  self.try_get_auction(auction_id);
                 if offer.token_type == auction.auctioned_token_type
                     && offer.token_nonce == auction.auctioned_token_nonce
                     && offer.quantity == auction.nr_auctioned_tokens
@@ -124,7 +119,11 @@ pub trait CustomOffersModule:
             &nft_info.creator,
             &seller,
             &offer.offer_owner,
-            &self.calculate_offer_bid_split(&offer, &creator_royalties_percentage),
+            &self.calculate_amount_split(
+                &offer.price,
+                &creator_royalties_percentage,
+                self.get_collection_config(&offer.token_type),
+            ),
             false,
         );
     }
@@ -356,7 +355,7 @@ pub trait CustomOffersModule:
             "You are not the owner of this offer!"
         );
         self.common_global_offer_remove(&offer, true);
-        self.emit_remove_global_offer_event(offer_id);
+        self.emit_remove_global_offer_event(offer_id, &offer.collection);
     }
 
     #[payable("*")]
@@ -460,7 +459,11 @@ pub trait CustomOffersModule:
             &nft_info.creator,
             &seller,
             &offer.owner,
-            &self.calculate_global_offer_split(&offer, &nft_info),
+            &self.calculate_amount_split(
+                &offer.price,
+                &nft_info.royalties,
+                self.get_collection_config(&offer.collection),
+            ),
             false,
         );
     }

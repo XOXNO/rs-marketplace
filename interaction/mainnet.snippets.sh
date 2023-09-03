@@ -39,6 +39,10 @@ upgrade() {
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
+setExtraFees() {
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=40000000 --function="setExtraFees" --arguments "str:CLDBRKRS-e1ae14" 0x96 erd1f4fvzkka27xpc3ec4mzf8t939zw5d0amwyk9fm4dqdve55vht26qa8hnmu --send --proxy=${PROXY} --chain=1
+}
+
 addWitelistedSC() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=40000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqte3ntwhq8xcspmqf0q5sveh5rhv3ng8pu76ss8mv96 --send --proxy=${PROXY} --chain=1
 }

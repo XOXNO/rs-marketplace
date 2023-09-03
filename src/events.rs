@@ -202,7 +202,7 @@ pub trait EventsModule {
         #[indexed] accepted_payment_token: EgldOrEsdtTokenIdentifier,
         #[indexed] accepted_payment_token_nonce: u64,
         #[indexed] auction_type: AuctionType,
-        creator_royalties_percentage: BigUint, // between 0 and 10,000
+        #[indexed] creator_royalties_percentage: BigUint,
     );
 
     #[event("offer_token_event")]
@@ -229,12 +229,16 @@ pub trait EventsModule {
     #[event("send_global_offer")]
     fn send_global_offer_event(&self, #[indexed] offer: &GlobalOffer<Self::Api>);
 
-    fn emit_remove_global_offer_event(self, offer_id: u64) {
-        self.remove_global_offer_event(offer_id);
+    fn emit_remove_global_offer_event(self, offer_id: u64, collection: &TokenIdentifier) {
+        self.remove_global_offer_event(offer_id, collection);
     }
 
     #[event("remove_global_offer")]
-    fn remove_global_offer_event(&self, #[indexed] offer_id: u64);
+    fn remove_global_offer_event(
+        &self,
+        #[indexed] offer_id: u64,
+        #[indexed] collection: &TokenIdentifier,
+    );
 
     fn emit_accept_global_offer_event(
         self,

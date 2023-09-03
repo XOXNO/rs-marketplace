@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                          104
+// Endpoints:                           96
 // Async Callback:                       1
-// Total number of exported functions: 106
+// Total number of exported functions:  98
 
 #![no_std]
 #![feature(lang_items)]
@@ -63,7 +63,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         getCollectionGlobalOffers => collection_global_offers
         userGlobalOffers => user_global_offers
         userCollectionGlobalOffers => user_collection_global_offers
-        getCollectionsRoyaltiesReverted => royalties_reverted
+        getCollectionConfig => collection_config
         getListingsCount => get_listings_count
         getOffersCount => get_offers_count
         getGlobalOffersCount => get_global_offers_count
@@ -82,17 +82,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         doesGlobalOfferExist => does_global_offer_exist
         doesOfferExist => does_offer_exist
         isSCWl => is_sc_wl
-        getAuctionedToken => get_auctioned_token
-        getAuctionedTokenAndOwner => get_auctioned_token_and_owner
-        getAuctionType => get_auction_type
-        getPaymentTokenForAuction => get_payment_token_for_auction
-        getMinMaxBid => get_min_max_bid
-        getStartTime => get_start_time
-        getDeadline => get_deadline
-        getOriginalOwner => get_original_owner
-        getCurrentWinningBid => get_current_winning_bid
-        getCurrentWinner => get_current_winner
-        getFullAuctionData => get_full_auction_data
         acceptOffer => accept_offer
         declineOffer => decline_offer
         withdrawOffer => withdraw_offer
@@ -117,8 +106,11 @@ multiversx_sc_wasm_adapter::endpoints! {
         claimTokensForCreator => claim_tokens_for_creator
         addBlackListWallet => add_blacklist
         removeBlackListWallet => remove_blacklist
-        enableRoyaltiesReverted => add_collection_for_reverted_royalties
-        removeRoyaltiesReverted => remove_collection_for_reverted_royalties
+        setCutFeesReverted => set_cut_fees_reverted
+        setRoyaltiesReverted => set_royalties_reverted
+        setExtraFees => set_extra_fees
+        setCustomRoyalties => set_custom_royalties
+        setConfigAdmin => set_config_admin
         claimTokens => claim_tokens
         deposit => deposit
         withdrawDeposit => withdraw_deposit

@@ -1,6 +1,6 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
-use crate::auction::AuctionType;
+use crate::auction::{AuctionType, CollectionExtraFeesConfig, CollectionFeeConfig};
 #[multiversx_sc::module]
 pub trait AdminModule:
     crate::storage::StorageModule
@@ -11,19 +11,26 @@ pub trait AdminModule:
     + crate::wrapping::WrappingModule
     + crate::dex::DexModule
 {
-    fn require_admin(&self) {
+    fn require_admin(&self, extra_admin: Option<ManagedAddress>) {
         let signer: ManagedAddress = self.signer().get();
         let caller = self.blockchain().get_caller();
         let sc_owner = self.blockchain().get_owner_address();
-        require!(
-            caller.eq(&sc_owner) || caller.eq(&signer),
-            "You are not an admin!"
-        );
+        if extra_admin.is_some() {
+            require!(
+                caller.eq(&sc_owner) || caller.eq(&signer) || caller.eq(&extra_admin.unwrap()),
+                "You are not an admin!"
+            );
+        } else {
+            require!(
+                caller.eq(&sc_owner) || caller.eq(&signer),
+                "You are not an admin!"
+            );
+        }
     }
 
     #[endpoint(returnListing)]
     fn return_listing(&self, auction_ids: MultiValueEncoded<u64>) {
-        self.require_admin();
+        self.require_admin(None);
         for auction_id in auction_ids {
             let map_auction = self.auction_by_id(auction_id);
             if map_auction.is_empty() {
@@ -55,17 +62,22 @@ pub trait AdminModule:
     }
 
     #[endpoint(withdrawGlobalOffers)]
-    fn withdraw_global_offers(&self, offer_id: u64) {
-        self.require_admin();
-        require!(self.status().get(), "Global operation enabled!");
-        let offer = self.try_get_global_offer(offer_id);
-        self.common_global_offer_remove(&offer, true);
-        self.emit_remove_global_offer_event(offer_id);
+    fn withdraw_global_offers(&self, offer_ids: MultiValueEncoded<u64>) {
+        self.require_admin(None);
+        for offer_id in offer_ids {
+            let map_offer = self.global_offer(offer_id);
+            if map_offer.is_empty() {
+                continue;
+            }
+            let offer = map_offer.get();
+            self.common_global_offer_remove(&offer, true);
+            self.emit_remove_global_offer_event(offer_id, &offer.collection);
+        }
     }
 
     #[endpoint(deleteOffersByWallet)]
     fn delete_user_offers(&self, user: &ManagedAddress) {
-        self.require_admin();
+        self.require_admin(None);
         let offers_root = self.offers_by_wallet(user);
         if offers_root.len() > 0 {
             for offer in offers_root.iter().take(80) {
@@ -76,7 +88,7 @@ pub trait AdminModule:
 
     #[endpoint(cleanExpiredOffers)]
     fn clean_expired_offers(&self, offer_ids: MultiValueEncoded<u64>) {
-        self.require_admin();
+        self.require_admin(None);
         let timestamp = self.blockchain().get_block_timestamp();
         for offer_id in offer_ids {
             let offer = self.offer_by_id(offer_id);
@@ -126,21 +138,21 @@ pub trait AdminModule:
         self.reward_amount().set(amount);
     }
 
-    #[only_owner]
     #[endpoint(setAcceptedTokens)]
     fn set_accepted_tokens(&self, token: EgldOrEsdtTokenIdentifier) {
+        self.require_admin(None);
         self.accepted_tokens().insert(token);
     }
 
-    #[only_owner]
     #[endpoint(removeAcceptedTokens)]
     fn remove_accepted_tokens(&self, token: EgldOrEsdtTokenIdentifier) -> bool {
+        self.require_admin(None);
         self.accepted_tokens().remove(&token)
     }
 
     #[endpoint(addWitelistedSC)]
     fn add_whitelisted_sc(&self, sc: ManagedAddress) {
-        self.require_admin();
+        self.require_admin(None);
         require!(
             self.blockchain().is_smart_contract(&sc),
             "The address is not a smart contract!"
@@ -164,7 +176,7 @@ pub trait AdminModule:
 
     #[endpoint(removeWitelistedSC)]
     fn remove_wl_sc(&self, sc: ManagedAddress) {
-        self.require_admin();
+        self.require_admin(None);
         require!(
             self.blockchain().is_smart_contract(&sc),
             "The address is not a smart contract!"
@@ -174,7 +186,7 @@ pub trait AdminModule:
 
     #[endpoint(setStatus)]
     fn set_status(&self, status: bool) {
-        self.require_admin();
+        self.require_admin(None);
         self.status().set(&status);
     }
 
@@ -201,7 +213,7 @@ pub trait AdminModule:
         token_nonce: u64,
         creator: ManagedAddress,
     ) {
-        self.require_admin();
+        self.require_admin(None);
         let amount_mapper = self.claimable_amount(&creator, &token_id, token_nonce);
         let amount = amount_mapper.get();
 
@@ -214,25 +226,150 @@ pub trait AdminModule:
 
     #[endpoint(addBlackListWallet)]
     fn add_blacklist(&self, wallet: ManagedAddress) -> bool {
-        self.require_admin();
+        self.require_admin(None);
         self.blacklist_wallets().insert(wallet)
     }
 
     #[endpoint(removeBlackListWallet)]
     fn remove_blacklist(&self, wallet: ManagedAddress) -> bool {
-        self.require_admin();
+        self.require_admin(None);
         self.blacklist_wallets().remove(&wallet)
     }
 
-    #[endpoint(enableRoyaltiesReverted)]
-    fn add_collection_for_reverted_royalties(&self, token_id: EgldOrEsdtTokenIdentifier) {
-        self.require_admin();
-        self.royalties_reverted().insert(token_id);
+    #[endpoint(setCutFeesReverted)]
+    fn set_cut_fees_reverted(&self, token_id: &TokenIdentifier, value: bool) {
+        self.require_admin(None);
+        let config_map = self.collection_config(&token_id);
+        if config_map.is_empty() {
+            config_map.set(CollectionFeeConfig {
+                reverse_cut_fees: value,
+                reverse_royalties: false,
+                custom_royalties: false,
+                min_royalties: BigUint::zero(),
+                max_royalties: BigUint::zero(),
+                extra_fees: CollectionExtraFeesConfig {
+                    amount: BigUint::zero(),
+                    address: ManagedAddress::zero(),
+                },
+                admin: ManagedAddress::zero(),
+            });
+        } else {
+            config_map.update(|f| {
+                f.reverse_cut_fees = value;
+            })
+        }
     }
 
-    #[endpoint(removeRoyaltiesReverted)]
-    fn remove_collection_for_reverted_royalties(&self, token_id: &EgldOrEsdtTokenIdentifier) {
-        self.require_admin();
-        self.royalties_reverted().swap_remove(token_id);
+    #[endpoint(setRoyaltiesReverted)]
+    fn set_royalties_reverted(&self, token_id: &TokenIdentifier, value: bool) {
+        self.require_admin(None);
+        let config_map = self.collection_config(&token_id);
+        if config_map.is_empty() {
+            self.require_admin(None);
+            config_map.set(CollectionFeeConfig {
+                reverse_cut_fees: false,
+                reverse_royalties: value,
+                custom_royalties: false,
+                min_royalties: BigUint::zero(),
+                max_royalties: BigUint::zero(),
+                extra_fees: CollectionExtraFeesConfig {
+                    amount: BigUint::zero(),
+                    address: ManagedAddress::zero(),
+                },
+                admin: ManagedAddress::zero(),
+            });
+        } else {
+            self.require_admin(Some(config_map.get().admin));
+            config_map.update(|f| {
+                f.reverse_royalties = value;
+            })
+        }
+    }
+
+    #[endpoint(setExtraFees)]
+    fn set_extra_fees(&self, token_id: &TokenIdentifier, amount: BigUint, address: ManagedAddress) {
+        let config_map = self.collection_config(&token_id);
+        if config_map.is_empty() {
+            self.require_admin(None);
+            config_map.set(CollectionFeeConfig {
+                reverse_cut_fees: false,
+                reverse_royalties: false,
+                custom_royalties: false,
+                min_royalties: BigUint::zero(),
+                max_royalties: BigUint::zero(),
+                extra_fees: CollectionExtraFeesConfig {
+                    amount: amount,
+                    address: address,
+                },
+                admin: ManagedAddress::zero(),
+            });
+        } else {
+            self.require_admin(Some(config_map.get().admin));
+            config_map.update(|f| {
+                f.extra_fees.amount = amount;
+                f.extra_fees.address = address;
+            })
+        }
+    }
+
+    #[endpoint(setCustomRoyalties)]
+    fn set_custom_royalties(
+        &self,
+        token_id: &TokenIdentifier,
+        min: BigUint,
+        max: BigUint,
+        enabled: bool,
+    ) {
+        let config_map = self.collection_config(&token_id);
+        require!(
+            min <= max,
+            "Min royalties must be lower than max royalties!"
+        );
+        if config_map.is_empty() {
+            self.require_admin(None);
+            config_map.set(CollectionFeeConfig {
+                reverse_cut_fees: false,
+                reverse_royalties: false,
+                custom_royalties: enabled,
+                min_royalties: BigUint::zero(),
+                max_royalties: BigUint::zero(),
+                extra_fees: CollectionExtraFeesConfig {
+                    amount: BigUint::zero(),
+                    address: ManagedAddress::zero(),
+                },
+                admin: ManagedAddress::zero(),
+            });
+        } else {
+            self.require_admin(Some(config_map.get().admin));
+            config_map.update(|f| {
+                f.min_royalties = min;
+                f.max_royalties = max;
+                f.custom_royalties = enabled;
+            })
+        }
+    }
+
+    #[endpoint(setConfigAdmin)]
+    fn set_config_admin(&self, token_id: &TokenIdentifier, admin: ManagedAddress) {
+        self.require_admin(None);
+        let config_map = self.collection_config(&token_id);
+        if config_map.is_empty() {
+            config_map.set(CollectionFeeConfig {
+                reverse_cut_fees: false,
+                reverse_royalties: false,
+                custom_royalties: false,
+                min_royalties: BigUint::zero(),
+                max_royalties: BigUint::zero(),
+                extra_fees: CollectionExtraFeesConfig {
+                    amount: BigUint::zero(),
+                    address: ManagedAddress::zero(),
+                },
+                admin,
+            });
+        } else {
+            config_map.update(|f| {
+                f.admin = admin;
+            })
+        }
     }
 }

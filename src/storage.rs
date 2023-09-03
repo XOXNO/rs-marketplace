@@ -173,7 +173,7 @@ pub trait StorageModule {
     #[storage_mapper("userCollectionGlobalOffers")]
     fn user_collection_global_offers(&self, address: &ManagedAddress, collection: &TokenIdentifier) -> UnorderedSetMapper<u64>;
 
-    #[view(getCollectionsRoyaltiesReverted)]
-    #[storage_mapper("getCollectionsRoyaltiesReverted")]
-    fn royalties_reverted(&self) -> UnorderedSetMapper<EgldOrEsdtTokenIdentifier>;
+    #[view(getCollectionConfig)]
+    #[storage_mapper("getCollectionConfig")]
+    fn collection_config(&self, ticker: &TokenIdentifier) -> SingleValueMapper<CollectionFeeConfig<Self::Api>>;
 }

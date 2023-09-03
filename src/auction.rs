@@ -131,10 +131,14 @@ pub enum OfferStatus {
     Withdraw,
 }
 
-pub struct BidSplitAmounts<M: ManagedTypeApi> {
+pub struct FeesDistribution<M: ManagedTypeApi> {
     pub creator: BigUint<M>,
     pub marketplace: BigUint<M>,
     pub seller: BigUint<M>,
+    pub extra: BigUint<M>,
+    pub extra_address: ManagedAddress<M>,
+    pub reverse_royalties: bool,
+    pub reverse_cut_fee: bool,
 }
 
 #[derive(TopEncode, TypeAbi)]
@@ -214,4 +218,21 @@ pub struct BulkUpdateListing<M: ManagedTypeApi> {
     pub new_price: BigUint<M>,
     pub auction_id: u64,
     pub deadline: u64,
+}
+
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct CollectionFeeConfig<M: ManagedTypeApi> {
+    pub reverse_cut_fees: bool,
+    pub reverse_royalties: bool,
+    pub custom_royalties: bool,
+    pub min_royalties: BigUint<M>,
+    pub max_royalties: BigUint<M>,
+    pub extra_fees: CollectionExtraFeesConfig<M>,
+    pub admin: ManagedAddress<M>, 
+}
+
+#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct CollectionExtraFeesConfig<M: ManagedTypeApi> {
+    pub amount: BigUint<M>,
+    pub address: ManagedAddress<M>,
 }

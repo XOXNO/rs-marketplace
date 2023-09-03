@@ -11,12 +11,13 @@ pub mod dex;
 pub mod events;
 pub mod helpers;
 pub mod offers;
+pub mod pools;
 pub mod storage;
 pub mod views;
 pub mod wrapping;
-pub mod pools;
 
 const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
+const MAX_COLLECTION_ROYALTIES: u64 = 5_000; // 50%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
 
 #[multiversx_sc::contract]
@@ -129,13 +130,24 @@ pub trait XOXNOProtocol:
                     "Invalid start time"
                 );
             }
+            let fee_map = self.collection_config(&nft_type);
+            let mut creator_royalties_percentage =
+                self.get_nft_info(&nft_type, nft_nonce).royalties;
 
-            let creator_royalties_percentage = self.get_nft_info(&nft_type, nft_nonce).royalties;
+            if !fee_map.is_empty() {
+                let fee_config = fee_map.get();
+                if fee_config.custom_royalties {
+                    if creator_royalties_percentage > fee_config.max_royalties {
+                        creator_royalties_percentage = fee_config.max_royalties;
+                    } else if creator_royalties_percentage < fee_config.min_royalties {
+                        creator_royalties_percentage = fee_config.min_royalties;
+                    }
+                }
+            }
 
-            require!(
-                marketplace_cut_percentage + &creator_royalties_percentage < PERCENTAGE_TOTAL,
-                "Marketplace cut plus royalties exceeds 100%"
-            );
+            if marketplace_cut_percentage + &creator_royalties_percentage >= PERCENTAGE_TOTAL {
+                creator_royalties_percentage = BigUint::from(MAX_COLLECTION_ROYALTIES);
+            }
 
             let accepted_payment_nft_nonce = 0;
 
@@ -398,10 +410,23 @@ pub trait XOXNOProtocol:
 
             listing.current_bid = listing.min_bid.clone();
             listing.current_winner = caller.clone();
-            let bid_split_amounts = self.calculate_winning_bid_split(&listing);
+            let config = self.get_collection_config(&listing.auctioned_token_type);
 
+            let bid_split_amounts = self.calculate_amount_split(
+                &listing.current_bid,
+                &listing.creator_royalties_percentage,
+                config.clone(),
+            );
+            if config.is_some() {
+                if config.unwrap().reverse_cut_fees {
+                    total_available += &bid_split_amounts.marketplace;
+                } else {
+                    marketplace_fees += &bid_split_amounts.marketplace;
+                }
+            } else {
+                marketplace_fees += &bid_split_amounts.marketplace;
+            }
             self.distribute_tokens_bulk_buy(
-                &EgldOrEsdtTokenIdentifier::esdt(listing.auctioned_token_type.clone()),
                 &listing.payment_token_type,
                 listing.payment_token_nonce,
                 &nft_info.creator,
@@ -410,8 +435,6 @@ pub trait XOXNOProtocol:
                 &bid_split_amounts,
                 wrapping,
             );
-
-            marketplace_fees += bid_split_amounts.marketplace;
             self.update_or_remove_items_quantity(&listing, &listing.nr_auctioned_tokens);
             self.remove_auction_common(auction_id, &listing);
             self.emit_buy_event(

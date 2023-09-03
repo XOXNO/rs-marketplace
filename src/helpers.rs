@@ -4,7 +4,7 @@ multiversx_sc::derive_imports!();
 use core::convert::TryInto;
 
 use crate::{
-    auction::{Auction, BidSplitAmounts, GlobalOffer, Offer},
+    auction::{Auction, CollectionFeeConfig, FeesDistribution, GlobalOffer, Offer},
     PERCENTAGE_TOTAL,
 };
 
@@ -32,14 +32,6 @@ pub trait HelpersModule:
         }
     }
 
-    fn data_or_empty_if_sc(&self, dest: &ManagedAddress, data: &'static [u8]) -> &[u8] {
-        if self.blockchain().is_smart_contract(dest) {
-            &[]
-        } else {
-            data
-        }
-    }
-
     fn get_nft_info(&self, nft_type: &TokenIdentifier, nft_nonce: u64) -> EsdtTokenData<Self::Api> {
         self.blockchain().get_esdt_token_data(
             &self.blockchain().get_sc_address(),
@@ -59,92 +51,83 @@ pub trait HelpersModule:
     }
 
     fn try_get_auction(&self, auction_id: u64) -> Auction<Self::Api> {
-        require!(
-            self.does_auction_exist(auction_id),
-            "Auction {} does not exist!", auction_id
-        );
-        self.auction_by_id(auction_id).get()
+        let map = self.auction_by_id(auction_id);
+        require!(!map.is_empty(), "Auction {} does not exist!", auction_id);
+        map.get()
     }
 
     fn try_get_global_offer(&self, offer_id: u64) -> GlobalOffer<Self::Api> {
-        require!(
-            self.does_global_offer_exist(offer_id),
-            "Global Offer {} does not exist!", offer_id
-        );
-        self.global_offer(offer_id).get()
+        let map = self.global_offer(offer_id);
+        require!(!map.is_empty(), "Global Offer {} does not exist!", offer_id);
+        map.get()
     }
 
     fn try_get_offer(&self, offer_id: u64) -> Offer<Self::Api> {
-        require!(
-            self.does_offer_exist(offer_id),
-            "Offer {} does not exist!", offer_id
-        );
-        self.offer_by_id(offer_id).get()
+        let map = self.offer_by_id(offer_id);
+        require!(!map.is_empty(), "Offer {} does not exist!", offer_id);
+        map.get()
     }
 
     fn calculate_cut_amount(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
         total_amount * cut_percentage / PERCENTAGE_TOTAL
     }
 
-    fn calculate_winning_bid_split(
+    fn get_collection_config(
         &self,
-        auction: &Auction<Self::Api>,
-    ) -> BidSplitAmounts<Self::Api> {
-        let creator_royalties =
-            self.calculate_cut_amount(&auction.current_bid, &auction.creator_royalties_percentage);
-        let bid_cut_amount =
-            self.calculate_cut_amount(&auction.current_bid, &auction.marketplace_cut_percentage);
-        let mut seller_amount_to_send = auction.current_bid.clone();
-        seller_amount_to_send -= &creator_royalties;
-        seller_amount_to_send -= &bid_cut_amount;
-
-        BidSplitAmounts {
-            creator: creator_royalties,
-            marketplace: bid_cut_amount,
-            seller: seller_amount_to_send,
-        }
+        collection: &TokenIdentifier,
+    ) -> Option<CollectionFeeConfig<Self::Api>> {
+        let map = self.collection_config(collection);
+        return match map.is_empty() {
+            true => None,
+            false => Some(map.get()),
+        };
     }
 
-    fn calculate_offer_bid_split(
+    fn calculate_amount_split(
         &self,
-        offer: &Offer<Self::Api>,
-        creator_royalties_percentage: &BigUint,
-    ) -> BidSplitAmounts<Self::Api> {
-        let creator_royalties =
-            self.calculate_cut_amount(&offer.price, &creator_royalties_percentage);
-        let bid_cut_amount =
-            self.calculate_cut_amount(&offer.price, &offer.marketplace_cut_percentage);
-        let mut seller_amount_to_send = offer.price.clone();
-        seller_amount_to_send -= &creator_royalties;
-        seller_amount_to_send -= &bid_cut_amount;
+        price: &BigUint,
+        royalties: &BigUint,
+        config: Option<CollectionFeeConfig<Self::Api>>,
+    ) -> FeesDistribution<Self::Api> {
+        let fees = self.bid_cut_percentage().get();
+        let mut extra_amount = BigUint::zero();
+        let mut reverse_royalties = false;
+        let mut reverse_cut_fee = false;
+        let mut extra_fee = BigUint::zero();
+        let mut extra_address = ManagedAddress::zero();
 
-        BidSplitAmounts {
-            creator: creator_royalties,
-            marketplace: bid_cut_amount,
-            seller: seller_amount_to_send,
-        }
-    }
+        let _ = match config {
+            Some(config) => {
+                extra_fee = config.extra_fees.amount;
+                extra_address = config.extra_fees.address;
+                reverse_royalties = config.reverse_royalties;
+                reverse_cut_fee = config.reverse_cut_fees;
+            }
+            None => {}
+        };
 
-    fn calculate_global_offer_split(
-        &self,
-        offer: &GlobalOffer<Self::Api>,
-        nft_info: &EsdtTokenData<Self::Api>,
-    ) -> BidSplitAmounts<Self::Api> {
-        let cut_fee = self.bid_cut_percentage().get();
         require!(
-            &cut_fee + &nft_info.royalties < PERCENTAGE_TOTAL,
-            "Marketplace cut plus royalties exceeds 100%"
+            &fees + royalties + &extra_fee < PERCENTAGE_TOTAL,
+            "Fees exceed 100%"
         );
-        let creator_royalties = self.calculate_cut_amount(&offer.price, &nft_info.royalties);
-        let bid_cut_amount = self.calculate_cut_amount(&offer.price, &cut_fee);
-        let mut seller_amount_to_send = offer.price.clone();
+        let creator_royalties = self.calculate_cut_amount(price, royalties);
+        let bid_cut_amount = self.calculate_cut_amount(price, &fees);
+        let mut seller_amount_to_send = price.clone();
         seller_amount_to_send -= &creator_royalties;
         seller_amount_to_send -= &bid_cut_amount;
+        if extra_fee > BigUint::zero() && extra_address != ManagedAddress::zero() {
+            extra_amount = self.calculate_cut_amount(&price, &extra_fee);
+            seller_amount_to_send -= &extra_amount;
+        }
 
-        BidSplitAmounts {
+        FeesDistribution {
             creator: creator_royalties,
             marketplace: bid_cut_amount,
+            extra: extra_amount,
             seller: seller_amount_to_send,
+            extra_address,
+            reverse_royalties,
+            reverse_cut_fee,
         }
     }
 

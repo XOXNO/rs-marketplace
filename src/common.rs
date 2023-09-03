@@ -1,5 +1,5 @@
 use crate::{
-    auction::{Auction, AuctionType, BidSplitAmounts, GlobalOffer, Offer},
+    auction::{Auction, AuctionType, FeesDistribution, GlobalOffer, Offer},
     NFT_AMOUNT,
 };
 
@@ -197,7 +197,12 @@ pub trait CommonModule:
         if !auction.current_winner.is_zero() {
             let nft_info =
                 self.get_nft_info(&auction.auctioned_token_type, auction.auctioned_token_nonce);
-            let bid_split_amounts = self.calculate_winning_bid_split(auction);
+
+            let bid_split_amounts = self.calculate_amount_split(
+                &auction.current_bid,
+                &auction.creator_royalties_percentage,
+                self.get_collection_config(&auction.auctioned_token_type),
+            );
 
             // send NFT to auction winner
             let nft_amount = BigUint::from(NFT_AMOUNT);
@@ -361,7 +366,7 @@ pub trait CommonModule:
         creator: &ManagedAddress,
         original_owner: &ManagedAddress,
         new_owner: &ManagedAddress,
-        bid_split_amounts: &BidSplitAmounts<Self::Api>,
+        bid_split_amounts: &FeesDistribution<Self::Api>,
         wrapping: bool,
     ) {
         // send part as cut for contract owner
@@ -382,7 +387,18 @@ pub trait CommonModule:
             }
         }
 
-        if self.royalties_reverted().contains(nft_type) {
+        if bid_split_amounts.extra > BigUint::zero()
+            && bid_split_amounts.extra_address != ManagedAddress::zero()
+        {
+            self.transfer_or_save_payment(
+                &bid_split_amounts.extra_address,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.extra,
+            );
+        }
+
+        if bid_split_amounts.reverse_royalties {
             self.transfer_or_save_payment(
                 new_owner,
                 payment_token_id,
@@ -409,25 +425,32 @@ pub trait CommonModule:
 
         // send NFT to new owner
         self.transfer_or_save_payment(new_owner, nft_type, nft_nonce, nft_amount_to_send);
-
-        self.share_marketplace_fees(
-            payment_token_id,
-            bid_split_amounts.marketplace.clone(),
-            payment_token_nonce,
-            wegld,
-            wrapping,
-        );
+        if bid_split_amounts.reverse_cut_fee {
+            self.transfer_or_save_payment(
+                new_owner,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.marketplace,
+            );
+        } else {
+            self.share_marketplace_fees(
+                payment_token_id,
+                bid_split_amounts.marketplace.clone(),
+                payment_token_nonce,
+                wegld,
+                wrapping,
+            );
+        }
     }
 
     fn distribute_tokens_bulk_buy(
         &self,
-        nft_type: &EgldOrEsdtTokenIdentifier,
         payment_token_id: &EgldOrEsdtTokenIdentifier,
         payment_token_nonce: u64,
         creator: &ManagedAddress,
         original_owner: &ManagedAddress,
         new_owner: &ManagedAddress,
-        bid_split_amounts: &BidSplitAmounts<Self::Api>,
+        bid_split_amounts: &FeesDistribution<Self::Api>,
         wrapping: bool,
     ) {
         if wrapping {
@@ -448,7 +471,18 @@ pub trait CommonModule:
             }
         }
 
-        if self.royalties_reverted().contains(nft_type) {
+        if bid_split_amounts.extra > BigUint::zero()
+            && bid_split_amounts.extra_address != ManagedAddress::zero()
+        {
+            self.transfer_or_save_payment(
+                &bid_split_amounts.extra_address,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.extra,
+            );
+        }
+
+        if bid_split_amounts.reverse_royalties {
             self.transfer_or_save_payment(
                 new_owner,
                 payment_token_id,
