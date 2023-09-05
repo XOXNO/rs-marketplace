@@ -98,15 +98,28 @@ pub trait ViewsModule: crate::storage::StorageModule {
         let mut results = ManagedVec::new();
         let nonces = self.token_items_for_sale(token);
 
-        let timestamp = self.blockchain().get_block_timestamp();
         for nonce in nonces.iter() {
             let auctions = self.token_auction_ids(token, nonce);
             for auction_id in auctions.iter() {
-                let auction_info = self.auction_by_id(auction_id);
-                let dl = auction_info.get().deadline;
-                if dl > timestamp || dl == 0 {
-                    results.push(auction_id);
-                }
+                results.push(auction_id);
+            }
+        }
+        results
+    }
+
+    #[view(getFullAuctionsForTicker)]
+    fn get_full_auctions_for_ticker(
+        &self,
+        token: &TokenIdentifier,
+    ) -> ManagedVec<Auction<Self::Api>> {
+        let mut results = ManagedVec::new();
+        let nonces = self.token_items_for_sale(token);
+
+        for nonce in nonces.iter() {
+            let auctions = self.token_auction_ids(token, nonce);
+            for auction_id in auctions.iter() {
+                let auction_info = self.auction_by_id(auction_id).get();
+                results.push(auction_info);
             }
         }
         results
