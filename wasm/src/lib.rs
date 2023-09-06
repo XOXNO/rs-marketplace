@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           97
+// Endpoints:                           91
 // Async Callback:                       1
-// Total number of exported functions:  99
+// Total number of exported functions:  93
 
 #![no_std]
 #![feature(lang_items)]
@@ -27,11 +27,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         bulkBuy => bulk_buy
         withdraw => withdraw
         changeListing => bulk_change_listing
-        getSigner => signer
-        wrappingSC => wrapping
-        wrappingToken => wrapping_token
-        dexXOPair => swap_pair_xoxno
-        xoxnoToken => xoxno_token
         getMarketplaceCutPercentage => bid_cut_percentage
         getOffersByWallet => offers_by_wallet
         checkOfferSent => check_offer_sent
@@ -48,16 +43,15 @@ multiversx_sc_wasm_adapter::endpoints! {
         getClaimableTokens => claimable_tokens
         getClaimableTokenNonces => claimable_token_nonces
         getCollectionsListed => collections_listed
+        getAllListings => listings
         getOffers => offers
         getStatus => status
+        getFullAuctionData => auction_by_id
         offerById => offer_by_id
-        getLastValidAuctionId => last_valid_auction_id
         getRewardBalance => reward_balance
         getRewardTicker => reward_ticker
         specialRewardAmount => special_reward_amount
         defaultRewardAmount => reward_amount
-        getLastValidOfferId => last_valid_offer_id
-        getLastValidGlobalOfferId => last_valid_global_offer_id
         getGlobalOffers => global_offer_ids
         getGlobalOffer => global_offer
         getCollectionGlobalOffers => collection_global_offers
