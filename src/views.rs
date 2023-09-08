@@ -153,14 +153,48 @@ pub trait ViewsModule: crate::storage::StorageModule {
     fn get_bulk_offers(&self, offers: MultiValueEncoded<u64>) -> ManagedVec<BulkOffers<Self::Api>> {
         let mut results = ManagedVec::new();
         for offer_id in offers.into_iter() {
-            if !self.offer_by_id(offer_id).is_empty() {
-                let offer = self.offer_by_id(offer_id).get();
+            let map = self.offer_by_id(offer_id);
+            if !map.is_empty() {
+                let offer = map.get();
                 let result = BulkOffers {
                     offer_id: offer_id,
                     nonce: offer.token_nonce,
                     offer: offer,
                 };
                 results.push(result);
+            }
+        }
+        return results;
+    }
+
+    #[view(getBulkGlobalOffers)]
+    fn get_bulk_global_offers(
+        &self,
+        offers: MultiValueEncoded<u64>,
+    ) -> ManagedVec<GlobalOffer<Self::Api>> {
+        let mut results = ManagedVec::new();
+        for offer_id in offers.into_iter() {
+            let map_offer = self.global_offer(offer_id);
+            if !map_offer.is_empty() {
+                let offer = map_offer.get();
+                results.push(offer);
+            }
+        }
+        return results;
+    }
+
+    #[view(getBulkGlobalOffersByCollection)]
+    fn get_bulk_global_offers_by_collection(
+        &self,
+        ticker: TokenIdentifier,
+    ) -> ManagedVec<GlobalOffer<Self::Api>> {
+        let mut results = ManagedVec::new();
+        let offers = self.collection_global_offers(&ticker);
+        for offer_id in offers.into_iter() {
+            let map = self.global_offer(offer_id);
+            if !map.is_empty() {
+                let offer = map.get();
+                results.push(offer);
             }
         }
         return results;
@@ -173,8 +207,9 @@ pub trait ViewsModule: crate::storage::StorageModule {
     ) -> ManagedVec<TokensOnSale<Self::Api>> {
         let mut results = ManagedVec::new();
         for auction_id in auction_ids.into_iter() {
-            if !self.auction_by_id(auction_id).is_empty() {
-                let auction = self.auction_by_id(auction_id).get();
+            let map = self.auction_by_id(auction_id);
+            if !map.is_empty() {
+                let auction = map.get();
                 let token_type = self.blockchain().get_esdt_token_data(
                     &self.blockchain().get_owner_address(),
                     &auction.auctioned_token_type,

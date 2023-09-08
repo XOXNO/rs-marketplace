@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           91
+// Endpoints:                           93
 // Async Callback:                       1
-// Total number of exported functions:  93
+// Total number of exported functions:  95
 
 #![no_std]
 #![feature(lang_items)]
@@ -72,6 +72,8 @@ multiversx_sc_wasm_adapter::endpoints! {
         getFullAuctionsForTicker => get_full_auctions_for_ticker
         checkTokenOffers => check_token_offers
         getBulkOffers => get_bulk_offers
+        getBulkGlobalOffers => get_bulk_global_offers
+        getBulkGlobalOffersByCollection => get_bulk_global_offers_by_collection
         getBulkListings => get_bulk_listings
         doesAuctionExist => does_auction_exist
         doesGlobalOfferExist => does_global_offer_exist

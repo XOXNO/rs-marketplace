@@ -141,7 +141,7 @@ pub struct FeesDistribution<M: ManagedTypeApi> {
     pub reverse_cut_fee: bool,
 }
 
-#[derive(TopEncode, TypeAbi)]
+#[derive(ManagedVecItem, TypeAbi, NestedEncode, NestedDecode, Clone, TopEncode)]
 pub struct GlobalOffer<M: ManagedTypeApi> {
     pub offer_id: u64,
     pub collection: TokenIdentifier<M>,
