@@ -6,7 +6,6 @@ use core::convert::TryInto;
 use super::auction::{AuctionType, Offer, OfferStatus};
 use crate::auction::GlobalOffer;
 use crate::common;
-use crate::dex;
 use crate::events;
 use crate::helpers;
 use crate::pools;
@@ -22,7 +21,6 @@ pub trait CustomOffersModule:
     + views::ViewsModule
     + common::CommonModule
     + wrapping::WrappingModule
-    + dex::DexModule
     + pools::PoolsModule
 {
     #[payable("*")]
@@ -308,8 +306,8 @@ pub trait CustomOffersModule:
         self.has_balance(&caller, &payment_token, payment_nonce, &price);
         let mut map_count_user_offers = self.user_global_offers(&caller);
         require!(
-            map_count_user_offers.len() <= 100,
-            "You can not place over 100 global offers per wallet!"
+            map_count_user_offers.len() <= 250,
+            "You can not place over 250 global offers per wallet!"
         );
         require!(
             !self.blacklist_wallets().contains(&caller),
@@ -317,8 +315,8 @@ pub trait CustomOffersModule:
         );
         let mut user_map = self.user_collection_global_offers(&caller, &collection);
         require!(
-            user_map.len() <= 10,
-            "You have a limit of 10 offers per collection!"
+            user_map.len() <= 25,
+            "You have a limit of 25 offers per collection!"
         );
 
         let offer_id = self.last_valid_global_offer_id().get() + 1;

@@ -7,7 +7,6 @@ use auction::*;
 pub mod admin;
 pub mod common;
 pub mod creator;
-pub mod dex;
 pub mod events;
 pub mod helpers;
 pub mod offers;
@@ -29,9 +28,8 @@ pub trait XOXNOProtocol:
     + offers::CustomOffersModule
     + admin::AdminModule
     + creator::CreatorModule
-    + common::CommonModule
     + wrapping::WrappingModule
-    + dex::DexModule
+    + common::CommonModule
     + pools::PoolsModule
 {
     #[init]
@@ -41,14 +39,14 @@ pub trait XOXNOProtocol:
         signer: ManagedAddress,
         wrapping_sc: ManagedAddress,
         wrapping_token: TokenIdentifier,
-        // xoxno_pair: ManagedAddress,
+        aggregator: ManagedAddress,
         // xoxno_token: TokenIdentifier,
     ) {
         self.try_set_bid_cut_percentage(bid_cut_percentage);
         self.signer().set_if_empty(&signer);
         self.wrapping().set(wrapping_sc);
         self.wrapping_token().set(wrapping_token);
-        // self.swap_pair_xoxno().set(xoxno_pair);
+        self.aggregator_sc().set(aggregator);
         // self.xoxno_token().set(xoxno_token);
     }
 
@@ -224,18 +222,23 @@ pub trait XOXNOProtocol:
         require!(self.status().get(), "Global operation enabled!");
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
-
+        require!(
+            !self.freezed_auctions().contains(&auction_id),
+            "Auction is frozen!"
+        );
         let mut auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
         let wegld = self.wrapping_token().get();
         self.common_bid_checks(
             &auction,
+            auction_id,
             &nft_type,
             nft_nonce,
             &payment_token,
             payment_token_nonce,
             &payment_amount,
             &wegld,
+            false,
         );
 
         require!(
@@ -294,6 +297,10 @@ pub trait XOXNOProtocol:
     fn end_auction(&self, auction_id: u64) {
         require!(self.status().get(), "Global operation enabled!");
         let auction = self.try_get_auction(auction_id);
+        require!(
+            !self.freezed_auctions().contains(&auction_id),
+            "Auction is frozen!"
+        );
         let current_time = self.blockchain().get_block_timestamp();
         require!(
             auction.auction_type == AuctionType::SftAll
@@ -339,6 +346,32 @@ pub trait XOXNOProtocol:
             opt_sft_buy_amount,
             OptionalValue::None,
             OptionalValue::None,
+            OptionalValue::None,
+            OptionalValue::None,
+        );
+    }
+
+    #[payable("*")]
+    #[endpoint(buySwap)]
+    fn buy_swap(
+        &self,
+        auction_id: u64,
+        nft_type: TokenIdentifier,
+        nft_nonce: u64,
+        steps: ManagedVec<AggregatorStep<Self::Api>>,
+        limits: MultiValueEncoded<TokenAmount<Self::Api>>,
+        opt_sft_buy_amount: OptionalValue<BigUint>,
+    ) {
+        self.require_admin(None);
+        self.common_buy(
+            auction_id,
+            nft_type,
+            nft_nonce,
+            opt_sft_buy_amount,
+            OptionalValue::None,
+            OptionalValue::None,
+            OptionalValue::Some(steps),
+            OptionalValue::Some(limits),
         );
     }
 
@@ -360,6 +393,8 @@ pub trait XOXNOProtocol:
             opt_sft_buy_amount,
             buy_for,
             message,
+            OptionalValue::None,
+            OptionalValue::None,
         );
     }
 
@@ -383,6 +418,10 @@ pub trait XOXNOProtocol:
             if listing_map.is_empty() {
                 continue;
             }
+            require!(
+                !self.freezed_auctions().contains(&auction_id),
+                "Auction is frozen!"
+            );
             let mut listing = listing_map.get();
             require!(
                 listing.auction_type == AuctionType::Nft,
@@ -396,12 +435,14 @@ pub trait XOXNOProtocol:
 
             self.common_bid_checks(
                 &listing,
+                auction_id,
                 &listing.auctioned_token_type,
                 listing.auctioned_token_nonce,
                 &payment_token,
                 payment_token_nonce,
                 &total_available,
                 &wegld,
+                false,
             );
 
             let wrapping = self.require_egld_conversion(&listing, &payment_token, &wegld);
@@ -484,6 +525,10 @@ pub trait XOXNOProtocol:
             if listing_map.is_empty() {
                 continue;
             }
+            require!(
+                !self.freezed_auctions().contains(&auction_id),
+                "Auction is frozen!"
+            );
             let listing = listing_map.get();
             require!(
                 &listing.original_owner == &caller,
@@ -503,6 +548,10 @@ pub trait XOXNOProtocol:
             if listing_map.is_empty() {
                 continue;
             }
+            require!(
+                !self.freezed_auctions().contains(&update.auction_id),
+                "Auction is frozen!"
+            );
             let mut listing = listing_map.get();
 
             require!(

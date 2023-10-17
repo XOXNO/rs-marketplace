@@ -13,8 +13,8 @@ pub trait StorageModule {
     #[storage_mapper("wrappingToken")]
     fn wrapping_token(&self) -> SingleValueMapper<TokenIdentifier>;
 
-    #[storage_mapper("dexXOPair")]
-    fn swap_pair_xoxno(&self) -> SingleValueMapper<ManagedAddress>;
+    #[storage_mapper("aggregatorSC")]
+    fn aggregator_sc(&self) -> SingleValueMapper<ManagedAddress>;
 
     #[storage_mapper("xoxnoToken")]
     fn xoxno_token(&self) -> SingleValueMapper<TokenIdentifier>;
@@ -170,4 +170,8 @@ pub trait StorageModule {
     #[view(getCollectionConfig)]
     #[storage_mapper("getCollectionConfig")]
     fn collection_config(&self, ticker: &TokenIdentifier) -> SingleValueMapper<CollectionFeeConfig<Self::Api>>;
+
+    #[view(freezedAuctions)]
+    #[storage_mapper("freezedAuctions")]
+    fn freezed_auctions(&self) -> UnorderedSetMapper<u64>;
 }

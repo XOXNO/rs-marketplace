@@ -9,7 +9,6 @@ pub trait AdminModule:
     + crate::events::EventsModule
     + crate::common::CommonModule
     + crate::wrapping::WrappingModule
-    + crate::dex::DexModule
 {
     fn require_admin(&self, extra_admin: Option<ManagedAddress>) {
         let signer: ManagedAddress = self.signer().get();
@@ -194,6 +193,18 @@ pub trait AdminModule:
     #[endpoint(setCutPercentage)]
     fn set_percentage_cut(&self, new_cut_percentage: u64) {
         self.try_set_bid_cut_percentage(new_cut_percentage)
+    }
+
+    #[endpoint(unFreezeAuctionId)]
+    fn un_freeze_auction_id(&self, auction_id: u64) {
+        self.require_admin(None);
+        self.freezed_auctions().swap_remove(&auction_id);
+    }
+
+    #[endpoint(freezeAuctionId)]
+    fn freeze_auction_id(&self, auction_id: u64) {
+        self.require_admin(None);
+        self.freezed_auctions().insert(auction_id);
     }
 
     // #[only_owner]

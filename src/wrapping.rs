@@ -5,7 +5,8 @@ use multiversx_wegld_swap_sc::ProxyTrait as _;
 #[multiversx_sc::module]
 pub trait WrappingModule: crate::storage::StorageModule {
     #[proxy]
-    fn wegld_proxy(&self, sc_address: ManagedAddress) -> multiversx_wegld_swap_sc::Proxy<Self::Api>;
+    fn wegld_proxy(&self, sc_address: ManagedAddress)
+        -> multiversx_wegld_swap_sc::Proxy<Self::Api>;
 
     fn wrap_egld(&self, amount: BigUint) {
         self.wegld_proxy(self.wrapping().get())

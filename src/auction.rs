@@ -53,7 +53,7 @@ impl<M: ManagedTypeApi> TopDecode for Offer<M> {
         let price = BigUint::dep_decode(&mut input)?;
         let deadline = u64::dep_decode(&mut input)?;
         let timestamp = u64::dep_decode(&mut input)?;
-        let offer_owner =  ManagedAddress::dep_decode(&mut input)?;
+        let offer_owner = ManagedAddress::dep_decode(&mut input)?;
         let marketplace_cut_percentage = BigUint::dep_decode(&mut input)?;
 
         let new_version = if input.is_depleted() {
@@ -74,7 +74,7 @@ impl<M: ManagedTypeApi> TopDecode for Offer<M> {
             timestamp,
             offer_owner,
             marketplace_cut_percentage,
-            new_version
+            new_version,
         })
     }
 }
@@ -176,7 +176,6 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
             Option::<ManagedBuffer<M>>::dep_decode(&mut input)?
         };
 
-
         let new_version = if input.is_depleted() {
             false
         } else {
@@ -193,7 +192,7 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
             timestamp,
             owner,
             attributes,
-            new_version
+            new_version,
         })
     }
 }
@@ -228,11 +227,37 @@ pub struct CollectionFeeConfig<M: ManagedTypeApi> {
     pub min_royalties: BigUint<M>,
     pub max_royalties: BigUint<M>,
     pub extra_fees: CollectionExtraFeesConfig<M>,
-    pub admin: ManagedAddress<M>, 
+    pub admin: ManagedAddress<M>,
 }
 
 #[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct CollectionExtraFeesConfig<M: ManagedTypeApi> {
     pub amount: BigUint<M>,
     pub address: ManagedAddress<M>,
+}
+
+#[derive(
+    TopEncode, TopDecode, NestedEncode, NestedDecode, PartialEq, TypeAbi, Clone, ManagedVecItem,
+)]
+pub struct TokenAmount<M: ManagedTypeApi> {
+    pub token: TokenIdentifier<M>,
+    pub amount: BigUint<M>,
+}
+
+impl<M: ManagedTypeApi> TokenAmount<M> {
+    pub fn new(token: TokenIdentifier<M>, amount: BigUint<M>) -> Self {
+        TokenAmount { token, amount }
+    }
+}
+
+#[derive(
+    TopEncode, TopDecode, NestedEncode, NestedDecode, PartialEq, TypeAbi, Clone, ManagedVecItem,
+)]
+pub struct AggregatorStep<M: ManagedTypeApi> {
+    pub token_in: TokenIdentifier<M>,
+    pub token_out: TokenIdentifier<M>,
+    pub amount_in: BigUint<M>,
+    pub pool_address: ManagedAddress<M>,
+    pub function_name: ManagedBuffer<M>,
+    pub arguments: ManagedVec<M, ManagedBuffer<M>>,
 }

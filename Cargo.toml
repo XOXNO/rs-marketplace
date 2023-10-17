@@ -7,17 +7,24 @@ publish = false
 
 [lib]
 path = "src/init.rs"
+
 [dependencies.multiversx-sc]
-version = "0.42.0"
+version = "0.43.4"
 
 [dependencies.multiversx-sc-modules]
-version = "0.42.0"
+version = "0.43.4"
 
 # [dependencies.pair]
 # git = "https://github.com/multiversx/mx-exchange-sc"
 # branch = "main"
 
+[dependencies.aggregator]
+git = "https://github.com/ashswap/ash-aggregator-sc"
+branch = "main"
+package = "aggregator"
+
 [dependencies.multiversx-wegld-swap-sc]
-version = "0.42.0"
+version = "0.43.4"
+
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.42.0"
+version = "0.43.4"

@@ -158,7 +158,7 @@ pub trait EventsModule {
         nr_bought_tokens: &BigUint,
         current_time: u64,
         message: OptionalValue<ManagedBuffer>,
-        buy_by: OptionalValue<ManagedAddress>,
+        paid_by: OptionalValue<ManagedAddress>,
     ) {
         self.buy_event(
             &auction.auctioned_token_type,
@@ -172,7 +172,7 @@ pub trait EventsModule {
             auction.payment_token_nonce,
             current_time,
             message.into_option().unwrap_or(ManagedBuffer::new()),
-            buy_by.into_option().unwrap_or(ManagedAddress::default()),
+            paid_by.into_option().unwrap_or(ManagedAddress::default()),
             &auction.nr_auctioned_tokens,
         )
     }

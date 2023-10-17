@@ -5,11 +5,14 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           93
+// Endpoints:                           97
 // Async Callback:                       1
-// Total number of exported functions:  95
+// Total number of exported functions:  99
 
 #![no_std]
+
+// Configuration that works with rustc < 1.73.0.
+// TODO: Recommended rustc version: 1.73.0 or newer.
 #![feature(lang_items)]
 
 multiversx_sc_wasm_adapter::allocator!();
@@ -23,6 +26,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         bid => bid
         endAuction => end_auction
         buy => buy
+        buySwap => buy_swap
         buyFor => buy_for
         bulkBuy => bulk_buy
         withdraw => withdraw
@@ -58,6 +62,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         userGlobalOffers => user_global_offers
         userCollectionGlobalOffers => user_collection_global_offers
         getCollectionConfig => collection_config
+        freezedAuctions => freezed_auctions
         getListingsCount => get_listings_count
         getOffersCount => get_offers_count
         getGlobalOffersCount => get_global_offers_count
@@ -100,6 +105,8 @@ multiversx_sc_wasm_adapter::endpoints! {
         removeWitelistedSC => remove_wl_sc
         setStatus => set_status
         setCutPercentage => set_percentage_cut
+        unFreezeAuctionId => un_freeze_auction_id
+        freezeAuctionId => freeze_auction_id
         claimTokensForCreator => claim_tokens_for_creator
         addBlackListWallet => add_blacklist
         removeBlackListWallet => remove_blacklist
