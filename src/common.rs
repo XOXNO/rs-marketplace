@@ -114,6 +114,7 @@ pub trait CommonModule:
         }
     }
 
+    #[allow_multiple_var_args]
     fn common_buy(
         &self,
         auction_id: u64,

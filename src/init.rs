@@ -351,6 +351,7 @@ pub trait XOXNOProtocol:
         );
     }
 
+    #[allow_multiple_var_args]
     #[payable("*")]
     #[endpoint(buySwap)]
     fn buy_swap(
@@ -375,6 +376,7 @@ pub trait XOXNOProtocol:
         );
     }
 
+    #[allow_multiple_var_args]
     #[payable("*")]
     #[endpoint(buyFor)]
     fn buy_for(
@@ -386,6 +388,7 @@ pub trait XOXNOProtocol:
         buy_for: OptionalValue<ManagedAddress>,
         message: OptionalValue<ManagedBuffer>,
     ) {
+        self.require_admin(None);
         self.common_buy(
             auction_id,
             nft_type,

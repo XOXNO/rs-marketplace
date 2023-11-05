@@ -356,6 +356,7 @@ pub trait CustomOffersModule:
         self.emit_remove_global_offer_event(offer_id, &offer.collection);
     }
 
+    #[allow_multiple_var_args]
     #[payable("*")]
     #[endpoint(acceptGlobalOffer)]
     fn accept_global_offer(

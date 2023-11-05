@@ -13,29 +13,24 @@ EVEWALLET=erd18tudnj2z8vjh0339yu3vrkgzz2jpz8mjq0uhgnmklnap6z33qqeszq2yn4
 EVEHEX=0x3af8d9c9423b2577c6252722c1d90212a4111f7203f9744f76fcfa1d0a310033
 SC=0x000000000000000005008c2c42c102c9b6c3d2422e522cdf7b903e6ae78a69e1
 EGLD=0x4d45582d373966303633 #45474c44 2d633365323066
-ADDRESS=erd1qqqqqqqqqqqqqpgqn4fnwl43hhchz9emdy66eh5azzhl599zd8ssxjdyh3
+ADDRESS=erd1qqqqqqqqqqqqqpgql0dnz6n5hpuw8cptlt00khd0nn4ja8eadsfq2xrqw4
 DEPLOY_TRANSACTION=$(mxpy data load --key=deployTransaction-devnet)
 PROXY=https://devnet-gateway.multiversx.com
-SHARD1WrappingWEGLD=erd1qqqqqqqqqqqqqpgq7ykazrzd905zvnlr88dpfw06677lxe9w0n4suz00uh
+SHARD2WrappingWEGLD=erd1qqqqqqqqqqqqqpgqvn9ew0wwn7a3pk053ezex98497hd4exqdg0q8v2e0c
 XOXNOPairSwap=erd1qqqqqqqqqqqqqpgqae44n6t0fhg40zmtq3lzjk58f8t7envn0n4sj7x6pl
 
 deploy() {
     echo ${PROJECT}
-    mxpy --verbose contract deploy --project=${PROJECT} --recall-nonce --pem=${ALICE} --gas-limit=225000000 --arguments 0xFA --send --outfile="deploy-devnet.interaction.json" --proxy=${PROXY} --chain=D || return
-
-    TRANSACTION=$(mxpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['hash']")
-    ADDRESS=$(mxpy data parse --file="deploy-devnet.interaction.json" --expression="data['emitted_tx']['address']")
-
-    mxpy data store --key=address-devnet --value=${ADDRESS}
-    mxpy data store --key=deployTransaction-devnet --value=${TRANSACTION}
+    mxpy --verbose contract deploy --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD2WrappingWEGLD} str:WEGLD-a28c59 "erd1qqqqqqqqqqqqqpgqh96hhj42huhe47j3jerlec7ndhw75gy72gesy7w2d6" --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 --gas-limit=525000000 --send --proxy=${PROXY} --chain=D || return
 
     echo ""
     echo "Smart contract address: ${ADDRESS}"
 }
+
 # ${XOXNOPairSwap} str:XOXNO-2d9386
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD1WrappingWEGLD} str:WEGLD-d7c6bb --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --pem=${ALICE} \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD2WrappingWEGLD} str:WEGLD-a28c59 "erd1qqqqqqqqqqqqqpgqh96hhj42huhe47j3jerlec7ndhw75gy72gesy7w2d6" --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 \
     --gas-limit=350000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 
@@ -49,7 +44,7 @@ getDustAmountLeft() {
 }
 
 setStatusOn() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=15000000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=D
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 --gas-limit=15000000 --function="setStatus" --arguments 0x01 --send --proxy=${PROXY} --chain=D
 }
 
 addWitelistedSC() {
@@ -61,7 +56,7 @@ setStatusOff() {
 }
 
 setAcceptedTokens() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=10500000 --function="setAcceptedTokens" --arguments str:HSEGLD-8f2360 --send --proxy=${PROXY} --chain=D
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 --gas-limit=10500000 --function="setAcceptedTokens" --arguments str:WEGLD-a28c59 --send --proxy=${PROXY} --chain=D
 }
 removeAcceptedTokens() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=D
