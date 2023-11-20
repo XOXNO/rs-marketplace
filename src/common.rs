@@ -631,7 +631,7 @@ pub trait CommonModule:
             ManagedAsyncCallResult::Ok(payments) => {
                 let gas_left = self.blockchain().get_gas_left();
                 if payments.len() > 0 && gas_left >= 20_000_000 {
-                    let mut payment = payments.get(0);
+                    let payment = payments.get(0);
                     let mut auction = self.try_get_auction(auction_id);
                     let token = &EgldOrEsdtTokenIdentifier::esdt(payment.token_identifier);
                     let wrapping = self.require_egld_conversion(&auction, token, &wegld);
@@ -644,10 +644,8 @@ pub trait CommonModule:
                             payment.token_nonce,
                             &extra_amount,
                         );
-                        payment.amount = total_price.clone();
-
                         auction.current_winner = send_to.clone();
-                        auction.current_bid = payment.amount.clone();
+                        auction.current_bid = total_price.clone();
                         auction.nr_auctioned_tokens -= quantity;
                         if auction.nr_auctioned_tokens == 0 {
                             self.remove_auction_common(auction_id, &auction);

@@ -87,6 +87,10 @@ setAcceptedTokens() {
     mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setAcceptedTokens" --arguments str:SEGLD-3ad2d0 --send --proxy=${PROXY} --chain=1
 }
 
+unFreezeAuctionId() {
+    mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="unFreezeAuctionId" --arguments 0x0ffb2f --send --proxy=${PROXY} --chain=1
+}
+
 enableRoyaltiesReverted() {
     mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="enableRoyaltiesReverted" --arguments str:COW-cd463d --send --proxy=${PROXY} --chain=1
 }
