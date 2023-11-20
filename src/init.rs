@@ -363,7 +363,7 @@ pub trait XOXNOProtocol:
         limits: MultiValueEncoded<TokenAmount<Self::Api>>,
         opt_sft_buy_amount: OptionalValue<BigUint>,
     ) {
-        self.require_admin(None);
+        // self.require_admin(None);
         self.common_buy(
             auction_id,
             nft_type,

@@ -80,7 +80,7 @@ pub trait CustomOffersModule:
             found_match = true;
         } else {
             for auction_id in token_auction_ids_instance.iter() {
-                let auction =  self.try_get_auction(auction_id);
+                let auction = self.try_get_auction(auction_id);
                 if offer.token_type == auction.auctioned_token_type
                     && offer.token_nonce == auction.auctioned_token_nonce
                     && offer.quantity == auction.nr_auctioned_tokens
