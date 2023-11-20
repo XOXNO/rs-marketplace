@@ -159,6 +159,7 @@ pub trait EventsModule {
         current_time: u64,
         message: OptionalValue<ManagedBuffer>,
         paid_by: OptionalValue<ManagedAddress>,
+        original_payment: &EgldOrEsdtTokenPayment
     ) {
         self.buy_event(
             &auction.auctioned_token_type,
@@ -174,6 +175,7 @@ pub trait EventsModule {
             message.into_option().unwrap_or(ManagedBuffer::new()),
             paid_by.into_option().unwrap_or(ManagedAddress::default()),
             &auction.nr_auctioned_tokens,
+            original_payment
         )
     }
 
@@ -369,6 +371,7 @@ pub trait EventsModule {
         #[indexed] message: ManagedBuffer,
         #[indexed] buy_by: ManagedAddress,
         #[indexed] nr_auctioned_tokens: &BigUint,
+        #[indexed] original_payment: &EgldOrEsdtTokenPayment,
     );
 
     #[event("withdraw_event")]

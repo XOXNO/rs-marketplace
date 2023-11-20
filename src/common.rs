@@ -197,6 +197,7 @@ pub trait CommonModule:
                 } else {
                     OptionalValue::None
                 },
+                &payments
             );
             let wrapping = self.require_egld_conversion(&auction, &payment_token, &wegld);
             self.distribute_tokens(&auction, Option::Some(&buy_amount), wrapping);
@@ -666,6 +667,7 @@ pub trait CommonModule:
                                 true => OptionalValue::None,
                                 false => OptionalValue::Some(paid_by.clone()),
                             },
+                            &original_payment,
                         );
                         self.distribute_tokens(&auction, Option::Some(quantity), wrapping);
                     } else {

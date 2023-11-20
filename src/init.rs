@@ -403,14 +403,9 @@ pub trait XOXNOProtocol:
 
     #[payable("*")]
     #[endpoint(bulkBuy)]
-    fn bulk_buy(
-        &self,
-        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
-        #[payment_nonce] payment_token_nonce: u64,
-        #[payment_amount] payment_amount: BigUint,
-        auction_ids: MultiValueEncoded<u64>,
-    ) {
-        let mut total_available = payment_amount.clone();
+    fn bulk_buy(&self, auction_ids: MultiValueEncoded<u64>) {
+        let payments = self.call_value().egld_or_single_esdt();
+        let mut total_available = payments.amount.clone();
         let mut bought_nfts: ManagedVec<EsdtTokenPayment<Self::Api>> = ManagedVec::new();
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
@@ -441,14 +436,15 @@ pub trait XOXNOProtocol:
                 auction_id,
                 &listing.auctioned_token_type,
                 listing.auctioned_token_nonce,
-                &payment_token,
-                payment_token_nonce,
+                &payments.token_identifier,
+                payments.token_nonce,
                 &total_available,
                 &wegld,
                 false,
             );
 
-            let wrapping = self.require_egld_conversion(&listing, &payment_token, &wegld);
+            let wrapping =
+                self.require_egld_conversion(&listing, &payments.token_identifier, &wegld);
             let nft_info =
                 self.get_nft_info(&listing.auctioned_token_type, listing.auctioned_token_nonce);
 
@@ -488,6 +484,7 @@ pub trait XOXNOProtocol:
                 current_time,
                 OptionalValue::None,
                 OptionalValue::None,
+                &payments
             );
             total_available -= listing.min_bid;
 
@@ -500,8 +497,8 @@ pub trait XOXNOProtocol:
         if total_available.gt(&BigUint::zero()) {
             self.send().direct(
                 &caller,
-                &payment_token,
-                payment_token_nonce,
+                &payments.token_identifier,
+                payments.token_nonce,
                 &total_available,
             )
         }
@@ -510,9 +507,9 @@ pub trait XOXNOProtocol:
         }
         if marketplace_fees > BigUint::zero() {
             self.share_marketplace_fees(
-                &payment_token,
+                &payments.token_identifier,
                 marketplace_fees,
-                payment_token_nonce,
+                payments.token_nonce,
                 wegld,
                 false,
             );
