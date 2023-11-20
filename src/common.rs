@@ -197,7 +197,7 @@ pub trait CommonModule:
                 } else {
                     OptionalValue::None
                 },
-                &payments
+                &payments,
             );
             let wrapping = self.require_egld_conversion(&auction, &payment_token, &wegld);
             self.distribute_tokens(&auction, Option::Some(&buy_amount), wrapping);
@@ -632,11 +632,16 @@ pub trait CommonModule:
                 let gas_left = self.blockchain().get_gas_left();
                 if payments.len() > 0 && gas_left >= 20_000_000 {
                     let payment = payments.get(0);
+                    let balance = self.blockchain().get_esdt_balance(
+                        &self.blockchain().get_sc_address(),
+                        &payment.token_identifier,
+                        payment.token_nonce,
+                    );
                     let mut auction = self.try_get_auction(auction_id);
                     let token = &EgldOrEsdtTokenIdentifier::esdt(payment.token_identifier);
                     let wrapping = self.require_egld_conversion(&auction, token, &wegld);
                     let has_required_token = token == &auction.payment_token_type || wrapping;
-                    if &payment.amount >= total_price && payments.len() == 1 && has_required_token {
+                    if &payment.amount >= total_price && payments.len() == 1 && has_required_token && balance >= payment.amount {
                         let extra_amount = &payment.amount - total_price;
                         self.transfer_or_save_payment(
                             paid_by,
