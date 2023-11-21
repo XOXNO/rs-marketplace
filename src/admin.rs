@@ -207,32 +207,30 @@ pub trait AdminModule:
         self.freezed_auctions().insert(auction_id);
     }
 
-    // #[only_owner]
-    // #[endpoint(sendLostRoyalties)]
-    // fn send_lost_royalties(&self, amount: &BigUint, creator: &ManagedAddress) {
-    //     require!(
-    //         self.blockchain().is_smart_contract(creator),
-    //         "The address is not a smart contract!"
-    //     );
-    //     self.send().direct_egld(creator, amount);
-    // }
+    #[only_owner]
+    #[endpoint(claimLeftOverDust)]
+    fn claim_lost_funds(&self, token: &EgldOrEsdtTokenIdentifier, amount: &BigUint) {
+        self.send()
+            .direct(&self.blockchain().get_owner_address(), token, 0, amount);
+    }
 
-    #[endpoint(claimTokensForCreator)]
-    fn claim_tokens_for_creator(
-        &self,
-        token_id: EgldOrEsdtTokenIdentifier,
-        token_nonce: u64,
-        creator: ManagedAddress,
-    ) {
+    #[endpoint(claimSavedFundsForUser)]
+    fn claim_tokens_for_creator(&self, wallet: &ManagedAddress) {
         self.require_admin(None);
-        let amount_mapper = self.claimable_amount(&creator, &token_id, token_nonce);
-        let amount = amount_mapper.get();
-
-        if amount > 0 {
-            amount_mapper.clear();
-            let caller = self.blockchain().get_caller();
-            self.send().direct(&caller, &token_id, token_nonce, &amount);
+        let mut tokens = self.claimable_tokens(wallet);
+        for token in tokens.iter() {
+            let mut nonces = self.claimable_token_nonces(wallet, &token);
+            for nonce in nonces.iter() {
+                let amount_map = self.claimable_amount(wallet, &token, nonce);
+                let amount = amount_map.get();
+                if amount > BigUint::zero() {
+                    self.send().direct(wallet, &token, nonce, &amount_map.get());
+                    amount_map.clear();
+                }
+            }
+            nonces.clear();
         }
+        tokens.clear();
     }
 
     #[endpoint(addBlackListWallet)]

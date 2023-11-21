@@ -641,7 +641,11 @@ pub trait CommonModule:
                     let token = &EgldOrEsdtTokenIdentifier::esdt(payment.token_identifier);
                     let wrapping = self.require_egld_conversion(&auction, token, &wegld);
                     let has_required_token = token == &auction.payment_token_type || wrapping;
-                    if &payment.amount >= total_price && payments.len() == 1 && has_required_token && balance >= payment.amount {
+                    if &payment.amount >= total_price
+                        && payments.len() == 1
+                        && has_required_token
+                        && balance >= payment.amount
+                    {
                         let extra_amount = &payment.amount - total_price;
                         self.transfer_or_save_payment(
                             paid_by,
@@ -674,7 +678,15 @@ pub trait CommonModule:
                         );
                         self.distribute_tokens(&auction, Option::Some(quantity), wrapping);
                     } else {
-                        self.send().direct_multi(paid_by, &payments);
+                        if balance >= payment.amount {
+                            self.send().direct_multi(paid_by, &payments);
+                        } else {
+                            self.claimable_token_nonces(paid_by, &token)
+                                .insert(payment.token_nonce);
+                            self.claimable_amount(paid_by, &token, payment.token_nonce)
+                                .update(|amt| *amt += payment.amount);
+                            self.claimable_tokens(paid_by).insert(token.clone());
+                        }
                     }
                 }
             }
