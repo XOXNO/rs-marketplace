@@ -4,7 +4,7 @@ multiversx_sc::derive_imports!();
 use core::convert::TryInto;
 
 use crate::{
-    auction::{Auction, CollectionFeeConfig, FeesDistribution, GlobalOffer, Offer},
+    auction::{Auction, CollectionFeeConfig, FeesDistribution, GlobalOffer, Offer, AttributesIns},
     PERCENTAGE_TOTAL,
 };
 
@@ -33,11 +33,18 @@ pub trait HelpersModule:
     }
 
     fn get_nft_info(&self, nft_type: &TokenIdentifier, nft_nonce: u64) -> EsdtTokenData<Self::Api> {
-        self.blockchain().get_esdt_token_data(
+        let mut data = self.blockchain().get_esdt_token_data(
             &self.blockchain().get_sc_address(),
             nft_type,
             nft_nonce,
-        )
+        );
+
+        if nft_type == &TokenIdentifier::from_esdt_bytes(b"INS-dd5a76") {
+            let attributes = data.decode_attributes::<AttributesIns<Self::Api>>();
+            data.creator = attributes.creator;
+        }
+
+        data
     }
 
     fn try_set_bid_cut_percentage(&self, new_cut_percentage: u64) {

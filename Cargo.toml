@@ -7,13 +7,15 @@ publish = false
 
 [lib]
 path = "src/init.rs"
+
 [dependencies.multiversx-sc]
-version = "0.44.0"
+version = "0.46.1"
 
 [dependencies.multiversx-sc-modules]
-version = "0.44.0"
+version = "0.46.1"
 
 [dependencies.multiversx-wegld-swap-sc]
-version = "0.44.0"
+version = "0.46.1"
+
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.44.0"
+version = "0.46.1"

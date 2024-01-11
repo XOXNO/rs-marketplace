@@ -35,7 +35,7 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"  ${SHARD2WrappingWEGLD} str:WEGLD-bd4d79 "erd1qqqqqqqqqqqqqpgqglgkaxm73j7mhw5u940fsmmncnayxj884fvs54lnr6" --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
@@ -52,8 +52,8 @@ addWitelistedSC() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=40000000 --function="addWitelistedSC" --arguments erd1qqqqqqqqqqqqqpgqte3ntwhq8xcspmqf0q5sveh5rhv3ng8pu76ss8mv96 --send --proxy=${PROXY} --chain=1
 }
 
-sendLostRoyalties() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=40000000 --function="sendLostRoyalties" --arguments 0x026B534E52C859F400 erd1qqqqqqqqqqqqqpgq75w3kkazfdvfxrl3mvwd3cp7yhzucnuv92rsjq304j --send --proxy=${PROXY} --chain=1
+claimLeftOverDust() {
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=40000000 --function="claimLeftOverDust" --arguments str:WEGLD-bd4d79 75000000000000000000 --send --proxy=${PROXY} --chain=1
 }
 
 removeWitelistedSC() {

@@ -30,7 +30,7 @@ deploy() {
 # ${XOXNOPairSwap} str:XOXNO-2d9386
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments 0x64 "erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz" ${SHARD2WrappingWEGLD} str:WEGLD-a28c59 "erd1qqqqqqqqqqqqqpgqh96hhj42huhe47j3jerlec7ndhw75gy72gesy7w2d6" --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 \
     --gas-limit=350000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 
@@ -56,8 +56,9 @@ setStatusOff() {
 }
 
 setAcceptedTokens() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 --gas-limit=10500000 --function="setAcceptedTokens" --arguments str:WEGLD-a28c59 --send --proxy=${PROXY} --chain=D
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 --gas-limit=10500000 --function="setAcceptedTokens" --arguments str:EGLD --send --proxy=${PROXY} --chain=D
 }
+
 removeAcceptedTokens() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${ALICE} --gas-limit=6500000 --function="removeAcceptedTokens" --arguments 0x4c4b4d45582d3830356538 --send --proxy=${PROXY} --chain=D
 }

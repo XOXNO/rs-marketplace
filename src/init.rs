@@ -50,6 +50,9 @@ pub trait XOXNOProtocol:
         // self.xoxno_token().set(xoxno_token);
     }
 
+    #[upgrade]
+    fn upgrade(&self) {}
+
     #[payable("*")]
     #[endpoint(listing)]
     fn listing(&self, listings: MultiValueEncoded<BulkListing<Self::Api>>) {
@@ -217,7 +220,7 @@ pub trait XOXNOProtocol:
     }
 
     #[payable("*")]
-    #[endpoint]
+    #[endpoint(bid)]
     fn bid(&self, auction_id: u64, nft_type: TokenIdentifier, nft_nonce: u64) {
         require!(self.status().get(), "Global operation enabled!");
         let (payment_token, payment_token_nonce, payment_amount) =
@@ -403,7 +406,7 @@ pub trait XOXNOProtocol:
 
     #[payable("*")]
     #[endpoint(bulkBuy)]
-    fn bulk_buy(&self, auction_ids: MultiValueEncoded<u64>) {
+    fn bulk_buy(&self, auction_ids: MultiValueEncoded<u64>) -> ManagedVec<EsdtTokenPayment<Self::Api>> {
         let payments = self.call_value().egld_or_single_esdt();
         let mut total_available = payments.amount.clone();
         let mut bought_nfts: ManagedVec<EsdtTokenPayment<Self::Api>> = ManagedVec::new();
@@ -514,19 +517,21 @@ pub trait XOXNOProtocol:
                 false,
             );
         }
+        bought_nfts
     }
 
-    #[endpoint]
+    #[endpoint(withdraw)]
     fn withdraw(&self, withdraws: MultiValueEncoded<u64>) {
         require!(self.status().get(), "Global operation enabled!");
         let caller = self.blockchain().get_caller();
+        let map_frozen = self.freezed_auctions();
         for auction_id in withdraws.into_iter() {
             let listing_map = self.auction_by_id(auction_id);
             if listing_map.is_empty() {
                 continue;
             }
             require!(
-                !self.freezed_auctions().contains(&auction_id),
+                !map_frozen.contains(&auction_id),
                 "Auction is frozen!"
             );
             let listing = listing_map.get();
@@ -543,13 +548,15 @@ pub trait XOXNOProtocol:
         require!(self.status().get(), "Global operation enabled!");
         let caller = self.blockchain().get_caller();
         require!(updates.len() > 0, "You can not send len 0 of updates!");
+        let map_frozen = self.freezed_auctions();
         for update in updates.into_iter() {
             let listing_map = self.auction_by_id(update.auction_id);
             if listing_map.is_empty() {
+                // skip in case of already removed auctions to avoid failing the entire TX
                 continue;
             }
             require!(
-                !self.freezed_auctions().contains(&update.auction_id),
+                !map_frozen.contains(&update.auction_id),
                 "Auction is frozen!"
             );
             let mut listing = listing_map.get();
