@@ -213,8 +213,9 @@ pub trait CommonModule:
             ));
             self.freezed_auctions().insert(auction_id);
             let gas_left = self.blockchain().get_gas_left();
+            let req_gas = (20_000_000 + steps.len() * 15_000_000).try_into().unwrap();
             require!(
-                gas_left > (20_000_000 + steps.len() * 15_000_000).try_into().unwrap(),
+                gas_left >= req_gas,
                 "Not enough gas left to complete the transaction!"
             );
             self.aggregate(
@@ -224,6 +225,7 @@ pub trait CommonModule:
                 &total_value,
                 auction_id,
                 payments,
+                req_gas,
                 steps,
                 limits,
                 message,
@@ -583,6 +585,7 @@ pub trait CommonModule:
         total_price: &BigUint,
         auction_id: u64,
         payment: EgldOrEsdtTokenPayment,
+        gas: u64,
         steps: ManagedVec<AggregatorStep<Self::Api>>,
         limits: MultiValueEncoded<TokenAmount<Self::Api>>,
         message: OptionalValue<ManagedBuffer>,
@@ -600,7 +603,8 @@ pub trait CommonModule:
         self.dex_proxy(self.aggregator_sc().get())
             .aggregate(steps, limits)
             .with_multi_token_transfer(payments)
-            .async_call()
+            .with_gas_limit(gas)
+            .async_call_promise()
             .with_callback(self.callbacks().callback_ash(
                 sent_to,
                 paid_by,
@@ -610,10 +614,11 @@ pub trait CommonModule:
                 payment.clone(),
                 message,
             ))
-            .call_and_exit()
+            .with_extra_gas_for_callback(30_000_000)
+            .register_promise()
     }
 
-    #[callback]
+    #[promises_callback]
     fn callback_ash(
         &self,
         send_to: &ManagedAddress,
@@ -622,91 +627,50 @@ pub trait CommonModule:
         total_price: &BigUint,
         auction_id: u64,
         original_payment: EgldOrEsdtTokenPayment,
-        #[call_result] result: ManagedAsyncCallResult<ManagedVec<EsdtTokenPayment>>,
         message: OptionalValue<ManagedBuffer>,
     ) {
         self.freezed_auctions().swap_remove(&auction_id);
         let wegld = self.wrapping_token().get();
-        match result {
-            ManagedAsyncCallResult::Ok(payments) => {
-                let gas_left = self.blockchain().get_gas_left();
-                if payments.len() > 0 && gas_left >= 20_000_000 {
-                    let payment = payments.get(0);
-                    let balance = self.blockchain().get_esdt_balance(
-                        &self.blockchain().get_sc_address(),
-                        &payment.token_identifier,
-                        payment.token_nonce,
-                    );
-                    let mut auction = self.try_get_auction(auction_id);
-                    let token = &EgldOrEsdtTokenIdentifier::esdt(payment.token_identifier);
-                    let wrapping = self.require_egld_conversion(&auction, token, &wegld);
-                    let has_required_token = token == &auction.payment_token_type || wrapping;
-                    if &payment.amount >= total_price
-                        && payments.len() == 1
-                        && has_required_token
-                        && balance >= payment.amount
-                    {
-                        let extra_amount = &payment.amount - total_price;
-                        self.transfer_or_save_payment(
-                            paid_by,
-                            token,
-                            payment.token_nonce,
-                            &extra_amount,
-                        );
-                        auction.current_winner = send_to.clone();
-                        auction.current_bid = total_price.clone();
-                        auction.nr_auctioned_tokens -= quantity;
-                        if auction.nr_auctioned_tokens == 0 {
-                            self.remove_auction_common(auction_id, &auction);
-                        } else {
-                            self.auction_by_id(auction_id).set(&auction);
-                        }
-                        self.update_or_remove_items_quantity(&auction, quantity);
-
-                        let current_time = self.blockchain().get_block_timestamp();
-                        self.emit_buy_event(
-                            auction_id,
-                            &auction,
-                            quantity,
-                            current_time,
-                            message,
-                            match paid_by == send_to {
-                                true => OptionalValue::None,
-                                false => OptionalValue::Some(paid_by.clone()),
-                            },
-                            &original_payment,
-                        );
-                        self.distribute_tokens(&auction, Option::Some(quantity), wrapping);
-                    } else {
-                        if balance >= payment.amount {
-                            self.send().direct_multi(paid_by, &payments);
-                        } else {
-                            self.claimable_token_nonces(paid_by, &token)
-                                .insert(payment.token_nonce);
-                            self.claimable_amount(paid_by, &token, payment.token_nonce)
-                                .update(|amt| *amt += payment.amount);
-                            self.claimable_tokens(paid_by).insert(token.clone());
-                        }
-                    }
-                }
-            }
-            ManagedAsyncCallResult::Err(_err) => {
-                if original_payment.token_identifier.is_egld() {
-                    self.send().direct_esdt(
-                        paid_by,
-                        &wegld,
-                        original_payment.token_nonce,
-                        &original_payment.amount,
-                    );
+        let p = self.call_value().all_esdt_transfers();
+        let payments = p.clone_value();
+        if payments.len() > 0 {
+            let payment = p.clone_value().get(0);
+            let mut auction = self.try_get_auction(auction_id);
+            let token = &EgldOrEsdtTokenIdentifier::esdt(payment.token_identifier);
+            let wrapping = self.require_egld_conversion(&auction, token, &wegld);
+            let has_required_token = token == &auction.payment_token_type || wrapping;
+            if &payment.amount >= total_price && has_required_token {
+                let extra_amount = &payment.amount - total_price;
+                self.transfer_or_save_payment(paid_by, token, payment.token_nonce, &extra_amount);
+                auction.current_winner = send_to.clone();
+                auction.current_bid = total_price.clone();
+                auction.nr_auctioned_tokens -= quantity;
+                if auction.nr_auctioned_tokens == 0 {
+                    self.remove_auction_common(auction_id, &auction);
                 } else {
-                    self.send().direct_esdt(
-                        paid_by,
-                        &original_payment.token_identifier.unwrap_esdt(),
-                        original_payment.token_nonce,
-                        &original_payment.amount,
-                    );
+                    self.auction_by_id(auction_id).set(&auction);
                 }
+                self.update_or_remove_items_quantity(&auction, quantity);
+
+                let current_time = self.blockchain().get_block_timestamp();
+                self.emit_buy_event(
+                    auction_id,
+                    &auction,
+                    quantity,
+                    current_time,
+                    message,
+                    match paid_by == send_to {
+                        true => OptionalValue::None,
+                        false => OptionalValue::Some(paid_by.clone()),
+                    },
+                    &original_payment,
+                );
+                self.distribute_tokens(&auction, Option::Some(quantity), wrapping);
+            } else {
+                self.send().direct_multi(paid_by, &payments);
             }
+        } else {
+            self.send().direct_multi(paid_by, &payments);
         }
     }
 }

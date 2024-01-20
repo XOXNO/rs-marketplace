@@ -5,9 +5,10 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           99
-// Async Callback:                       1
-// Total number of exported functions: 101
+// Endpoints:                          100
+// Async Callback (empty):               1
+// Promise callbacks:                    1
+// Total number of exported functions: 103
 
 #![no_std]
 #![allow(internal_features)]
@@ -105,6 +106,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         setStatus => set_status
         setCutPercentage => set_percentage_cut
         unFreezeAuctionId => un_freeze_auction_id
+        unFreezeAllAuctionIds => un_freeze_all_auction_id
         freezeAuctionId => freeze_auction_id
         claimLeftOverDust => claim_lost_funds
         claimSavedFundsForUser => claim_tokens_for_creator
@@ -119,7 +121,8 @@ multiversx_sc_wasm_adapter::endpoints! {
         deposit => deposit
         withdrawDeposit => withdraw_deposit
         userDeposit => user_funds
+        callback_ash => callback_ash
     )
 }
 
-multiversx_sc_wasm_adapter::async_callback! { xoxno_protocol }
+multiversx_sc_wasm_adapter::async_callback_empty! {}

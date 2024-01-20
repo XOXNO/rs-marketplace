@@ -201,6 +201,12 @@ pub trait AdminModule:
         self.freezed_auctions().swap_remove(&auction_id);
     }
 
+    #[endpoint(unFreezeAllAuctionIds)]
+    fn un_freeze_all_auction_id(&self) {
+        self.require_admin(None);
+        self.freezed_auctions().clear();
+    }
+
     #[endpoint(freezeAuctionId)]
     fn freeze_auction_id(&self, auction_id: u64) {
         self.require_admin(None);
@@ -271,7 +277,6 @@ pub trait AdminModule:
 
     #[endpoint(setRoyaltiesReverted)]
     fn set_royalties_reverted(&self, token_id: &TokenIdentifier, value: bool) {
-        self.require_admin(None);
         let config_map = self.collection_config(&token_id);
         if config_map.is_empty() {
             self.require_admin(None);

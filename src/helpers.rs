@@ -4,7 +4,7 @@ multiversx_sc::derive_imports!();
 use core::convert::TryInto;
 
 use crate::{
-    auction::{Auction, CollectionFeeConfig, FeesDistribution, GlobalOffer, Offer, AttributesIns},
+    auction::{AttributesIns, Auction, CollectionFeeConfig, FeesDistribution, GlobalOffer, Offer},
     PERCENTAGE_TOTAL,
 };
 

@@ -406,7 +406,10 @@ pub trait XOXNOProtocol:
 
     #[payable("*")]
     #[endpoint(bulkBuy)]
-    fn bulk_buy(&self, auction_ids: MultiValueEncoded<u64>) -> ManagedVec<EsdtTokenPayment<Self::Api>> {
+    fn bulk_buy(
+        &self,
+        auction_ids: MultiValueEncoded<u64>,
+    ) -> ManagedVec<EsdtTokenPayment<Self::Api>> {
         let payments = self.call_value().egld_or_single_esdt();
         let mut total_available = payments.amount.clone();
         let mut bought_nfts: ManagedVec<EsdtTokenPayment<Self::Api>> = ManagedVec::new();
@@ -487,7 +490,7 @@ pub trait XOXNOProtocol:
                 current_time,
                 OptionalValue::None,
                 OptionalValue::None,
-                &payments
+                &payments,
             );
             total_available -= listing.min_bid;
 
@@ -530,10 +533,7 @@ pub trait XOXNOProtocol:
             if listing_map.is_empty() {
                 continue;
             }
-            require!(
-                !map_frozen.contains(&auction_id),
-                "Auction is frozen!"
-            );
+            require!(!map_frozen.contains(&auction_id), "Auction is frozen!");
             let listing = listing_map.get();
             require!(
                 &listing.original_owner == &caller,

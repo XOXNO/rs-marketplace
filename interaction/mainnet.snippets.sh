@@ -35,7 +35,7 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    mxpy --verbose contract upgrade ${ADDRESS} --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
@@ -53,7 +53,12 @@ addWitelistedSC() {
 }
 
 claimLeftOverDust() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=40000000 --function="claimLeftOverDust" --arguments str:WEGLD-bd4d79 75000000000000000000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=40000000 --function="claimLeftOverDust" --arguments str:MEX-455c57 43693206751350000000000 --send --proxy=${PROXY} --chain=1
+}
+
+
+unLockTokens() {
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=600000000 --function="unLockTokens" --arguments erd1qqqqqqqqqqqqqpgqjpt0qqgsrdhp2xqygpjtfrpwf76f9nvg2jpsg4q7th str:LKMEX-aab910 0x1e1f9c 0x1edc09 0x4507cd 0x461fa6 0x22e4ef 0x35d1ed 0x3c430e 0x2c40f8 0x3d7c0f 0x246f45 0x445b36 --send --proxy=${PROXY} --chain=1
 }
 
 removeWitelistedSC() {
@@ -89,6 +94,10 @@ setAcceptedTokens() {
 
 unFreezeAuctionId() {
     mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="unFreezeAuctionId" --arguments 0x0ffb2f --send --proxy=${PROXY} --chain=1
+}
+
+unFreezeAllAuctionIds() {
+    mxpy contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=50000000 --function="unFreezeAllAuctionIds" --send --proxy=${PROXY} --chain=1
 }
 
 enableRoyaltiesReverted() {

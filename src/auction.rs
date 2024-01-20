@@ -262,7 +262,6 @@ pub struct AggregatorStep<M: ManagedTypeApi> {
     pub arguments: ManagedVec<M, ManagedBuffer<M>>,
 }
 
-
 #[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct AttributesIns<M: ManagedTypeApi> {
     pub creator: ManagedAddress<M>,

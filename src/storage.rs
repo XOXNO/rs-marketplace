@@ -165,11 +165,18 @@ pub trait StorageModule {
 
     #[view(userCollectionGlobalOffers)]
     #[storage_mapper("userCollectionGlobalOffers")]
-    fn user_collection_global_offers(&self, address: &ManagedAddress, collection: &TokenIdentifier) -> UnorderedSetMapper<u64>;
+    fn user_collection_global_offers(
+        &self,
+        address: &ManagedAddress,
+        collection: &TokenIdentifier,
+    ) -> UnorderedSetMapper<u64>;
 
     #[view(getCollectionConfig)]
     #[storage_mapper("getCollectionConfig")]
-    fn collection_config(&self, ticker: &TokenIdentifier) -> SingleValueMapper<CollectionFeeConfig<Self::Api>>;
+    fn collection_config(
+        &self,
+        ticker: &TokenIdentifier,
+    ) -> SingleValueMapper<CollectionFeeConfig<Self::Api>>;
 
     #[view(freezedAuctions)]
     #[storage_mapper("freezedAuctions")]
