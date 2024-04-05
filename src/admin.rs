@@ -10,23 +10,6 @@ pub trait AdminModule:
     + crate::common::CommonModule
     + crate::wrapping::WrappingModule
 {
-    fn require_admin(&self, extra_admin: Option<ManagedAddress>) {
-        let signer: ManagedAddress = self.signer().get();
-        let caller = self.blockchain().get_caller();
-        let sc_owner = self.blockchain().get_owner_address();
-        if extra_admin.is_some() {
-            require!(
-                caller.eq(&sc_owner) || caller.eq(&signer) || caller.eq(&extra_admin.unwrap()),
-                "You are not an admin!"
-            );
-        } else {
-            require!(
-                caller.eq(&sc_owner) || caller.eq(&signer),
-                "You are not an admin!"
-            );
-        }
-    }
-
     #[endpoint(returnListing)]
     fn return_listing(&self, auction_ids: MultiValueEncoded<u64>) {
         self.require_admin(None);
@@ -70,7 +53,6 @@ pub trait AdminModule:
             }
             let offer = map_offer.get();
             self.common_global_offer_remove(&offer, true);
-            self.emit_remove_global_offer_event(offer_id, &offer.collection);
         }
     }
 
@@ -118,16 +100,18 @@ pub trait AdminModule:
     #[only_owner]
     #[endpoint(setRewardTicker)]
     fn set_reward_ticker(&self, token: EgldOrEsdtTokenIdentifier) {
-        require!(
-            self.reward_ticker().is_empty(),
-            "The ticker was already set!"
-        );
-        self.reward_ticker().set(token);
+        let map = self.reward_ticker();
+        require!(map.is_empty(), "The ticker was already set!");
+        map.set(token);
     }
 
     #[only_owner]
     #[endpoint(setSpecialRewardAmount)]
     fn set_special_reward_amount(&self, token: &TokenIdentifier, amount: BigUint) {
+        require!(
+            &self.reward_ticker().get() == token,
+            "The reward ticker is not used!"
+        );
         self.special_reward_amount(token).set(amount);
     }
 
@@ -273,6 +257,7 @@ pub trait AdminModule:
                 f.reverse_cut_fees = value;
             })
         }
+        self.emit_collection_config(&config_map.get());
     }
 
     #[endpoint(setRoyaltiesReverted)]
@@ -298,6 +283,7 @@ pub trait AdminModule:
                 f.reverse_royalties = value;
             })
         }
+        self.emit_collection_config(&config_map.get());
     }
 
     #[endpoint(setExtraFees)]
@@ -324,6 +310,7 @@ pub trait AdminModule:
                 f.extra_fees.address = address;
             })
         }
+        self.emit_collection_config(&config_map.get());
     }
 
     #[endpoint(setCustomRoyalties)]
@@ -337,7 +324,7 @@ pub trait AdminModule:
         let config_map = self.collection_config(&token_id);
         require!(
             min <= max,
-            "Min royalties must be lower than max royalties!"
+            "Min royalties must be lower or equal than max royalties!"
         );
         if config_map.is_empty() {
             self.require_admin(None);
@@ -361,6 +348,7 @@ pub trait AdminModule:
                 f.custom_royalties = enabled;
             })
         }
+        self.emit_collection_config(&config_map.get());
     }
 
     #[endpoint(setConfigAdmin)]
@@ -385,5 +373,6 @@ pub trait AdminModule:
                 f.admin = admin;
             })
         }
+        self.emit_collection_config(&config_map.get());
     }
 }

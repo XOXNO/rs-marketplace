@@ -345,6 +345,10 @@ pub trait CommonModule:
             .swap_remove(&offer.offer_id);
         self.global_offer(offer.offer_id).clear();
         self.global_offer_ids().swap_remove(&offer.offer_id);
+
+        if return_offer {
+            self.emit_remove_global_offer_event(offer.offer_id, &offer.collection);
+        }
     }
 
     fn common_withdraw_offer(&self, offer_id: u64, offer: &Offer<Self::Api>) {
@@ -472,7 +476,7 @@ pub trait CommonModule:
 
         // send NFT to new owner
         self.transfer_or_save_payment(new_owner, nft_type, nft_nonce, nft_amount_to_send);
-        if bid_split_amounts.reverse_cut_fee {
+        if bid_split_amounts.reverse_cut_fees {
             self.transfer_or_save_payment(
                 new_owner,
                 payment_token_id,
@@ -488,6 +492,7 @@ pub trait CommonModule:
                 wrapping,
             );
         }
+        self.distribute_rewards(new_owner, original_owner);
     }
 
     fn distribute_tokens_bulk_buy(
@@ -553,6 +558,7 @@ pub trait CommonModule:
             payment_token_nonce,
             &bid_split_amounts.seller,
         );
+        self.distribute_rewards(new_owner, original_owner);
     }
 
     fn share_marketplace_fees(
@@ -572,6 +578,24 @@ pub trait CommonModule:
         // } else {
         self.transfer_or_save_payment(&sc_owner, payment_token_id, payment_token_nonce, &amount);
         // }
+    }
+
+    fn distribute_rewards(&self, buyer: &ManagedAddress, seller: &ManagedAddress) {
+        let ticker_map = self.reward_ticker();
+        if !ticker_map.is_empty() {
+            let map_balance = self.reward_balance();
+            let reward = self.reward_amount().get();
+            let ticker = ticker_map.get();
+            let balance_sc = self.blockchain().get_esdt_balance(&self.blockchain().get_sc_address(), &ticker.clone().into_esdt_option().unwrap(), 0u64);
+            let reward_to_share = reward.clone().mul(2u64);
+            if map_balance.get().ge(&reward_to_share) && balance_sc.ge(&reward_to_share){
+                self.transfer_or_save_payment(&buyer, &ticker, 0u64, &reward);
+
+                self.transfer_or_save_payment(&seller, &ticker, 0u64, &reward);
+
+                map_balance.update(|qt| *qt -= reward_to_share);
+            }
+        }
     }
 
     #[proxy]

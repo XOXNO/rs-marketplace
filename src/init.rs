@@ -417,13 +417,14 @@ pub trait XOXNOProtocol:
         let caller = self.blockchain().get_caller();
         let wegld = self.wrapping_token().get();
         let mut marketplace_fees = BigUint::zero();
+        let map_frozen = self.freezed_auctions();
         for auction_id in auction_ids.into_iter() {
             let listing_map = self.auction_by_id(auction_id);
             if listing_map.is_empty() {
                 continue;
             }
             require!(
-                !self.freezed_auctions().contains(&auction_id),
+                !map_frozen.contains(&auction_id),
                 "Auction is frozen!"
             );
             let mut listing = listing_map.get();
@@ -463,6 +464,7 @@ pub trait XOXNOProtocol:
                 &listing.creator_royalties_percentage,
                 config.clone(),
             );
+
             if config.is_some() {
                 if config.unwrap().reverse_cut_fees {
                     total_available += &bid_split_amounts.marketplace;
@@ -472,6 +474,7 @@ pub trait XOXNOProtocol:
             } else {
                 marketplace_fees += &bid_split_amounts.marketplace;
             }
+
             self.distribute_tokens_bulk_buy(
                 &listing.payment_token_type,
                 listing.payment_token_nonce,
@@ -500,6 +503,7 @@ pub trait XOXNOProtocol:
                 listing.nr_auctioned_tokens,
             ));
         }
+        
         if total_available.gt(&BigUint::zero()) {
             self.send().direct(
                 &caller,
@@ -523,12 +527,24 @@ pub trait XOXNOProtocol:
         bought_nfts
     }
 
+    #[allow_multiple_var_args]
     #[endpoint(withdraw)]
-    fn withdraw(&self, withdraws: MultiValueEncoded<u64>) {
+    fn withdraw(&self, withdraws: MultiValueEncoded<u64>, signature: OptionalValue<ManagedBuffer>) {
         require!(self.status().get(), "Global operation enabled!");
         let caller = self.blockchain().get_caller();
         let map_frozen = self.freezed_auctions();
+        let sign = signature.into_option();
+        let has_sign = sign.is_some();
+        // require!(sign.is_some(), "Signature required!");
+        let mut data = ManagedBuffer::new();
+        if has_sign {
+            data.append(caller.as_managed_buffer());
+        }
+
         for auction_id in withdraws.into_iter() {
+            if has_sign {
+                data.append(&self.decimal_to_ascii(auction_id.try_into().unwrap()));
+            }
             let listing_map = self.auction_by_id(auction_id);
             if listing_map.is_empty() {
                 continue;
@@ -540,6 +556,11 @@ pub trait XOXNOProtocol:
                 "Only the original owner can withdraw!"
             );
             self.withdraw_auction_common(auction_id, &listing);
+        }
+        if has_sign {
+            let signer: ManagedAddress = self.signer().get();
+            self.crypto()
+                .verify_ed25519(signer.as_managed_buffer(), &data, &sign.unwrap());
         }
     }
 

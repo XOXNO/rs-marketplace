@@ -138,7 +138,7 @@ pub struct FeesDistribution<M: ManagedTypeApi> {
     pub extra: BigUint<M>,
     pub extra_address: ManagedAddress<M>,
     pub reverse_royalties: bool,
-    pub reverse_cut_fee: bool,
+    pub reverse_cut_fees: bool,
 }
 
 #[derive(ManagedVecItem, TypeAbi, NestedEncode, NestedDecode, Clone, TopEncode)]

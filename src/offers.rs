@@ -233,10 +233,9 @@ pub trait CustomOffersModule:
             !self.blacklist_wallets().contains(&caller),
             "Your address was blacklisted, all your SCAM offers are lost!"
         );
+        let map_offer_check = self.check_offer_sent(&caller, &nft_type, nft_nonce, &payment_token);
         require!(
-            !self
-                .check_offer_sent(&caller, &nft_type, nft_nonce, &payment_token)
-                .get(),
+            !map_offer_check.get(),
             "You already sent an offer for this NFT with the same token!"
         );
 
@@ -275,8 +274,7 @@ pub trait CustomOffersModule:
         self.offers().insert(offer_id);
         // Add to the owner wallet the new Offer ID
         self.offers_by_wallet(&offer.offer_owner).insert(offer_id);
-        self.check_offer_sent(&caller, &nft_type, nft_nonce, &payment_token)
-            .set(&true);
+        map_offer_check.set(&true);
         // Emit event for new offer
         self.emit_offer_token_event(offer_id, offer);
 
@@ -353,7 +351,6 @@ pub trait CustomOffersModule:
             "You are not the owner of this offer!"
         );
         self.common_global_offer_remove(&offer, true);
-        self.emit_remove_global_offer_event(offer_id, &offer.collection);
     }
 
     #[allow_multiple_var_args]

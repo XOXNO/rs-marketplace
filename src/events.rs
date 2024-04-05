@@ -1,7 +1,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::auction::GlobalOffer;
+use crate::{auction::GlobalOffer, CollectionFeeConfig};
 
 use super::auction::{Auction, AuctionType, Offer, OfferStatus};
 
@@ -207,6 +207,26 @@ pub trait EventsModule {
         #[indexed] creator_royalties_percentage: BigUint,
     );
 
+    #[event("send_global_offer")]
+    fn emit_send_global_offer_event(&self, #[indexed] offer: &GlobalOffer<Self::Api>);
+
+    #[event("remove_global_offer")]
+    fn emit_remove_global_offer_event(
+        &self,
+        #[indexed] offer_id: u64,
+        #[indexed] collection: &TokenIdentifier,
+    );
+
+    #[event("accept_global_offer")]
+    fn emit_accept_global_offer_event(
+        &self,
+        #[indexed] offer: &GlobalOffer<Self::Api>,
+        #[indexed] seller: &ManagedAddress,
+        #[indexed] nonce: u64,
+        #[indexed] amount: &BigUint,
+        #[indexed] auction_id: u64,
+    );
+
     #[event("offer_token_event")]
     fn offer_token_event(
         &self,
@@ -222,45 +242,6 @@ pub trait EventsModule {
         #[indexed] offer_owner: &ManagedAddress,
         #[indexed] marketplace_cut_percentage: &BigUint,
         #[indexed] offer_id: u64,
-    );
-
-    fn emit_send_global_offer_event(self, offer: &GlobalOffer<Self::Api>) {
-        self.send_global_offer_event(offer);
-    }
-
-    #[event("send_global_offer")]
-    fn send_global_offer_event(&self, #[indexed] offer: &GlobalOffer<Self::Api>);
-
-    fn emit_remove_global_offer_event(self, offer_id: u64, collection: &TokenIdentifier) {
-        self.remove_global_offer_event(offer_id, collection);
-    }
-
-    #[event("remove_global_offer")]
-    fn remove_global_offer_event(
-        &self,
-        #[indexed] offer_id: u64,
-        #[indexed] collection: &TokenIdentifier,
-    );
-
-    fn emit_accept_global_offer_event(
-        self,
-        offer: &GlobalOffer<Self::Api>,
-        seller: &ManagedAddress,
-        nonce: u64,
-        amount: &BigUint,
-        auction_id: u64,
-    ) {
-        self.accept_global_offer_event(offer, seller, nonce, amount, auction_id);
-    }
-
-    #[event("accept_global_offer")]
-    fn accept_global_offer_event(
-        &self,
-        #[indexed] offer: &GlobalOffer<Self::Api>,
-        #[indexed] seller: &ManagedAddress,
-        #[indexed] nonce: u64,
-        #[indexed] amount: &BigUint,
-        #[indexed] auction_id: u64,
     );
 
     #[event("withdraw_offer_token_event")]
@@ -390,4 +371,7 @@ pub trait EventsModule {
         #[indexed] owner: &ManagedAddress,
         #[indexed] payment: &EgldOrEsdtTokenPayment,
     );
+
+    #[event("collection_config_event")]
+    fn emit_collection_config(&self, #[indexed] config: &CollectionFeeConfig<Self::Api>);
 }

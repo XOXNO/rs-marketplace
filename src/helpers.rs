@@ -22,11 +22,20 @@ pub trait HelpersModule:
         if amount == &0 {
             return;
         }
-        if self.blockchain().is_smart_contract(to) && !self.whitelisted_contracts().contains(&to) {
-            self.claimable_tokens(to).insert(token_id.clone());
-            self.claimable_token_nonces(to, token_id).insert(nonce);
-            self.claimable_amount(to, token_id, nonce)
-                .update(|amt| *amt += amount);
+        if self.blockchain().is_smart_contract(to) {
+            let codemeta = self.blockchain().get_code_metadata(to);
+            if codemeta.is_payable() || codemeta.is_payable_by_sc() {
+                self.send().direct(to, token_id, nonce, amount);
+            } else {
+                if !self.whitelisted_contracts().contains(&to) {
+                    self.claimable_tokens(to).insert(token_id.clone());
+                    self.claimable_token_nonces(to, token_id).insert(nonce);
+                    self.claimable_amount(to, token_id, nonce)
+                        .update(|amt| *amt += amount);
+                } else {
+                    self.send().direct(to, token_id, nonce, amount);
+                }
+            }
         } else {
             self.send().direct(to, token_id, nonce, amount);
         }
@@ -47,16 +56,6 @@ pub trait HelpersModule:
         data
     }
 
-    fn try_set_bid_cut_percentage(&self, new_cut_percentage: u64) {
-        require!(
-            new_cut_percentage > 0 && new_cut_percentage < PERCENTAGE_TOTAL,
-            "Invalid percentage value, should be between 0 and 10,000"
-        );
-
-        self.bid_cut_percentage()
-            .set(&BigUint::from(new_cut_percentage));
-    }
-
     fn try_get_auction(&self, auction_id: u64) -> Auction<Self::Api> {
         let map = self.auction_by_id(auction_id);
         require!(!map.is_empty(), "Auction {} does not exist!", auction_id);
@@ -73,6 +72,16 @@ pub trait HelpersModule:
         let map = self.offer_by_id(offer_id);
         require!(!map.is_empty(), "Offer {} does not exist!", offer_id);
         map.get()
+    }
+
+    fn try_set_bid_cut_percentage(&self, new_cut_percentage: u64) {
+        require!(
+            new_cut_percentage > 0 && new_cut_percentage < PERCENTAGE_TOTAL,
+            "Invalid percentage value, should be between 0 and 10,000"
+        );
+
+        self.bid_cut_percentage()
+            .set(&BigUint::from(new_cut_percentage));
     }
 
     fn calculate_cut_amount(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
@@ -99,7 +108,7 @@ pub trait HelpersModule:
         let fees = self.bid_cut_percentage().get();
         let mut extra_amount = BigUint::zero();
         let mut reverse_royalties = false;
-        let mut reverse_cut_fee = false;
+        let mut reverse_cut_fees = false;
         let mut extra_fee = BigUint::zero();
         let mut extra_address = ManagedAddress::zero();
 
@@ -108,7 +117,7 @@ pub trait HelpersModule:
                 extra_fee = config.extra_fees.amount;
                 extra_address = config.extra_fees.address;
                 reverse_royalties = config.reverse_royalties;
-                reverse_cut_fee = config.reverse_cut_fees;
+                reverse_cut_fees = config.reverse_cut_fees;
             }
             None => {}
         };
@@ -118,10 +127,10 @@ pub trait HelpersModule:
             "Fees exceed 100%"
         );
         let creator_royalties = self.calculate_cut_amount(price, royalties);
-        let bid_cut_amount = self.calculate_cut_amount(price, &fees);
+        let marketplace_fees = self.calculate_cut_amount(price, &fees);
         let mut seller_amount_to_send = price.clone();
         seller_amount_to_send -= &creator_royalties;
-        seller_amount_to_send -= &bid_cut_amount;
+        seller_amount_to_send -= &marketplace_fees;
         if extra_fee > BigUint::zero() && extra_address != ManagedAddress::zero() {
             extra_amount = self.calculate_cut_amount(&price, &extra_fee);
             seller_amount_to_send -= &extra_amount;
@@ -129,12 +138,12 @@ pub trait HelpersModule:
 
         FeesDistribution {
             creator: creator_royalties,
-            marketplace: bid_cut_amount,
+            marketplace: marketplace_fees,
             extra: extra_amount,
             seller: seller_amount_to_send,
             extra_address,
             reverse_royalties,
-            reverse_cut_fee,
+            reverse_cut_fees,
         }
     }
 
@@ -161,5 +170,22 @@ pub trait HelpersModule:
         slice.reverse();
 
         ManagedBuffer::new_from_bytes(slice)
+    }
+
+    fn require_admin(&self, extra_admin: Option<ManagedAddress>) {
+        let signer: ManagedAddress = self.signer().get();
+        let caller = self.blockchain().get_caller();
+        let sc_owner = self.blockchain().get_owner_address();
+        if extra_admin.is_some() {
+            require!(
+                caller.eq(&sc_owner) || caller.eq(&signer) || caller.eq(&extra_admin.unwrap()),
+                "You are not an admin!"
+            );
+        } else {
+            require!(
+                caller.eq(&sc_owner) || caller.eq(&signer),
+                "You are not an admin!"
+            );
+        }
     }
 }
