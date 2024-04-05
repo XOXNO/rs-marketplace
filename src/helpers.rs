@@ -23,18 +23,13 @@ pub trait HelpersModule:
             return;
         }
         if self.blockchain().is_smart_contract(to) {
-            let codemeta = self.blockchain().get_code_metadata(to);
-            if codemeta.is_payable() || codemeta.is_payable_by_sc() {
-                self.send().direct(to, token_id, nonce, amount);
+            if !self.whitelisted_contracts().contains(&to) {
+                self.claimable_tokens(to).insert(token_id.clone());
+                self.claimable_token_nonces(to, token_id).insert(nonce);
+                self.claimable_amount(to, token_id, nonce)
+                    .update(|amt| *amt += amount);
             } else {
-                if !self.whitelisted_contracts().contains(&to) {
-                    self.claimable_tokens(to).insert(token_id.clone());
-                    self.claimable_token_nonces(to, token_id).insert(nonce);
-                    self.claimable_amount(to, token_id, nonce)
-                        .update(|amt| *amt += amount);
-                } else {
-                    self.send().direct(to, token_id, nonce, amount);
-                }
+                self.send().direct(to, token_id, nonce, amount);
             }
         } else {
             self.send().direct(to, token_id, nonce, amount);
