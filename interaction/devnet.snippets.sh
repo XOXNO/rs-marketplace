@@ -30,7 +30,7 @@ deploy() {
 # ${XOXNOPairSwap} str:XOXNO-2d9386
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode="/Users/truststaking/Documents/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode="/Users/mihaieremia/GitHub/marketplace/output/xoxno-protocol.wasm" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=2 \
     --gas-limit=350000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain="D" || return
 }
 

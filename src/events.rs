@@ -373,5 +373,9 @@ pub trait EventsModule {
     );
 
     #[event("collection_config_event")]
-    fn emit_collection_config(&self, #[indexed] config: &CollectionFeeConfig<Self::Api>);
+    fn emit_collection_config(
+        &self,
+        #[indexed] collection: &TokenIdentifier,
+        #[indexed] config: &CollectionFeeConfig<Self::Api>,
+    );
 }

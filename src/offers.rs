@@ -26,7 +26,7 @@ pub trait CustomOffersModule:
     #[payable("*")]
     #[endpoint(acceptOffer)]
     fn accept_offer(&self, offer_id: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
         let mut offer = self.try_get_offer(offer_id);
@@ -129,7 +129,7 @@ pub trait CustomOffersModule:
     #[payable("*")]
     #[endpoint(declineOffer)]
     fn decline_offer(&self, offer_id: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
         let offer = self.try_get_offer(offer_id);
@@ -178,7 +178,7 @@ pub trait CustomOffersModule:
 
     #[endpoint(withdrawOffer)]
     fn withdraw_offer(&self, offer_id: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let offer = self.try_get_offer(offer_id);
         let caller = self.blockchain().get_caller();
 
@@ -202,7 +202,7 @@ pub trait CustomOffersModule:
         nft_amount: BigUint,
         deadline: u64,
     ) -> u64 {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
 
         require!(
             self.accepted_tokens().contains(&payment_token),
@@ -291,7 +291,7 @@ pub trait CustomOffersModule:
         collection: TokenIdentifier,
         attributes: OptionalValue<ManagedBuffer>,
     ) -> u64 {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         require!(payment_token.is_egld(), "The payment token is not EGLD!");
         require!(payment_nonce == 0, "The payment nonce is not 0!");
         require!(
@@ -343,7 +343,7 @@ pub trait CustomOffersModule:
 
     #[endpoint(withdrawGlobalOffer)]
     fn withdraw_global_offer(&self, offer_id: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let caller = self.blockchain().get_caller();
         let offer = self.try_get_global_offer(offer_id);
         require!(
@@ -362,7 +362,7 @@ pub trait CustomOffersModule:
         auction_id_opt: OptionalValue<u64>,
         signature: OptionalValue<ManagedBuffer>,
     ) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let (collection, c_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
         let offer_map = self.global_offer(offer_id);
         require!(!offer_map.is_empty(), "This offer is already removed!");

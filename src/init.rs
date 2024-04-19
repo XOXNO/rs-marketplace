@@ -56,7 +56,7 @@ pub trait XOXNOProtocol:
     #[payable("*")]
     #[endpoint(listing)]
     fn listing(&self, listings: MultiValueEncoded<BulkListing<Self::Api>>) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let payments = self.call_value().all_esdt_transfers();
         let marketplace_cut_percentage = &self.bid_cut_percentage().get();
         let current_time = self.blockchain().get_block_timestamp();
@@ -222,7 +222,7 @@ pub trait XOXNOProtocol:
     #[payable("*")]
     #[endpoint(bid)]
     fn bid(&self, auction_id: u64, nft_type: TokenIdentifier, nft_nonce: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
         require!(
@@ -298,7 +298,7 @@ pub trait XOXNOProtocol:
 
     #[endpoint(endAuction)]
     fn end_auction(&self, auction_id: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let auction = self.try_get_auction(auction_id);
         require!(
             !self.freezed_auctions().contains(&auction_id),
@@ -423,10 +423,7 @@ pub trait XOXNOProtocol:
             if listing_map.is_empty() {
                 continue;
             }
-            require!(
-                !map_frozen.contains(&auction_id),
-                "Auction is frozen!"
-            );
+            require!(!map_frozen.contains(&auction_id), "Auction is frozen!");
             let mut listing = listing_map.get();
             require!(
                 listing.auction_type == AuctionType::Nft,
@@ -503,7 +500,7 @@ pub trait XOXNOProtocol:
                 listing.nr_auctioned_tokens,
             ));
         }
-        
+
         if total_available.gt(&BigUint::zero()) {
             self.send().direct(
                 &caller,
@@ -520,8 +517,6 @@ pub trait XOXNOProtocol:
                 &payments.token_identifier,
                 marketplace_fees,
                 payments.token_nonce,
-                wegld,
-                false,
             );
         }
         bought_nfts
@@ -529,12 +524,12 @@ pub trait XOXNOProtocol:
 
     #[allow_multiple_var_args]
     #[endpoint(withdraw)]
-    fn withdraw(&self, withdraws: MultiValueEncoded<u64>, signature: OptionalValue<ManagedBuffer>) {
-        require!(self.status().get(), "Global operation enabled!");
+    fn withdraw(&self, signature: ManagedBuffer, withdraws: MultiValueEncoded<u64>) {
+        self.require_enabled();
         let caller = self.blockchain().get_caller();
         let map_frozen = self.freezed_auctions();
-        let sign = signature.into_option();
-        let has_sign = sign.is_some();
+        let sign = signature;
+        let has_sign = true;
         // require!(sign.is_some(), "Signature required!");
         let mut data = ManagedBuffer::new();
         if has_sign {
@@ -560,13 +555,13 @@ pub trait XOXNOProtocol:
         if has_sign {
             let signer: ManagedAddress = self.signer().get();
             self.crypto()
-                .verify_ed25519(signer.as_managed_buffer(), &data, &sign.unwrap());
+                .verify_ed25519(signer.as_managed_buffer(), &data, &sign);
         }
     }
 
     #[endpoint(changeListing)]
     fn bulk_change_listing(&self, updates: MultiValueEncoded<BulkUpdateListing<Self::Api>>) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let caller = self.blockchain().get_caller();
         require!(updates.len() > 0, "You can not send len 0 of updates!");
         let map_frozen = self.freezed_auctions();

@@ -1,5 +1,6 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
+
 use crate::{
     auction::{
         AggregatorStep, Auction, AuctionType, FeesDistribution, GlobalOffer, Offer, TokenAmount,
@@ -126,7 +127,7 @@ pub trait CommonModule:
         swaps: OptionalValue<ManagedVec<AggregatorStep<Self::Api>>>,
         limits: OptionalValue<MultiValueEncoded<TokenAmount<Self::Api>>>,
     ) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let payments = self.call_value().egld_or_single_esdt();
         let (payment_token, payment_token_nonce, payment_amount) = payments.clone().into_tuple();
         let mut auction = self.try_get_auction(auction_id);
@@ -418,8 +419,6 @@ pub trait CommonModule:
         bid_split_amounts: &FeesDistribution<Self::Api>,
         wrapping: bool,
     ) {
-        // send part as cut for contract owner
-        let wegld = self.wrapping_token().get();
         if wrapping {
             if payment_token_id.is_egld() {
                 self.unwrap_egld(
@@ -458,11 +457,11 @@ pub trait CommonModule:
             );
         } else {
             // send part as royalties to creator
-            self.transfer_or_save_payment(
+            self.share_royalties(
                 creator,
                 payment_token_id,
+                bid_split_amounts.creator.clone(),
                 payment_token_nonce,
-                &bid_split_amounts.creator,
             );
         }
 
@@ -476,6 +475,7 @@ pub trait CommonModule:
 
         // send NFT to new owner
         self.transfer_or_save_payment(new_owner, nft_type, nft_nonce, nft_amount_to_send);
+
         if bid_split_amounts.reverse_cut_fees {
             self.transfer_or_save_payment(
                 new_owner,
@@ -488,8 +488,6 @@ pub trait CommonModule:
                 payment_token_id,
                 bid_split_amounts.marketplace.clone(),
                 payment_token_nonce,
-                wegld,
-                wrapping,
             );
         }
         self.distribute_rewards(new_owner, original_owner);
@@ -566,18 +564,45 @@ pub trait CommonModule:
         payment_token_id: &EgldOrEsdtTokenIdentifier,
         amount: BigUint,
         payment_token_nonce: u64,
-        _wegld: TokenIdentifier,
-        _wrapping: bool,
     ) {
         let sc_owner = self.blockchain().get_owner_address();
-        // if payment_token_id.is_egld() ||  payment_token_id.eq(&wegld) {
-        //     if !wrapping && payment_token_id.is_egld() {
-        //         self.wrap_egld(amount.clone());
-        //     }
-        //     self.swap_wegld_for_xoxno(&sc_owner, EsdtTokenPayment::new(wegld, 0, amount));
-        // } else {
-        self.transfer_or_save_payment(&sc_owner, payment_token_id, payment_token_nonce, &amount);
-        // }
+        self.send()
+            .direct(&sc_owner, payment_token_id, payment_token_nonce, &amount);
+        // self.accumulator_proxy(sc_owner)
+        //     .deposit()
+        //     .with_egld_or_single_esdt_transfer((
+        //         payment_token_id.clone(),
+        //         payment_token_nonce,
+        //         amount,
+        //     ))
+        //     .with_gas_limit(6_000_000)
+        //     .async_call_promise()
+        //     .with_callback(self.callbacks().callback_accumulator())
+        //     .with_extra_gas_for_callback(1_000_000)
+        //     .register_promise();
+    }
+
+    fn share_royalties(
+        &self,
+        creator: &ManagedAddress,
+        payment_token_id: &EgldOrEsdtTokenIdentifier,
+        amount: BigUint,
+        payment_token_nonce: u64,
+    ) {
+        self.transfer_or_save_payment(creator, payment_token_id, payment_token_nonce, &amount);
+        // let sc_owner = self.blockchain().get_owner_address();
+        // self.accumulator_proxy(sc_owner)
+        //     .royalties()
+        //     .with_egld_or_single_esdt_transfer((
+        //         payment_token_id.clone(),
+        //         payment_token_nonce,
+        //         amount,
+        //     ))
+        //     .with_gas_limit(6_000_000)
+        //     .async_call_promise()
+        //     .with_callback(self.callbacks().callback_accumulator_royalties(creator))
+        //     .with_extra_gas_for_callback(2_000_000)
+        //     .register_promise();
     }
 
     fn distribute_rewards(&self, buyer: &ManagedAddress, seller: &ManagedAddress) {
@@ -586,9 +611,13 @@ pub trait CommonModule:
             let map_balance = self.reward_balance();
             let reward = self.reward_amount().get();
             let ticker = ticker_map.get();
-            let balance_sc = self.blockchain().get_esdt_balance(&self.blockchain().get_sc_address(), &ticker.clone().into_esdt_option().unwrap(), 0u64);
+            let balance_sc = self.blockchain().get_esdt_balance(
+                &self.blockchain().get_sc_address(),
+                &ticker.clone().into_esdt_option().unwrap(),
+                0u64,
+            );
             let reward_to_share = reward.clone().mul(2u64);
-            if map_balance.get().ge(&reward_to_share) && balance_sc.ge(&reward_to_share){
+            if map_balance.get().ge(&reward_to_share) && balance_sc.ge(&reward_to_share) {
                 self.transfer_or_save_payment(&buyer, &ticker, 0u64, &reward);
 
                 self.transfer_or_save_payment(&seller, &ticker, 0u64, &reward);
@@ -600,6 +629,25 @@ pub trait CommonModule:
 
     #[proxy]
     fn dex_proxy(&self, sc_address: ManagedAddress) -> ash_proxy::Proxy<Self::Api>;
+
+    // #[proxy]
+    // fn accumulator_proxy(&self, sc_address: ManagedAddress) -> accumulator_proxy::Proxy<Self::Api>;
+
+    // #[promises_callback]
+    // fn callback_accumulator(&self) {
+    //     let p = self.call_value().all_esdt_transfers();
+    //     let payments = p.clone_value();
+    //     if payments.len() > 0 {
+    //         self.send()
+    //             .direct_multi(&self.blockchain().get_owner_address(), &payments);
+    //     }
+    // }
+
+    // #[promises_callback]
+    // fn callback_accumulator_royalties(&self, creator: &ManagedAddress) {
+    //     let p = self.call_value().egld_or_single_esdt();
+    //     self.transfer_or_save_payment(creator, &p.token_identifier, p.token_nonce, &p.amount);
+    // }
 
     fn aggregate(
         &self,
@@ -713,3 +761,17 @@ mod ash_proxy {
         ) -> ManagedVec<EsdtTokenPayment>;
     }
 }
+
+// mod accumulator_proxy {
+//     multiversx_sc::imports!();
+//     #[multiversx_sc::proxy]
+//     pub trait AccumulatorContract {
+//         #[payable("*")]
+//         #[endpoint]
+//         fn deposit(&self);
+
+//         #[payable("*")]
+//         #[endpoint]
+//         fn royalties(&self);
+//     }
+// }

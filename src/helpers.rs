@@ -19,21 +19,19 @@ pub trait HelpersModule:
         nonce: u64,
         amount: &BigUint,
     ) {
-        if amount == &0 {
-            return;
-        }
         if self.blockchain().is_smart_contract(to) {
             if !self.whitelisted_contracts().contains(&to) {
+                if amount == &0 {
+                    return;
+                }
                 self.claimable_tokens(to).insert(token_id.clone());
                 self.claimable_token_nonces(to, token_id).insert(nonce);
                 self.claimable_amount(to, token_id, nonce)
                     .update(|amt| *amt += amount);
-            } else {
-                self.send().direct(to, token_id, nonce, amount);
+                return;
             }
-        } else {
-            self.send().direct(to, token_id, nonce, amount);
         }
+        self.send().direct_non_zero(to, token_id, nonce, amount);
     }
 
     fn get_nft_info(&self, nft_type: &TokenIdentifier, nft_nonce: u64) -> EsdtTokenData<Self::Api> {
@@ -182,5 +180,9 @@ pub trait HelpersModule:
                 "You are not an admin!"
             );
         }
+    }
+
+    fn require_enabled(&self) {
+        require!(self.status().get(), "Global operation enabled!");
     }
 }

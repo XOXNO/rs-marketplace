@@ -5,10 +5,10 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                          100
+// Endpoints:                           99
 // Async Callback (empty):               1
 // Promise callbacks:                    1
-// Total number of exported functions: 103
+// Total number of exported functions: 102
 
 #![no_std]
 #![allow(internal_features)]
@@ -75,7 +75,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         getOnSaleTokensForTicker => get_on_sale_tokens_for_ticker
         getAuctionsForTicker => get_auctions_for_ticker
         getFullAuctionsForTicker => get_full_auctions_for_ticker
-        checkTokenOffers => check_token_offers
+        getTokenOffers => get_token_offers
         getBulkOffers => get_bulk_offers
         getBulkGlobalOffers => get_bulk_global_offers
         getBulkGlobalOffersByCollection => get_bulk_global_offers_by_collection
@@ -101,8 +101,8 @@ multiversx_sc_wasm_adapter::endpoints! {
         setDefaultRewardAmount => set_default_reward_amount
         setAcceptedTokens => set_accepted_tokens
         removeAcceptedTokens => remove_accepted_tokens
-        addWitelistedSC => add_whitelisted_sc
-        removeWitelistedSC => remove_wl_sc
+        addWhitelist => add_whitelisted_sc
+        removeWhitelist => remove_wl_sc
         setStatus => set_status
         setCutPercentage => set_percentage_cut
         unFreezeAuctionId => un_freeze_auction_id
@@ -117,7 +117,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         setExtraFees => set_extra_fees
         setCustomRoyalties => set_custom_royalties
         setConfigAdmin => set_config_admin
-        claimTokens => claim_tokens
         deposit => deposit
         withdrawDeposit => withdraw_deposit
         userDeposit => user_funds

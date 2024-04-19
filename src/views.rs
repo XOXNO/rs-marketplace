@@ -125,8 +125,8 @@ pub trait ViewsModule: crate::storage::StorageModule {
         results
     }
 
-    #[view(checkTokenOffers)]
-    fn check_token_offers(
+    #[view(getTokenOffers)]
+    fn get_token_offers(
         &self,
         token: &TokenIdentifier,
         nonces: MultiValueEncoded<u64>,
