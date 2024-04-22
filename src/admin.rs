@@ -101,7 +101,7 @@ pub trait AdminModule:
     #[endpoint(setRewardTicker)]
     fn set_reward_ticker(&self, token: EgldOrEsdtTokenIdentifier) {
         let map = self.reward_ticker();
-        require!(map.is_empty(), "The ticker was already set!");
+        // require!(map.is_empty(), "The ticker was already set!");
         map.set(token);
     }
 

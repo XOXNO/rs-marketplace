@@ -73,11 +73,11 @@ setStatusOff() {
 }
 
 setRewardTicker() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setRewardTicker" --arguments 0x57415445522d396564343030 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setRewardTicker" --arguments 0x424f4245522d396562373634 --send --proxy=${PROXY} --chain=1
 }
 
 setDefaultRewardAmount() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setDefaultRewardAmount" --arguments 0x8AC7230489E80000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setDefaultRewardAmount" --arguments 0x03bd913e6c1df40000 --send --proxy=${PROXY} --chain=1
 }
 
 setSpecialRewardAmount() {

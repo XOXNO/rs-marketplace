@@ -18,6 +18,7 @@ pub mod wrapping;
 const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
 const MAX_COLLECTION_ROYALTIES: u64 = 5_000; // 50%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
+const MIN_TRADE_REWARD: u64 = 200_000_000_000_000_000; // Token has to be unique to be considered NFT
 
 #[multiversx_sc::contract]
 pub trait XOXNOProtocol:

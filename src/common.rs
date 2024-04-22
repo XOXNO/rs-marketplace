@@ -5,7 +5,7 @@ use crate::{
     auction::{
         AggregatorStep, Auction, AuctionType, FeesDistribution, GlobalOffer, Offer, TokenAmount,
     },
-    NFT_AMOUNT,
+    MIN_TRADE_REWARD, NFT_AMOUNT,
 };
 
 #[multiversx_sc::module]
@@ -419,21 +419,18 @@ pub trait CommonModule:
         bid_split_amounts: &FeesDistribution<Self::Api>,
         wrapping: bool,
     ) {
+        let total_amount = &bid_split_amounts.seller
+            + &bid_split_amounts.creator
+            + &bid_split_amounts.marketplace
+            + &bid_split_amounts.extra;
+        if &total_amount >= &BigUint::from(MIN_TRADE_REWARD) && payment_token_id.is_egld() {
+            self.distribute_rewards(new_owner, original_owner);
+        }
         if wrapping {
             if payment_token_id.is_egld() {
-                self.unwrap_egld(
-                    &bid_split_amounts.seller
-                        + &bid_split_amounts.creator
-                        + &bid_split_amounts.marketplace
-                        + &bid_split_amounts.extra,
-                );
+                self.unwrap_egld(total_amount);
             } else if payment_token_id.is_esdt() {
-                self.wrap_egld(
-                    &bid_split_amounts.seller
-                        + &bid_split_amounts.creator
-                        + &bid_split_amounts.marketplace
-                        + &bid_split_amounts.extra,
-                );
+                self.wrap_egld(total_amount);
             }
         }
 
@@ -490,7 +487,6 @@ pub trait CommonModule:
                 payment_token_nonce,
             );
         }
-        self.distribute_rewards(new_owner, original_owner);
     }
 
     fn distribute_tokens_bulk_buy(
@@ -503,21 +499,18 @@ pub trait CommonModule:
         bid_split_amounts: &FeesDistribution<Self::Api>,
         wrapping: bool,
     ) {
+        let total_amount =
+            &bid_split_amounts.seller + &bid_split_amounts.creator + &bid_split_amounts.marketplace;
+        if &total_amount >= &BigUint::from(MIN_TRADE_REWARD) && payment_token_id.is_egld() {
+            self.distribute_rewards(new_owner, original_owner);
+        }
         if wrapping {
             if payment_token_id.is_egld() {
                 // A platit cu WEGLD trebuie transformat in EGLD
-                self.unwrap_egld(
-                    &bid_split_amounts.seller
-                        + &bid_split_amounts.creator
-                        + &bid_split_amounts.marketplace,
-                );
+                self.unwrap_egld(total_amount);
             } else if payment_token_id.is_esdt() {
                 // A platit cu EGLD trebuie transformat in WEGLD
-                self.wrap_egld(
-                    &bid_split_amounts.seller
-                        + &bid_split_amounts.creator
-                        + &bid_split_amounts.marketplace,
-                );
+                self.wrap_egld(total_amount);
             }
         }
 
@@ -556,7 +549,6 @@ pub trait CommonModule:
             payment_token_nonce,
             &bid_split_amounts.seller,
         );
-        self.distribute_rewards(new_owner, original_owner);
     }
 
     fn share_marketplace_fees(
