@@ -392,7 +392,6 @@ pub trait XOXNOProtocol:
         buy_for: OptionalValue<ManagedAddress>,
         message: OptionalValue<ManagedBuffer>,
     ) {
-        self.require_admin(None);
         self.common_buy(
             auction_id,
             nft_type,
