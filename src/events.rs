@@ -222,9 +222,9 @@ pub trait EventsModule {
         &self,
         #[indexed] offer: &GlobalOffer<Self::Api>,
         #[indexed] seller: &ManagedAddress,
-        #[indexed] nonce: u64,
-        #[indexed] amount: &BigUint,
-        #[indexed] auction_id: u64,
+        #[indexed] nonces: &ManagedVec<EsdtTokenPayment>,
+        #[indexed] quantity: &BigUint,
+        #[indexed] auction_ids: &ManagedVec<u64>,
     );
 
     #[event("offer_token_event")]

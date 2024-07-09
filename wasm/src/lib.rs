@@ -5,14 +5,13 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
+// Upgrade:                              1
 // Endpoints:                           99
 // Async Callback (empty):               1
 // Promise callbacks:                    1
-// Total number of exported functions: 102
+// Total number of exported functions: 103
 
 #![no_std]
-#![allow(internal_features)]
-#![feature(lang_items)]
 
 multiversx_sc_wasm_adapter::allocator!();
 multiversx_sc_wasm_adapter::panic_handler!();
@@ -63,6 +62,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         userCollectionGlobalOffers => user_collection_global_offers
         getCollectionConfig => collection_config
         freezedAuctions => freezed_auctions
+        getAccumulator => accumulator
         getListingsCount => get_listings_count
         getOffersCount => get_offers_count
         getGlobalOffersCount => get_global_offers_count

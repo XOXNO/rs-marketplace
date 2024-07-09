@@ -25,7 +25,7 @@ pub trait CustomOffersModule:
 {
     #[payable("*")]
     #[endpoint(acceptOffer)]
-    fn accept_offer(&self, offer_id: u64) {
+    fn accept_offer(&self, offer_id: u64, auction_id: OptionalValue<u64>) {
         self.require_enabled();
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
@@ -45,11 +45,10 @@ pub trait CustomOffersModule:
                 &offer.price,
             );
         }
-        let token_auction_ids_instance =
-            self.token_auction_ids(&offer.token_type, offer.token_nonce);
-        let mut found_match = false;
-        let mut auction_removed = 0;
-        if token_auction_ids_instance.is_empty() || payment_token.is_esdt() {
+
+        let auction_id_sent = auction_id.clone().into_option().unwrap_or(0);
+
+        if auction_id.is_none() {
             require!(
                 payment_amount == offer.quantity,
                 "The quantity sent is not matching the offer!"
@@ -62,11 +61,8 @@ pub trait CustomOffersModule:
                 payment_token == offer.token_type,
                 "The token sent is not matching the offer!"
             );
-            found_match = true;
-        } else if token_auction_ids_instance.len() == 1 {
-            let mut iter = token_auction_ids_instance.iter();
-            let auction_id = iter.next().unwrap();
-            let auction = self.try_get_auction(auction_id);
+        } else {
+            let auction = self.try_get_auction(auction_id_sent);
             self.common_offer_auction_check(&offer, &auction);
 
             require!(
@@ -75,29 +71,9 @@ pub trait CustomOffersModule:
             );
 
             self.update_or_remove_items_quantity(&auction, &auction.nr_auctioned_tokens);
-            self.remove_auction_common(auction_id, &auction);
-            auction_removed = auction_id;
-            found_match = true;
-        } else {
-            for auction_id in token_auction_ids_instance.iter() {
-                let auction = self.try_get_auction(auction_id);
-                if offer.token_type == auction.auctioned_token_type
-                    && offer.token_nonce == auction.auctioned_token_nonce
-                    && offer.quantity == auction.nr_auctioned_tokens
-                    && seller == auction.original_owner
-                    && (auction.auction_type == AuctionType::Nft
-                        || auction.auction_type == AuctionType::SftAll)
-                {
-                    self.update_or_remove_items_quantity(&auction, &auction.nr_auctioned_tokens);
-                    self.remove_auction_common(auction_id, &auction);
-                    auction_removed = auction_id;
-                    found_match = true;
-                    break;
-                }
-            }
+            self.remove_auction_common(auction_id_sent, &auction);
         }
 
-        require!(found_match, "No offer found for your accept!");
         offer.status = OfferStatus::Accepted;
         let nft_info = self.get_nft_info(&offer.token_type, offer.token_nonce);
         let creator_royalties_percentage = nft_info.royalties;
@@ -107,11 +83,13 @@ pub trait CustomOffersModule:
         );
 
         self.common_offer_remove(offer_id, &offer);
-        self.emit_accept_offer_event(offer_id, &offer, &seller, auction_removed);
+        self.emit_accept_offer_event(offer_id, &offer, &seller, auction_id_sent);
         self.distribute_tokens_common(
-            &EgldOrEsdtTokenIdentifier::esdt(offer.token_type.clone()),
-            offer.token_nonce,
-            &offer.quantity,
+            ManagedVec::from(EsdtTokenPayment::new(
+                offer.token_type.clone(),
+                offer.token_nonce,
+                offer.quantity.clone(),
+            )),
             &offer.payment_token_type,
             offer.payment_token_nonce,
             &nft_info.creator,
@@ -128,7 +106,7 @@ pub trait CustomOffersModule:
 
     #[payable("*")]
     #[endpoint(declineOffer)]
-    fn decline_offer(&self, offer_id: u64) {
+    fn decline_offer(&self, offer_id: u64, auction_id: OptionalValue<u64>) {
         self.require_enabled();
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
@@ -159,14 +137,11 @@ pub trait CustomOffersModule:
                 "You cannot decline offers for SFTs with more than 1 supply minted!"
             );
             require!(
-                payment_token_nonce == 0
-                    && payment_token.is_egld()
-                    && payment_amount.eq(&BigUint::zero()),
+                payment_token.is_egld() && payment_amount.eq(&BigUint::zero()),
                 "You have to send 0 eGLD as payment to decline the offer!"
             );
-            let mut iter = token_auction_ids_instance.iter();
-            let auction_id = iter.next().unwrap();
-            let auction = self.try_get_auction(auction_id);
+
+            let auction = self.try_get_auction(auction_id.into_option().unwrap());
             require!(
                 owner == auction.original_owner,
                 "Just the owner of the NFT can decline the offer!"
@@ -289,15 +264,10 @@ pub trait CustomOffersModule:
         payment_nonce: u64,
         price: BigUint,
         collection: TokenIdentifier,
+        quantity: BigUint,
         attributes: OptionalValue<ManagedBuffer>,
     ) -> u64 {
         self.require_enabled();
-        require!(payment_token.is_egld(), "The payment token is not EGLD!");
-        require!(payment_nonce == 0, "The payment nonce is not 0!");
-        require!(
-            self.accepted_tokens().contains(&payment_token),
-            "The payment token is not whitelisted!"
-        );
         self.deposit();
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
@@ -321,7 +291,7 @@ pub trait CustomOffersModule:
         let offer = GlobalOffer {
             offer_id,
             collection: collection.clone(),
-            quantity: BigUint::from(NFT_AMOUNT),
+            quantity: quantity,
             payment_token,
             payment_nonce,
             price,
@@ -359,29 +329,35 @@ pub trait CustomOffersModule:
     fn accept_global_offer(
         &self,
         offer_id: u64,
-        auction_id_opt: OptionalValue<u64>,
+        auction_id_opt: OptionalValue<ManagedVec<u64>>,
         signature: OptionalValue<ManagedBuffer>,
     ) {
         self.require_enabled();
-        let (collection, c_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
+        let nfts = self.call_value().all_esdt_transfers().clone_value();
         let offer_map = self.global_offer(offer_id);
+        let auctions_ids = auction_id_opt.into_option().unwrap_or(ManagedVec::new());
+        let mut total_quantity_wanted = BigUint::zero();
         require!(!offer_map.is_empty(), "This offer is already removed!");
         let seller = self.blockchain().get_caller();
-        let offer = offer_map.get();
-        if offer.new_version {
-            self.has_balance_and_deduct(
-                &offer.owner,
-                &offer.payment_token,
-                offer.payment_nonce,
-                &offer.price,
+        let mut offer = offer_map.get();
+
+        let mut tmp_nonces = ManagedBuffer::new();
+        let mut accepted_nfts: ManagedVec<EsdtTokenPayment> = ManagedVec::new();
+        let mut last_nft_info: EsdtTokenData = EsdtTokenData::default();
+        for nft in nfts.iter() {
+            require!(
+                offer.collection.eq(&nft.token_identifier),
+                "The collection sent is not the offer requested one!"
             );
+            total_quantity_wanted += &nft.amount;
+            if last_nft_info.creator == ManagedAddress::zero() {
+                last_nft_info = self.get_nft_info(&offer.collection, nft.token_nonce);
+            }
+            tmp_nonces.append(&self.decimal_to_ascii(nft.token_nonce.try_into().unwrap()));
+            accepted_nfts.push(nft);
         }
-        let mut collection_nonce = c_nonce;
-        let auction_id_option = auction_id_opt.into_option();
-        if auction_id_option.is_some() && auction_id_option.unwrap() > 0 {
-            require!(collection.is_egld(), "You don't have to send anything");
-            require!(amount.eq(&BigUint::zero()), "Amount has to be 0");
-            let auction_id = auction_id_option.unwrap();
+
+        for auction_id in auctions_ids.iter() {
             let auction = self.try_get_auction(auction_id);
             require!(
                 auction.auction_type == AuctionType::Nft,
@@ -399,7 +375,7 @@ pub trait CustomOffersModule:
             );
 
             require!(
-                auction.nr_auctioned_tokens == offer.quantity,
+                auction.nr_auctioned_tokens == BigUint::from(1u32),
                 "The quantity listed is not matching the offer!"
             );
 
@@ -407,27 +383,50 @@ pub trait CustomOffersModule:
                 auction.auctioned_token_type == offer.collection,
                 "The listed token is not matching the offer!"
             );
-            collection_nonce = auction.auctioned_token_nonce;
+
+            if last_nft_info.creator == ManagedAddress::zero() {
+                last_nft_info = self.get_nft_info(&offer.collection, auction.auctioned_token_nonce);
+            }
+
+            tmp_nonces
+                .append(&self.decimal_to_ascii(auction.auctioned_token_nonce.try_into().unwrap()));
+
             self.update_or_remove_items_quantity(&auction, &auction.nr_auctioned_tokens);
             self.remove_auction_common(auction_id, &auction);
-        } else {
-            require!(collection_nonce > 0, "You can not accept it with ESDT!");
-            require!(
-                offer.collection.eq(&collection),
-                "The collection sent is not the offer requested one!"
-            );
-            require!(
-                offer.quantity.eq(&amount),
-                "Your quantity is not matching the offer requested one!"
+
+            total_quantity_wanted += &auction.nr_auctioned_tokens;
+
+            accepted_nfts.push(EsdtTokenPayment::new(
+                auction.auctioned_token_type,
+                auction.auctioned_token_nonce,
+                auction.nr_auctioned_tokens,
+            ));
+        }
+
+        require!(
+            &offer.quantity >= &total_quantity_wanted,
+            "The offer is not accepting more than {} items",
+            (offer.quantity)
+        );
+
+        let to_deduct_payment_amount = &offer.price.clone().mul(&total_quantity_wanted);
+
+        if offer.new_version {
+            self.has_balance_and_deduct(
+                &offer.owner,
+                &offer.payment_token,
+                offer.payment_nonce,
+                to_deduct_payment_amount,
             );
         }
+
         if offer.attributes.is_some() {
             let sign = signature.into_option();
             require!(sign.is_some(), "Signature required!");
             let mut data = ManagedBuffer::new();
             data.append(seller.as_managed_buffer());
             data.append(offer.collection.as_managed_buffer());
-            data.append(&self.decimal_to_ascii(collection_nonce.try_into().unwrap()));
+            data.append(&tmp_nonces);
             data.append(&self.decimal_to_ascii(offer.offer_id.try_into().unwrap()));
             data.append(&offer.attributes.as_ref().unwrap());
 
@@ -435,32 +434,34 @@ pub trait CustomOffersModule:
             self.crypto()
                 .verify_ed25519(signer.as_managed_buffer(), &data, &sign.unwrap());
         }
-
         self.common_global_offer_remove(&offer, false);
-        let nft_info = self.get_nft_info(&offer.collection, collection_nonce);
 
         self.emit_accept_global_offer_event(
             &offer,
             &seller,
-            collection_nonce,
-            &offer.quantity,
-            auction_id_option.unwrap_or(0u64),
+            &nfts,
+            &total_quantity_wanted,
+            &auctions_ids,
         );
+
         self.distribute_tokens_common(
-            &EgldOrEsdtTokenIdentifier::esdt(offer.collection.clone()),
-            collection_nonce,
-            &offer.quantity,
+            accepted_nfts,
             &offer.payment_token,
             offer.payment_nonce,
-            &nft_info.creator,
+            &last_nft_info.creator,
             &seller,
             &offer.owner,
             &self.calculate_amount_split(
-                &offer.price,
-                &nft_info.royalties,
+                to_deduct_payment_amount,
+                &last_nft_info.royalties,
                 self.get_collection_config(&offer.collection),
             ),
             false,
         );
+
+        if &offer.quantity != &total_quantity_wanted {
+            offer.quantity -= &total_quantity_wanted;
+            offer_map.set(offer.clone());
+        }
     }
 }

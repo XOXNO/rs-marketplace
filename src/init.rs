@@ -3,8 +3,11 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 pub mod auction;
+use crate::aggregator::{AggregatorStep, TokenAmount};
 use auction::*;
+pub mod accumulator;
 pub mod admin;
+pub mod aggregator;
 pub mod common;
 pub mod creator;
 pub mod events;
@@ -52,7 +55,10 @@ pub trait XOXNOProtocol:
     }
 
     #[upgrade]
-    fn upgrade(&self) {}
+    fn upgrade(&self, sc_accumulator: ManagedAddress, aggregator: ManagedAddress) {
+        self.accumulator().set(sc_accumulator);
+        self.aggregator_sc().set(aggregator);
+    }
 
     #[payable("*")]
     #[endpoint(listing)]
@@ -139,6 +145,7 @@ pub trait XOXNOProtocol:
             if !fee_map.is_empty() {
                 let fee_config = fee_map.get();
                 if fee_config.custom_royalties {
+                    creator_royalties_percentage = listing.royalties;
                     if creator_royalties_percentage > fee_config.max_royalties {
                         creator_royalties_percentage = fee_config.max_royalties;
                     } else if creator_royalties_percentage < fee_config.min_royalties {
@@ -364,10 +371,9 @@ pub trait XOXNOProtocol:
         nft_type: TokenIdentifier,
         nft_nonce: u64,
         steps: ManagedVec<AggregatorStep<Self::Api>>,
-        limits: MultiValueEncoded<TokenAmount<Self::Api>>,
+        limits: ManagedVec<TokenAmount<Self::Api>>,
         opt_sft_buy_amount: OptionalValue<BigUint>,
     ) {
-        // self.require_admin(None);
         self.common_buy(
             auction_id,
             nft_type,

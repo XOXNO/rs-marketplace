@@ -181,4 +181,8 @@ pub trait StorageModule {
     #[view(freezedAuctions)]
     #[storage_mapper("freezedAuctions")]
     fn freezed_auctions(&self) -> UnorderedSetMapper<u64>;
+
+    #[view(getAccumulator)]
+    #[storage_mapper("accumulator")]
+    fn accumulator(&self) -> SingleValueMapper<ManagedAddress>;
 }
