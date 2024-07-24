@@ -585,7 +585,7 @@ pub trait CommonModule:
         payment_token_nonce: u64,
     ) {
         if amount > BigUint::zero() {
-           self.tx()
+            self.tx()
                 .to(self.accumulator().get())
                 .typed(accumulator::AccumulatorProxy)
                 .deposit_royalties(creator)

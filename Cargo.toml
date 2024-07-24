@@ -9,13 +9,13 @@ publish = false
 path = "src/init.rs"
 
 [dependencies.multiversx-sc]
-version = "0.50.5"
+version = "0.51.1"
 
 [dependencies.multiversx-sc-modules]
-version = "0.50.5"
+version = "0.51.1"
 
 [dependencies.multiversx-wegld-swap-sc]
-version = "0.50.5"
+version = "0.51.1"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.50.5"
+version = "0.51.1"
