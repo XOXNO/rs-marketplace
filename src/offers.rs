@@ -353,7 +353,9 @@ pub trait CustomOffersModule:
             if last_nft_info.creator == ManagedAddress::zero() {
                 last_nft_info = self.get_nft_info(&offer.collection, nft.token_nonce);
             }
-            tmp_nonces.append(&self.decimal_to_ascii(nft.token_nonce.try_into().unwrap()));
+            if offer.attributes.is_some() {
+                tmp_nonces.append(&self.decimal_to_ascii(nft.token_nonce.try_into().unwrap()));
+            }
             accepted_nfts.push(nft);
         }
 
@@ -388,8 +390,11 @@ pub trait CustomOffersModule:
                 last_nft_info = self.get_nft_info(&offer.collection, auction.auctioned_token_nonce);
             }
 
-            tmp_nonces
-                .append(&self.decimal_to_ascii(auction.auctioned_token_nonce.try_into().unwrap()));
+            if offer.attributes.is_some() {
+                tmp_nonces.append(
+                    &self.decimal_to_ascii(auction.auctioned_token_nonce.try_into().unwrap()),
+                );
+            }
 
             self.update_or_remove_items_quantity(&auction, &auction.nr_auctioned_tokens);
             self.remove_auction_common(auction_id, &auction);
@@ -439,7 +444,7 @@ pub trait CustomOffersModule:
         self.emit_accept_global_offer_event(
             &offer,
             &seller,
-            &nfts,
+            &accepted_nfts,
             &total_quantity_wanted,
             &auctions_ids,
         );
