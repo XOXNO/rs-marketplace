@@ -590,7 +590,7 @@ pub trait CommonModule:
                 .typed(accumulator::AccumulatorProxy)
                 .deposit_royalties(creator)
                 .egld_or_single_esdt(&payment_token_id, payment_token_nonce, &amount)
-                .gas(4_000_000)
+                .gas(5_500_000)
                 .transfer_execute();
         }
     }

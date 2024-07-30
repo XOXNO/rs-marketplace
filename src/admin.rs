@@ -56,29 +56,16 @@ pub trait AdminModule:
         }
     }
 
-    #[endpoint(deleteOffersByWallet)]
-    fn delete_user_offers(&self, user: &ManagedAddress) {
+    #[endpoint(withdrawCustomOffers)]
+    fn delete_custom_offers(&self, offer_ids: MultiValueEncoded<u64>) {
         self.require_admin(None);
-        let offers_root = self.offers_by_wallet(user);
-        if offers_root.len() > 0 {
-            for offer in offers_root.iter().take(80) {
-                self.common_withdraw_offer(offer, &self.offer_by_id(offer).get());
-            }
-        }
-    }
-
-    #[endpoint(cleanExpiredOffers)]
-    fn clean_expired_offers(&self, offer_ids: MultiValueEncoded<u64>) {
-        self.require_admin(None);
-        let timestamp = self.blockchain().get_block_timestamp();
         for offer_id in offer_ids {
-            let offer = self.offer_by_id(offer_id);
-            if !offer.is_empty() {
-                let main_offer = offer.get();
-                if main_offer.deadline <= timestamp {
-                    self.common_withdraw_offer(offer_id, &main_offer);
-                }
+            let map_offer = self.offer_by_id(offer_id);
+            if map_offer.is_empty() {
+                continue;
             }
+            let offer = map_offer.get();
+            self.common_withdraw_offer(offer_id, &offer);
         }
     }
 

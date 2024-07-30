@@ -6,10 +6,10 @@
 
 // Init:                                 1
 // Upgrade:                              1
-// Endpoints:                           99
+// Endpoints:                           98
 // Async Callback (empty):               1
 // Promise callbacks:                    1
-// Total number of exported functions: 103
+// Total number of exported functions: 102
 
 #![no_std]
 
@@ -93,8 +93,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         acceptGlobalOffer => accept_global_offer
         returnListing => return_listing
         withdrawGlobalOffers => withdraw_global_offers
-        deleteOffersByWallet => delete_user_offers
-        cleanExpiredOffers => clean_expired_offers
+        withdrawCustomOffers => delete_custom_offers
         addRewardBalance => add_reward_balance
         setRewardTicker => set_reward_ticker
         setSpecialRewardAmount => set_special_reward_amount
