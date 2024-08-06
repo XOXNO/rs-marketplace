@@ -195,19 +195,90 @@ pub trait AdminModule:
     fn claim_tokens_for_creator(&self, wallet: &ManagedAddress) {
         self.require_admin(None);
         let mut tokens = self.claimable_tokens(wallet);
-        for token in tokens.iter() {
-            let mut nonces = self.claimable_token_nonces(wallet, &token);
-            for nonce in nonces.iter() {
-                let amount_map = self.claimable_amount(wallet, &token, nonce);
-                let amount = amount_map.get();
-                if amount > BigUint::zero() {
-                    self.send().direct(wallet, &token, nonce, &amount_map.get());
-                    amount_map.clear();
+        if tokens.len() > 0 {
+            for token in tokens.iter() {
+                let mut nonces = self.claimable_token_nonces(wallet, &token);
+                for nonce in nonces.iter() {
+                    let amount_map = self.claimable_amount(wallet, &token, nonce);
+                    let amount = amount_map.get();
+                    if amount > BigUint::zero() {
+                        if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero() {
+                            self.share_royalties(wallet, &token, amount, nonce);
+                        }
+                        amount_map.clear();
+                    }
+                }
+                nonces.clear();
+            }
+            tokens.clear();
+        } else {
+            let token = &EgldOrEsdtTokenIdentifier::esdt("LKMEX-aab910");
+            let mut nonces = self.claimable_token_nonces(wallet, token);
+            if nonces.len() > 0 {
+                for nonce in nonces.iter() {
+                    let amount_map = self.claimable_amount(wallet, &token, nonce);
+                    let amount = amount_map.get();
+                    if amount > BigUint::zero() {
+                        if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero() {
+                            self.share_royalties(wallet, &token, amount, nonce);
+                        }
+                        amount_map.clear();
+                    }
+                }
+                nonces.clear();
+            } else {
+                let token = &EgldOrEsdtTokenIdentifier::esdt("WATER-9ed400");
+                let mut nonces = self.claimable_token_nonces(wallet, token);
+                if nonces.len() > 0 {
+                    for nonce in nonces.iter() {
+                        let amount_map = self.claimable_amount(wallet, &token, nonce);
+                        let amount = amount_map.get();
+                        if amount > BigUint::zero() {
+                            if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero() {
+                                self.share_royalties(wallet, &token, amount, nonce);
+                            }
+                            amount_map.clear();
+                        }
+                    }
+                    nonces.clear();
+                } else {
+                    let token = &EgldOrEsdtTokenIdentifier::esdt("RIDE-7d18e9");
+                    let mut nonces = self.claimable_token_nonces(wallet, token);
+                    if nonces.len() > 0 {
+                        for nonce in nonces.iter() {
+                            let amount_map = self.claimable_amount(wallet, &token, nonce);
+                            let amount = amount_map.get();
+                            if amount > BigUint::zero() {
+                                if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero()
+                                {
+                                    self.share_royalties(wallet, &token, amount, nonce);
+                                }
+                                amount_map.clear();
+                            }
+                        }
+                        nonces.clear();
+                    } else {
+                        let token = &EgldOrEsdtTokenIdentifier::esdt("MEX-455c57");
+                        let mut nonces = self.claimable_token_nonces(wallet, token);
+                        if nonces.len() > 0 {
+                            for nonce in nonces.iter() {
+                                let amount_map = self.claimable_amount(wallet, &token, nonce);
+                                let amount = amount_map.get();
+                                if amount > BigUint::zero() {
+                                    if self.blockchain().get_sc_balance(&token, nonce)
+                                        > BigUint::zero()
+                                    {
+                                        self.share_royalties(wallet, &token, amount, nonce);
+                                    }
+                                    amount_map.clear();
+                                }
+                            }
+                            nonces.clear();
+                        }
+                    }
                 }
             }
-            nonces.clear();
         }
-        tokens.clear();
     }
 
     #[endpoint(addBlackListWallet)]

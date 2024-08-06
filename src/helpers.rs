@@ -99,6 +99,7 @@ pub trait HelpersModule:
         config: Option<CollectionFeeConfig<Self::Api>>,
     ) -> FeesDistribution<Self::Api> {
         let fees = self.bid_cut_percentage().get();
+        let mut eligible_royalties = royalties.clone();
         let mut extra_amount = BigUint::zero();
         let mut reverse_royalties = false;
         let mut reverse_cut_fees = false;
@@ -111,15 +112,22 @@ pub trait HelpersModule:
                 extra_address = config.extra_fees.address;
                 reverse_royalties = config.reverse_royalties;
                 reverse_cut_fees = config.reverse_cut_fees;
+                if config.custom_royalties {
+                    if config.max_royalties < eligible_royalties {
+                        eligible_royalties = config.max_royalties;
+                    } else if config.min_royalties > eligible_royalties {
+                        eligible_royalties = config.min_royalties;
+                    }
+                }
             }
             None => {}
         };
 
         require!(
-            &fees + royalties + &extra_fee < PERCENTAGE_TOTAL,
+            &fees + &eligible_royalties + &extra_fee < PERCENTAGE_TOTAL,
             "Fees exceed 100%"
         );
-        let creator_royalties = self.calculate_cut_amount(price, royalties);
+        let creator_royalties = self.calculate_cut_amount(price, &eligible_royalties);
         let marketplace_fees = self.calculate_cut_amount(price, &fees);
         let mut seller_amount_to_send = price.clone();
         seller_amount_to_send -= &creator_royalties;

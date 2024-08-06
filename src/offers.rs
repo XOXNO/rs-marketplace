@@ -11,7 +11,7 @@ use crate::helpers;
 use crate::pools;
 use crate::views;
 use crate::wrapping;
-use crate::{storage, NFT_AMOUNT, PERCENTAGE_TOTAL};
+use crate::{storage, NFT_AMOUNT};
 
 #[multiversx_sc::module]
 pub trait CustomOffersModule:
@@ -77,10 +77,6 @@ pub trait CustomOffersModule:
         offer.status = OfferStatus::Accepted;
         let nft_info = self.get_nft_info(&offer.token_type, offer.token_nonce);
         let creator_royalties_percentage = nft_info.royalties;
-        require!(
-            &offer.marketplace_cut_percentage + &creator_royalties_percentage < PERCENTAGE_TOTAL,
-            "Marketplace cut plus royalties exceeds 100%"
-        );
 
         self.common_offer_remove(offer_id, &offer);
         self.emit_accept_offer_event(offer_id, &offer, &seller, auction_id_sent);
