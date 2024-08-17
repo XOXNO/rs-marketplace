@@ -330,8 +330,14 @@ pub trait CustomOffersModule:
     ) {
         self.require_enabled();
         let nfts = self.call_value().all_esdt_transfers().clone_value();
+
+        require!(
+            self.global_offer_ids().contains(&offer_id),
+            "The offer has been removed or accepted already"
+        );
+
         let offer_map = self.global_offer(offer_id);
-        let auctions_ids = auction_id_opt.into_option().unwrap_or(ManagedVec::new());
+        let auctions_ids = auction_id_opt.into_option().unwrap_or_default();
         let mut total_quantity_wanted = BigUint::zero();
         require!(!offer_map.is_empty(), "This offer is already removed!");
         let seller = self.blockchain().get_caller();
@@ -410,6 +416,12 @@ pub trait CustomOffersModule:
             (offer.quantity)
         );
 
+        require!(
+            &total_quantity_wanted > &0,
+            "You need to have a quantity higher than 0 for the offer {}",
+            (offer.offer_id)
+        );
+
         let to_deduct_payment_amount = &offer.price.clone().mul(&total_quantity_wanted);
 
         if offer.new_version {
@@ -435,7 +447,6 @@ pub trait CustomOffersModule:
             self.crypto()
                 .verify_ed25519(signer.as_managed_buffer(), &data, &sign.unwrap());
         }
-        self.common_global_offer_remove(&offer, false);
 
         self.emit_accept_global_offer_event(
             &offer,
@@ -463,6 +474,8 @@ pub trait CustomOffersModule:
         if &offer.quantity != &total_quantity_wanted {
             offer.quantity -= &total_quantity_wanted;
             offer_map.set(offer.clone());
+        } else {
+            self.common_global_offer_remove(&offer, false);
         }
     }
 }
