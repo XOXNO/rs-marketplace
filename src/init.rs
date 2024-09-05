@@ -334,10 +334,19 @@ pub trait XOXNOProtocol:
                 "You are not the owner of this auction in order to withdraw it!"
             );
         }
+
         require!(
-            deadline_reached || max_bid_reached,
+            deadline_reached || max_bid_reached || auction.current_winner == ManagedAddress::zero(),
             "Auction deadline has not passed or the current bid is not equal to the max bid!"
         );
+
+        if auction.current_winner == ManagedAddress::zero() {
+            require!(
+                self.blockchain().get_caller() == auction.original_owner,
+                "You are not the owner of this auction in order to withdraw it!"
+            );
+        }
+
         self.end_auction_common(auction_id, &auction);
     }
 
