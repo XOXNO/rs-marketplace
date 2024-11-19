@@ -85,6 +85,24 @@ pub trait AdminModule:
     }
 
     #[only_owner]
+    #[endpoint(removeRewardBalance)]
+    fn remove_reward_balance(&self) {
+        let token = self.reward_ticker().get();
+        let ticker = &token.clone().into_esdt_option().unwrap();
+        let balance =
+            self.blockchain()
+                .get_esdt_balance(&self.blockchain().get_sc_address(), ticker, 0);
+
+        self.reward_balance().clear();
+        self.reward_amount().clear();
+        self.special_reward_amount(ticker).clear();
+        self.tx()
+            .to(self.blockchain().get_owner_address())
+            .single_esdt(ticker, 0, &balance)
+            .transfer();
+    }
+
+    #[only_owner]
     #[endpoint(setRewardTicker)]
     fn set_reward_ticker(&self, token: EgldOrEsdtTokenIdentifier) {
         let map = self.reward_ticker();

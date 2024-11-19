@@ -41,6 +41,11 @@ upgrade() {
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
+removeRewardBalance() {
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=40000000 --function="removeRewardBalance"  --send --proxy=${PROXY} --chain=1
+}
+
+
 setExtraFees() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=40000000 --function="setExtraFees" --arguments "str:CLDBRKRS-e1ae14" 0x96 erd1f4fvzkka27xpc3ec4mzf8t939zw5d0amwyk9fm4dqdve55vht26qa8hnmu --send --proxy=${PROXY} --chain=1
 }

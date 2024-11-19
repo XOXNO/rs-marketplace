@@ -449,22 +449,7 @@ pub trait CommonModule:
             );
         }
 
-        if bid_split_amounts.reverse_royalties {
-            self.transfer_or_save_payment(
-                new_owner,
-                payment_token_id,
-                payment_token_nonce,
-                &bid_split_amounts.creator,
-            );
-        } else {
-            // send part as royalties to creator
-            self.share_royalties(
-                creator,
-                payment_token_id,
-                bid_split_amounts.creator.clone(),
-                payment_token_nonce,
-            );
-        }
+
 
         // send rest of the bid to original owner
         self.transfer_or_save_payment(
@@ -488,6 +473,23 @@ pub trait CommonModule:
             self.share_marketplace_fees(
                 payment_token_id,
                 bid_split_amounts.marketplace.clone(),
+                payment_token_nonce,
+            );
+        }        
+        
+        if bid_split_amounts.reverse_royalties {
+            self.transfer_or_save_payment(
+                new_owner,
+                payment_token_id,
+                payment_token_nonce,
+                &bid_split_amounts.creator,
+            );
+        } else {
+            // send part as royalties to creator
+            self.share_royalties(
+                creator,
+                payment_token_id,
+                bid_split_amounts.creator.clone(),
                 payment_token_nonce,
             );
         }
