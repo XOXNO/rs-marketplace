@@ -95,7 +95,6 @@ pub trait AdminModule:
 
         self.reward_balance().clear();
         self.reward_amount().clear();
-        self.special_reward_amount(ticker).clear();
         self.tx()
             .to(self.blockchain().get_owner_address())
             .single_esdt(ticker, 0, &balance)
@@ -108,16 +107,6 @@ pub trait AdminModule:
         let map = self.reward_ticker();
         // require!(map.is_empty(), "The ticker was already set!");
         map.set(token);
-    }
-
-    #[only_owner]
-    #[endpoint(setSpecialRewardAmount)]
-    fn set_special_reward_amount(&self, token: &TokenIdentifier, amount: BigUint) {
-        require!(
-            &self.reward_ticker().get() == token,
-            "The reward ticker is not used!"
-        );
-        self.special_reward_amount(token).set(amount);
     }
 
     #[only_owner]

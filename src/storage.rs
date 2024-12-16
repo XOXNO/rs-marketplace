@@ -133,10 +133,6 @@ pub trait StorageModule {
     #[storage_mapper("getRewardTicker")]
     fn reward_ticker(&self) -> SingleValueMapper<EgldOrEsdtTokenIdentifier>;
 
-    #[view(specialRewardAmount)]
-    #[storage_mapper("specialRewardAmount")]
-    fn special_reward_amount(&self, token: &TokenIdentifier) -> SingleValueMapper<BigUint>;
-
     #[view(defaultRewardAmount)]
     #[storage_mapper("defaultRewardAmount")]
     fn reward_amount(&self) -> SingleValueMapper<BigUint>;

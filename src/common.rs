@@ -427,9 +427,11 @@ pub trait CommonModule:
             + &bid_split_amounts.creator
             + &bid_split_amounts.marketplace
             + &bid_split_amounts.extra;
-        if &total_amount >= &BigUint::from(MIN_TRADE_REWARD) && payment_token_id.is_egld() {
+
+        if &bid_split_amounts.creator >= &BigUint::from(0u64) && &total_amount >= &BigUint::from(MIN_TRADE_REWARD) && payment_token_id.is_egld() {
             self.distribute_rewards(new_owner, original_owner);
         }
+
         if wrapping {
             if payment_token_id.is_egld() {
                 self.unwrap_egld(total_amount);

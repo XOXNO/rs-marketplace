@@ -80,15 +80,11 @@ setStatusOff() {
 }
 
 setRewardTicker() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setRewardTicker" --arguments 0x424f4245522d396562373634 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setRewardTicker" --arguments str:DRX-b7f337 --send --proxy=${PROXY} --chain=1
 }
 
 setDefaultRewardAmount() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setDefaultRewardAmount" --arguments 0x03bd913e6c1df40000 --send --proxy=${PROXY} --chain=1
-}
-
-setSpecialRewardAmount() {
-    mxpy --verbose contract call ${ADDRESS} --recall-nonce --pem=${OWNER} --gas-limit=10000000 --function="setSpecialRewardAmount" --arguments 0x475541524449414e2d336436363335 0x2B5E3AF16B1880000 --send --proxy=${PROXY} --chain=1
+    mxpy --verbose contract call ${ADDRESS} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 --gas-limit=10000000 --function="setDefaultRewardAmount" --arguments 0x02b5e3af16b1880000 --send --proxy=${PROXY} --chain=1
 }
 
 setCutPercentage() {
