@@ -1,7 +1,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::auction::GlobalOffer;
+use crate::{auction::GlobalOffer, CollectionFeeConfig};
 
 use super::auction::{Auction, AuctionType, Offer, OfferStatus};
 
@@ -158,7 +158,8 @@ pub trait EventsModule {
         nr_bought_tokens: &BigUint,
         current_time: u64,
         message: OptionalValue<ManagedBuffer>,
-        buy_by: OptionalValue<ManagedAddress>,
+        paid_by: OptionalValue<ManagedAddress>,
+        original_payment: &EgldOrEsdtTokenPayment,
     ) {
         self.buy_event(
             &auction.auctioned_token_type,
@@ -172,8 +173,9 @@ pub trait EventsModule {
             auction.payment_token_nonce,
             current_time,
             message.into_option().unwrap_or(ManagedBuffer::new()),
-            buy_by.into_option().unwrap_or(ManagedAddress::default()),
+            paid_by.into_option().unwrap_or(ManagedAddress::default()),
             &auction.nr_auctioned_tokens,
+            original_payment,
         )
     }
 
@@ -202,7 +204,27 @@ pub trait EventsModule {
         #[indexed] accepted_payment_token: EgldOrEsdtTokenIdentifier,
         #[indexed] accepted_payment_token_nonce: u64,
         #[indexed] auction_type: AuctionType,
-        creator_royalties_percentage: BigUint, // between 0 and 10,000
+        #[indexed] creator_royalties_percentage: BigUint,
+    );
+
+    #[event("send_global_offer")]
+    fn emit_send_global_offer_event(&self, #[indexed] offer: &GlobalOffer<Self::Api>);
+
+    #[event("remove_global_offer")]
+    fn emit_remove_global_offer_event(
+        &self,
+        #[indexed] offer_id: u64,
+        #[indexed] collection: &TokenIdentifier,
+    );
+
+    #[event("accept_global_offer")]
+    fn emit_accept_global_offer_event(
+        &self,
+        #[indexed] offer: &GlobalOffer<Self::Api>,
+        #[indexed] seller: &ManagedAddress,
+        #[indexed] nonces: &ManagedVec<EsdtTokenPayment>,
+        #[indexed] quantity: &BigUint,
+        #[indexed] auction_ids: &ManagedVec<u64>,
     );
 
     #[event("offer_token_event")]
@@ -220,41 +242,6 @@ pub trait EventsModule {
         #[indexed] offer_owner: &ManagedAddress,
         #[indexed] marketplace_cut_percentage: &BigUint,
         #[indexed] offer_id: u64,
-    );
-
-    fn emit_send_global_offer_event(self, offer: &GlobalOffer<Self::Api>) {
-        self.send_global_offer_event(offer);
-    }
-
-    #[event("send_global_offer")]
-    fn send_global_offer_event(&self, #[indexed] offer: &GlobalOffer<Self::Api>);
-
-    fn emit_remove_global_offer_event(self, offer_id: u64) {
-        self.remove_global_offer_event(offer_id);
-    }
-
-    #[event("remove_global_offer")]
-    fn remove_global_offer_event(&self, #[indexed] offer_id: u64);
-
-    fn emit_accept_global_offer_event(
-        self,
-        offer: &GlobalOffer<Self::Api>,
-        seller: &ManagedAddress,
-        nonce: u64,
-        amount: &BigUint,
-        auction_id: u64,
-    ) {
-        self.accept_global_offer_event(offer, seller, nonce, amount, auction_id);
-    }
-
-    #[event("accept_global_offer")]
-    fn accept_global_offer_event(
-        &self,
-        #[indexed] offer: &GlobalOffer<Self::Api>,
-        #[indexed] seller: &ManagedAddress,
-        #[indexed] nonce: u64,
-        #[indexed] amount: &BigUint,
-        #[indexed] auction_id: u64,
     );
 
     #[event("withdraw_offer_token_event")]
@@ -365,6 +352,7 @@ pub trait EventsModule {
         #[indexed] message: ManagedBuffer,
         #[indexed] buy_by: ManagedAddress,
         #[indexed] nr_auctioned_tokens: &BigUint,
+        #[indexed] original_payment: &EgldOrEsdtTokenPayment,
     );
 
     #[event("withdraw_event")]
@@ -375,5 +363,19 @@ pub trait EventsModule {
         #[indexed] auction_id: u64,
         #[indexed] nr_auctioned_tokens: &BigUint,
         #[indexed] seller: &ManagedAddress,
+    );
+
+    #[event("user_deposit")]
+    fn emit_deposit_balance(
+        &self,
+        #[indexed] owner: &ManagedAddress,
+        #[indexed] payment: &EgldOrEsdtTokenPayment,
+    );
+
+    #[event("collection_config_event")]
+    fn emit_collection_config(
+        &self,
+        #[indexed] collection: &TokenIdentifier,
+        #[indexed] config: &CollectionFeeConfig<Self::Api>,
     );
 }

@@ -3,7 +3,8 @@ use multiversx_sc::codec::NestedDecodeInput;
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct Auction<M: ManagedTypeApi> {
     pub auctioned_token_type: TokenIdentifier<M>,
     pub auctioned_token_nonce: u64,
@@ -23,7 +24,8 @@ pub struct Auction<M: ManagedTypeApi> {
     pub creator_royalties_percentage: BigUint<M>,
 }
 
-#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, NestedEncode, NestedDecode, Clone)]
 pub struct Offer<M: ManagedTypeApi> {
     pub token_type: TokenIdentifier<M>,
     pub token_nonce: u64,
@@ -36,32 +38,65 @@ pub struct Offer<M: ManagedTypeApi> {
     pub timestamp: u64,
     pub offer_owner: ManagedAddress<M>,
     pub marketplace_cut_percentage: BigUint<M>,
+    pub new_version: bool,
 }
+impl<M: ManagedTypeApi> TopDecode for Offer<M> {
+    fn top_decode<I>(input: I) -> Result<Self, DecodeError>
+    where
+        I: multiversx_sc::codec::TopDecodeInput,
+    {
+        let mut input = input.into_nested_buffer();
+        let token_type = TokenIdentifier::dep_decode(&mut input)?;
+        let token_nonce = u64::dep_decode(&mut input)?;
+        let quantity = BigUint::dep_decode(&mut input)?;
+        let status = OfferStatus::dep_decode(&mut input)?;
+        let payment_token_type = EgldOrEsdtTokenIdentifier::dep_decode(&mut input)?;
+        let payment_token_nonce = u64::dep_decode(&mut input)?;
+        let price = BigUint::dep_decode(&mut input)?;
+        let deadline = u64::dep_decode(&mut input)?;
+        let timestamp = u64::dep_decode(&mut input)?;
+        let offer_owner = ManagedAddress::dep_decode(&mut input)?;
+        let marketplace_cut_percentage = BigUint::dep_decode(&mut input)?;
 
-#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
+        let new_version = if input.is_depleted() {
+            false
+        } else {
+            bool::dep_decode(&mut input)?
+        };
+
+        Result::Ok(Offer {
+            token_type,
+            token_nonce,
+            quantity,
+            status,
+            payment_token_type,
+            payment_token_nonce,
+            price,
+            deadline,
+            timestamp,
+            offer_owner,
+            marketplace_cut_percentage,
+            new_version,
+        })
+    }
+}
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct TokensOnSale<M: ManagedTypeApi> {
-    pub auction: Auction<M>,
     pub auction_id: u64,
     pub token_type: u8,
+    pub auction: Auction<M>,
 }
-
-#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct BulkOffers<M: ManagedTypeApi> {
-    pub offer: Offer<M>,
     pub offer_id: u64,
     pub nonce: u64,
+    pub offer: Offer<M>,
 }
-
+#[type_abi]
 #[derive(
-    ManagedVecItem,
-    TopEncode,
-    TopDecode,
-    NestedEncode,
-    NestedDecode,
-    TypeAbi,
-    PartialEq,
-    Debug,
-    Clone,
+    ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, PartialEq, Debug, Clone,
 )]
 pub enum AuctionType {
     None,
@@ -70,18 +105,9 @@ pub enum AuctionType {
     SftAll,
     SftOnePerPayment,
 }
-
+#[type_abi]
 #[derive(
-    ManagedVecItem,
-    TopEncode,
-    TopDecode,
-    NestedEncode,
-    NestedDecode,
-    TypeAbi,
-    PartialEq,
-    Debug,
-    Clone,
-    Copy,
+    ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, PartialEq, Debug, Clone, Copy,
 )]
 pub enum OfferStatus {
     Pending,
@@ -90,13 +116,18 @@ pub enum OfferStatus {
     Withdraw,
 }
 
-pub struct BidSplitAmounts<M: ManagedTypeApi> {
+pub struct FeesDistribution<M: ManagedTypeApi> {
     pub creator: BigUint<M>,
     pub marketplace: BigUint<M>,
     pub seller: BigUint<M>,
+    pub extra: BigUint<M>,
+    pub extra_address: ManagedAddress<M>,
+    pub reverse_royalties: bool,
+    pub reverse_cut_fees: bool,
 }
 
-#[derive(TopEncode, TypeAbi)]
+#[type_abi]
+#[derive(ManagedVecItem, NestedEncode, NestedDecode, Clone, TopEncode)]
 pub struct GlobalOffer<M: ManagedTypeApi> {
     pub offer_id: u64,
     pub collection: TokenIdentifier<M>,
@@ -107,6 +138,7 @@ pub struct GlobalOffer<M: ManagedTypeApi> {
     pub timestamp: u64,
     pub owner: ManagedAddress<M>,
     pub attributes: Option<ManagedBuffer<M>>,
+    pub new_version: bool,
 }
 
 impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
@@ -130,6 +162,12 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
             Option::<ManagedBuffer<M>>::dep_decode(&mut input)?
         };
 
+        let new_version = if input.is_depleted() {
+            false
+        } else {
+            bool::dep_decode(&mut input)?
+        };
+
         Result::Ok(GlobalOffer {
             offer_id,
             collection,
@@ -140,11 +178,13 @@ impl<M: ManagedTypeApi> TopDecode for GlobalOffer<M> {
             timestamp,
             owner,
             attributes,
+            new_version,
         })
     }
 }
 
-#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct BulkListing<M: ManagedTypeApi> {
     pub min_bid: BigUint<M>,
     pub max_bid: BigUint<M>,
@@ -156,12 +196,39 @@ pub struct BulkListing<M: ManagedTypeApi> {
     pub collection: EgldOrEsdtTokenIdentifier<M>,
     pub nonce: u64,
     pub nft_amount: BigUint<M>,
+    pub royalties: BigUint<M>,
 }
 
-#[derive(ManagedVecItem, TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
 pub struct BulkUpdateListing<M: ManagedTypeApi> {
     pub payment_token_type: EgldOrEsdtTokenIdentifier<M>,
     pub new_price: BigUint<M>,
     pub auction_id: u64,
     pub deadline: u64,
+}
+
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct CollectionFeeConfig<M: ManagedTypeApi> {
+    pub reverse_cut_fees: bool,
+    pub reverse_royalties: bool,
+    pub custom_royalties: bool,
+    pub min_royalties: BigUint<M>,
+    pub max_royalties: BigUint<M>,
+    pub extra_fees: CollectionExtraFeesConfig<M>,
+    pub admin: ManagedAddress<M>,
+}
+
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct CollectionExtraFeesConfig<M: ManagedTypeApi> {
+    pub amount: BigUint<M>,
+    pub address: ManagedAddress<M>,
+}
+
+#[type_abi]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
+pub struct AttributesIns<M: ManagedTypeApi> {
+    pub creator: ManagedAddress<M>,
 }

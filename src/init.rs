@@ -3,20 +3,25 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 pub mod auction;
+use crate::aggregator::{AggregatorStep, TokenAmount};
 use auction::*;
+pub mod accumulator;
 pub mod admin;
+pub mod aggregator;
 pub mod common;
 pub mod creator;
-pub mod dex;
 pub mod events;
 pub mod helpers;
 pub mod offers;
+pub mod pools;
 pub mod storage;
 pub mod views;
 pub mod wrapping;
 
 const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
+const MAX_COLLECTION_ROYALTIES: u64 = 5_000; // 50%
 const NFT_AMOUNT: u32 = 1; // Token has to be unique to be considered NFT
+const MIN_TRADE_REWARD: u64 = 200_000_000_000_000_000; // Token has to be unique to be considered NFT
 
 #[multiversx_sc::contract]
 pub trait XOXNOProtocol:
@@ -27,9 +32,9 @@ pub trait XOXNOProtocol:
     + offers::CustomOffersModule
     + admin::AdminModule
     + creator::CreatorModule
-    + common::CommonModule
     + wrapping::WrappingModule
-    + dex::DexModule
+    + common::CommonModule
+    + pools::PoolsModule
 {
     #[init]
     fn init(
@@ -38,21 +43,27 @@ pub trait XOXNOProtocol:
         signer: ManagedAddress,
         wrapping_sc: ManagedAddress,
         wrapping_token: TokenIdentifier,
-        // xoxno_pair: ManagedAddress,
+        aggregator: ManagedAddress,
         // xoxno_token: TokenIdentifier,
     ) {
         self.try_set_bid_cut_percentage(bid_cut_percentage);
         self.signer().set_if_empty(&signer);
         self.wrapping().set(wrapping_sc);
         self.wrapping_token().set(wrapping_token);
-        // self.swap_pair_xoxno().set(xoxno_pair);
+        self.aggregator_sc().set(aggregator);
         // self.xoxno_token().set(xoxno_token);
+    }
+
+    #[upgrade]
+    fn upgrade(&self, sc_accumulator: ManagedAddress, aggregator: ManagedAddress) {
+        self.accumulator().set(sc_accumulator);
+        self.aggregator_sc().set(aggregator);
     }
 
     #[payable("*")]
     #[endpoint(listing)]
     fn listing(&self, listings: MultiValueEncoded<BulkListing<Self::Api>>) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let payments = self.call_value().all_esdt_transfers();
         let marketplace_cut_percentage = &self.bid_cut_percentage().get();
         let current_time = self.blockchain().get_block_timestamp();
@@ -65,7 +76,7 @@ pub trait XOXNOProtocol:
 
         require!(listings.len() == payments.len(), "Invalid body sent!");
         for (index, listing) in listings.to_vec().iter().enumerate() {
-            let (nft_type, nft_nonce, nft_amount) = payments.get(index).into_tuple();
+            let (nft_type, nft_nonce, nft_amount) = payments.get(index).clone().into_tuple();
             require!(
                 map_acc_tokens.contains(&listing.accepted_payment_token),
                 "The payment token is not whitelisted!"
@@ -127,13 +138,25 @@ pub trait XOXNOProtocol:
                     "Invalid start time"
                 );
             }
+            let fee_map = self.collection_config(&nft_type);
+            let mut creator_royalties_percentage =
+                self.get_nft_info(&nft_type, nft_nonce).royalties;
 
-            let creator_royalties_percentage = self.get_nft_info(&nft_type, nft_nonce).royalties;
+            if !fee_map.is_empty() {
+                let fee_config = fee_map.get();
+                if fee_config.custom_royalties {
+                    creator_royalties_percentage = listing.royalties.clone();
+                    if creator_royalties_percentage > fee_config.max_royalties {
+                        creator_royalties_percentage = fee_config.max_royalties;
+                    } else if creator_royalties_percentage < fee_config.min_royalties {
+                        creator_royalties_percentage = fee_config.min_royalties;
+                    }
+                }
+            }
 
-            require!(
-                marketplace_cut_percentage + &creator_royalties_percentage < PERCENTAGE_TOTAL,
-                "Marketplace cut plus royalties exceeds 100%"
-            );
+            if marketplace_cut_percentage + &creator_royalties_percentage >= PERCENTAGE_TOTAL {
+                creator_royalties_percentage = BigUint::from(MAX_COLLECTION_ROYALTIES);
+            }
 
             let accepted_payment_nft_nonce = 0;
 
@@ -169,10 +192,10 @@ pub trait XOXNOProtocol:
                 nr_auctioned_tokens: nft_amount.clone(),
                 auction_type,
 
-                payment_token_type: listing.accepted_payment_token,
+                payment_token_type: listing.accepted_payment_token.clone(),
                 payment_token_nonce: accepted_payment_nft_nonce,
 
-                min_bid: listing.min_bid,
+                min_bid: listing.min_bid.clone(),
                 max_bid: opt_max_bid.cloned(),
                 start_time,
                 deadline: listing.deadline,
@@ -205,23 +228,28 @@ pub trait XOXNOProtocol:
     }
 
     #[payable("*")]
-    #[endpoint]
+    #[endpoint(bid)]
     fn bid(&self, auction_id: u64, nft_type: TokenIdentifier, nft_nonce: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
-
+        require!(
+            !self.freezed_auctions().contains(&auction_id),
+            "Auction is frozen!"
+        );
         let mut auction = self.try_get_auction(auction_id);
         let caller = self.blockchain().get_caller();
         let wegld = self.wrapping_token().get();
         self.common_bid_checks(
             &auction,
+            auction_id,
             &nft_type,
             nft_nonce,
             &payment_token,
             payment_token_nonce,
             &payment_amount,
             &wegld,
+            false,
         );
 
         require!(
@@ -278,8 +306,12 @@ pub trait XOXNOProtocol:
 
     #[endpoint(endAuction)]
     fn end_auction(&self, auction_id: u64) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let auction = self.try_get_auction(auction_id);
+        require!(
+            !self.freezed_auctions().contains(&auction_id),
+            "Auction is frozen!"
+        );
         let current_time = self.blockchain().get_block_timestamp();
         require!(
             auction.auction_type == AuctionType::SftAll
@@ -302,10 +334,19 @@ pub trait XOXNOProtocol:
                 "You are not the owner of this auction in order to withdraw it!"
             );
         }
+
         require!(
-            deadline_reached || max_bid_reached,
+            deadline_reached || max_bid_reached || auction.current_winner == ManagedAddress::zero(),
             "Auction deadline has not passed or the current bid is not equal to the max bid!"
         );
+
+        if auction.current_winner == ManagedAddress::zero() {
+            require!(
+                self.blockchain().get_caller() == auction.original_owner,
+                "You are not the owner of this auction in order to withdraw it!"
+            );
+        }
+
         self.end_auction_common(auction_id, &auction);
     }
 
@@ -325,9 +366,36 @@ pub trait XOXNOProtocol:
             opt_sft_buy_amount,
             OptionalValue::None,
             OptionalValue::None,
+            OptionalValue::None,
+            OptionalValue::None,
         );
     }
 
+    #[allow_multiple_var_args]
+    #[payable("*")]
+    #[endpoint(buySwap)]
+    fn buy_swap(
+        &self,
+        auction_id: u64,
+        nft_type: TokenIdentifier,
+        nft_nonce: u64,
+        steps: ManagedVec<AggregatorStep<Self::Api>>,
+        limits: ManagedVec<TokenAmount<Self::Api>>,
+        opt_sft_buy_amount: OptionalValue<BigUint>,
+    ) {
+        self.common_buy(
+            auction_id,
+            nft_type,
+            nft_nonce,
+            opt_sft_buy_amount,
+            OptionalValue::None,
+            OptionalValue::None,
+            OptionalValue::Some(steps),
+            OptionalValue::Some(limits),
+        );
+    }
+
+    #[allow_multiple_var_args]
     #[payable("*")]
     #[endpoint(buyFor)]
     fn buy_for(
@@ -346,6 +414,8 @@ pub trait XOXNOProtocol:
             opt_sft_buy_amount,
             buy_for,
             message,
+            OptionalValue::None,
+            OptionalValue::None,
         );
     }
 
@@ -353,22 +423,24 @@ pub trait XOXNOProtocol:
     #[endpoint(bulkBuy)]
     fn bulk_buy(
         &self,
-        #[payment_token] payment_token: EgldOrEsdtTokenIdentifier,
-        #[payment_nonce] payment_token_nonce: u64,
-        #[payment_amount] payment_amount: BigUint,
         auction_ids: MultiValueEncoded<u64>,
-    ) {
-        let mut total_available = payment_amount.clone();
+    ) -> ManagedVec<EsdtTokenPayment<Self::Api>> {
+        let payments = self.call_value().egld_or_single_esdt();
+        let mut total_available = payments.amount.clone();
         let mut bought_nfts: ManagedVec<EsdtTokenPayment<Self::Api>> = ManagedVec::new();
         let current_time = self.blockchain().get_block_timestamp();
         let caller = self.blockchain().get_caller();
         let wegld = self.wrapping_token().get();
         let mut marketplace_fees = BigUint::zero();
+
+        let map_frozen = self.freezed_auctions();
+
         for auction_id in auction_ids.into_iter() {
             let listing_map = self.auction_by_id(auction_id);
             if listing_map.is_empty() {
                 continue;
             }
+            require!(!map_frozen.contains(&auction_id), "Auction is frozen!");
             let mut listing = listing_map.get();
             require!(
                 listing.auction_type == AuctionType::Nft,
@@ -382,32 +454,50 @@ pub trait XOXNOProtocol:
 
             self.common_bid_checks(
                 &listing,
+                auction_id,
                 &listing.auctioned_token_type,
                 listing.auctioned_token_nonce,
-                &payment_token,
-                payment_token_nonce,
+                &payments.token_identifier,
+                payments.token_nonce,
                 &total_available,
                 &wegld,
+                false,
             );
 
-            let wrapping = self.require_egld_conversion(&listing, &payment_token, &wegld);
+            let wrapping =
+                self.require_egld_conversion(&listing, &payments.token_identifier, &wegld);
             let nft_info =
                 self.get_nft_info(&listing.auctioned_token_type, listing.auctioned_token_nonce);
 
             listing.current_bid = listing.min_bid.clone();
             listing.current_winner = caller.clone();
-            let bid_split_amounts = self.calculate_winning_bid_split(&listing);
+            let config = self.get_collection_config(&listing.auctioned_token_type);
+
+            let bid_split_amounts = self.calculate_amount_split(
+                &listing.current_bid,
+                &listing.creator_royalties_percentage,
+                config.clone(),
+            );
+
+            if config.is_some() {
+                if config.unwrap().reverse_cut_fees {
+                    total_available += &bid_split_amounts.marketplace;
+                } else {
+                    marketplace_fees += &bid_split_amounts.marketplace;
+                }
+            } else {
+                marketplace_fees += &bid_split_amounts.marketplace;
+            }
 
             self.distribute_tokens_bulk_buy(
                 &listing.payment_token_type,
                 listing.payment_token_nonce,
                 &nft_info.creator,
                 &listing.original_owner,
+                &caller,
                 &bid_split_amounts,
                 wrapping,
             );
-
-            marketplace_fees += bid_split_amounts.marketplace;
             self.update_or_remove_items_quantity(&listing, &listing.nr_auctioned_tokens);
             self.remove_auction_common(auction_id, &listing);
             self.emit_buy_event(
@@ -417,6 +507,7 @@ pub trait XOXNOProtocol:
                 current_time,
                 OptionalValue::None,
                 OptionalValue::None,
+                &payments,
             );
             total_available -= listing.min_bid;
 
@@ -426,37 +517,53 @@ pub trait XOXNOProtocol:
                 listing.nr_auctioned_tokens,
             ));
         }
+
         if total_available.gt(&BigUint::zero()) {
             self.send().direct(
                 &caller,
-                &payment_token,
-                payment_token_nonce,
+                &payments.token_identifier,
+                payments.token_nonce,
                 &total_available,
             )
         }
+
         if bought_nfts.len() > 0 {
             self.send().direct_multi(&caller, &bought_nfts)
         }
+
         if marketplace_fees > BigUint::zero() {
             self.share_marketplace_fees(
-                &payment_token,
+                &payments.token_identifier,
                 marketplace_fees,
-                payment_token_nonce,
-                wegld,
-                false,
+                payments.token_nonce,
             );
         }
+        bought_nfts
     }
 
-    #[endpoint]
-    fn withdraw(&self, withdraws: MultiValueEncoded<u64>) {
-        require!(self.status().get(), "Global operation enabled!");
+    #[allow_multiple_var_args]
+    #[endpoint(withdraw)]
+    fn withdraw(&self, signature: ManagedBuffer, withdraws: MultiValueEncoded<u64>) {
+        self.require_enabled();
         let caller = self.blockchain().get_caller();
+        let map_frozen = self.freezed_auctions();
+        let sign = signature;
+        let has_sign = true;
+        // require!(sign.is_some(), "Signature required!");
+        let mut data = ManagedBuffer::new();
+        if has_sign {
+            data.append(caller.as_managed_buffer());
+        }
+
         for auction_id in withdraws.into_iter() {
+            if has_sign {
+                data.append(&self.decimal_to_ascii(auction_id.try_into().unwrap()));
+            }
             let listing_map = self.auction_by_id(auction_id);
             if listing_map.is_empty() {
                 continue;
             }
+            require!(!map_frozen.contains(&auction_id), "Auction is frozen!");
             let listing = listing_map.get();
             require!(
                 &listing.original_owner == &caller,
@@ -464,18 +571,29 @@ pub trait XOXNOProtocol:
             );
             self.withdraw_auction_common(auction_id, &listing);
         }
+        if has_sign {
+            let signer: ManagedAddress = self.signer().get();
+            self.crypto()
+                .verify_ed25519(signer.as_managed_buffer(), &data, &sign);
+        }
     }
 
     #[endpoint(changeListing)]
     fn bulk_change_listing(&self, updates: MultiValueEncoded<BulkUpdateListing<Self::Api>>) {
-        require!(self.status().get(), "Global operation enabled!");
+        self.require_enabled();
         let caller = self.blockchain().get_caller();
         require!(updates.len() > 0, "You can not send len 0 of updates!");
+        let map_frozen = self.freezed_auctions();
         for update in updates.into_iter() {
             let listing_map = self.auction_by_id(update.auction_id);
             if listing_map.is_empty() {
+                // skip in case of already removed auctions to avoid failing the entire TX
                 continue;
             }
+            require!(
+                !map_frozen.contains(&update.auction_id),
+                "Auction is frozen!"
+            );
             let mut listing = listing_map.get();
 
             require!(
@@ -487,11 +605,6 @@ pub trait XOXNOProtocol:
                 listing.original_owner == caller,
                 "Only the original owner can change the listing info!"
             );
-            require!(
-                listing.auction_type == AuctionType::Nft
-                    || listing.auction_type == AuctionType::SftOnePerPayment,
-                "You can not change the price of bids!"
-            );    
             listing.payment_token_type = update.payment_token_type;
             listing.deadline = update.deadline;
             self.emit_change_listing_event(update.auction_id, &listing, &update.new_price);

@@ -1,6 +1,8 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
-use crate::{auction::{AuctionType}};
+
+use crate::auction::AuctionType;
+
 #[multiversx_sc::module]
 pub trait AdminModule:
     crate::storage::StorageModule
@@ -9,89 +11,64 @@ pub trait AdminModule:
     + crate::events::EventsModule
     + crate::common::CommonModule
     + crate::wrapping::WrappingModule
-    + crate::dex::DexModule
 {
-    fn require_admin(&self) {
-        let signer: ManagedAddress = self.signer().get();
-        let caller = self.blockchain().get_caller();
-        let sc_owner = self.blockchain().get_owner_address();
-        require!(caller.eq(&sc_owner) || caller.eq(&signer), "You are not an admin!");
-    }
-
     #[endpoint(returnListing)]
     fn return_listing(&self, auction_ids: MultiValueEncoded<u64>) {
-        self.require_admin();
+        self.require_admin(None);
         for auction_id in auction_ids {
-        let map_auction = self.auction_by_id(auction_id);
-        if map_auction.is_empty() {
-            continue;
-        }
-        let mut auction = map_auction.get();
-        if auction.auction_type == AuctionType::SftOnePerPayment
-            || auction.auction_type == AuctionType::Nft
-        {
-            self.withdraw_auction_common(auction_id, &auction);
-        } else if auction.current_winner.is_zero() {
-            self.end_auction_common(auction_id, &auction);
-        } else {
-            if auction.current_winner != ManagedAddress::zero() {
-                self.transfer_or_save_payment(
-                    &auction.current_winner,
-                    &auction.payment_token_type,
-                    auction.payment_token_nonce,
-                    &auction.current_bid,
-                );
-                self.listings_bids(&auction.current_winner)
-                    .remove(&auction_id);
-
-                auction.current_winner = ManagedAddress::zero();
+            let map_auction = self.auction_by_id(auction_id);
+            if map_auction.is_empty() {
+                continue;
+            }
+            let mut auction = map_auction.get();
+            if auction.auction_type == AuctionType::SftOnePerPayment
+                || auction.auction_type == AuctionType::Nft
+            {
+                self.withdraw_auction_common(auction_id, &auction);
+            } else if auction.current_winner.is_zero() {
                 self.end_auction_common(auction_id, &auction);
+            } else {
+                if auction.current_winner != ManagedAddress::zero() {
+                    self.transfer_or_save_payment(
+                        &auction.current_winner,
+                        &auction.payment_token_type,
+                        auction.payment_token_nonce,
+                        &auction.current_bid,
+                    );
+                    self.listings_bids(&auction.current_winner)
+                        .remove(&auction_id);
+
+                    auction.current_winner = ManagedAddress::zero();
+                    self.end_auction_common(auction_id, &auction);
+                }
             }
         }
-    }
     }
 
     #[endpoint(withdrawGlobalOffers)]
-    fn withdraw_global_offers(&self, offer_id: u64) {
-        self.require_admin();
-        require!(self.status().get(), "Global operation enabled!");
-        let offer = self.try_get_global_offer(offer_id);
-        self.common_global_offer_remove(&offer, true);
-        self.emit_remove_global_offer_event(offer_id);
-    }
-
-    #[endpoint(deleteOffersByWallet)]
-    fn delete_user_offers(&self, user: &ManagedAddress) {
-        self.require_admin();
-        let offers_root = self.offers_by_wallet(user);
-        if offers_root.len() > 0 {
-            for offer in offers_root.iter().take(80) {
-                self.common_withdraw_offer(offer, &self.offer_by_id(offer).get());
+    fn withdraw_global_offers(&self, offer_ids: MultiValueEncoded<u64>) {
+        self.require_admin(None);
+        for offer_id in offer_ids {
+            let map_offer = self.global_offer(offer_id);
+            if map_offer.is_empty() {
+                continue;
             }
+            let offer = map_offer.get();
+            self.common_global_offer_remove(&offer, true);
         }
     }
 
-    #[endpoint(cleanExpiredOffers)]
-    fn clean_expired_offers(&self) -> i32 {
-        self.require_admin();
-        let timestamp = self.blockchain().get_block_timestamp();
-        let mut found = 0;
-        for offer_id in self.offers().iter() {
-            let offer = self.offer_by_id(offer_id);
-            if !offer.is_empty() {
-                let main_offer = offer.get();
-                if main_offer.deadline < timestamp {
-                    found += 1;
-                    self.common_withdraw_offer(offer_id, &main_offer);
-                }
-                if found == 150 {
-                    break;
-                }
-            } else {
-                self.offers().remove(&offer_id);
+    #[endpoint(withdrawCustomOffers)]
+    fn delete_custom_offers(&self, offer_ids: MultiValueEncoded<u64>) {
+        self.require_admin(None);
+        for offer_id in offer_ids {
+            let map_offer = self.offer_by_id(offer_id);
+            if map_offer.is_empty() {
+                continue;
             }
+            let offer = map_offer.get();
+            self.common_withdraw_offer(offer_id, &offer);
         }
-        found
     }
 
     #[only_owner]
@@ -110,19 +87,28 @@ pub trait AdminModule:
     }
 
     #[only_owner]
-    #[endpoint(setRewardTicker)]
-    fn set_reward_ticker(&self, token: EgldOrEsdtTokenIdentifier) {
-        require!(
-            self.reward_ticker().is_empty(),
-            "The ticker was already set!"
-        );
-        self.reward_ticker().set(token);
+    #[endpoint(removeRewardBalance)]
+    fn remove_reward_balance(&self) {
+        let token = self.reward_ticker().get();
+        let ticker = &token.clone().into_esdt_option().unwrap();
+        let balance =
+            self.blockchain()
+                .get_esdt_balance(&self.blockchain().get_sc_address(), ticker, 0);
+
+        self.reward_balance().clear();
+        self.reward_amount().clear();
+        self.tx()
+            .to(self.blockchain().get_owner_address())
+            .single_esdt(ticker, 0, &balance)
+            .transfer();
     }
 
     #[only_owner]
-    #[endpoint(setSpecialRewardAmount)]
-    fn set_special_reward_amount(&self, token: &TokenIdentifier, amount: BigUint) {
-        self.special_reward_amount(token).set(amount);
+    #[endpoint(setRewardTicker)]
+    fn set_reward_ticker(&self, token: EgldOrEsdtTokenIdentifier) {
+        let map = self.reward_ticker();
+        require!(map.is_empty(), "The ticker was already set!");
+        map.set(token);
     }
 
     #[only_owner]
@@ -131,21 +117,21 @@ pub trait AdminModule:
         self.reward_amount().set(amount);
     }
 
-    #[only_owner]
     #[endpoint(setAcceptedTokens)]
     fn set_accepted_tokens(&self, token: EgldOrEsdtTokenIdentifier) {
+        self.require_admin(None);
         self.accepted_tokens().insert(token);
     }
 
-    #[only_owner]
     #[endpoint(removeAcceptedTokens)]
     fn remove_accepted_tokens(&self, token: EgldOrEsdtTokenIdentifier) -> bool {
+        self.require_admin(None);
         self.accepted_tokens().remove(&token)
     }
 
-    #[endpoint(addWitelistedSC)]
+    #[endpoint(addWhitelist)]
     fn add_whitelisted_sc(&self, sc: ManagedAddress) {
-        self.require_admin();
+        self.require_admin(None);
         require!(
             self.blockchain().is_smart_contract(&sc),
             "The address is not a smart contract!"
@@ -167,9 +153,9 @@ pub trait AdminModule:
         self.whitelisted_contracts().insert(sc);
     }
 
-    #[endpoint(removeWitelistedSC)]
+    #[endpoint(removeWhitelist)]
     fn remove_wl_sc(&self, sc: ManagedAddress) {
-        self.require_admin();
+        self.require_admin(None);
         require!(
             self.blockchain().is_smart_contract(&sc),
             "The address is not a smart contract!"
@@ -179,7 +165,7 @@ pub trait AdminModule:
 
     #[endpoint(setStatus)]
     fn set_status(&self, status: bool) {
-        self.require_admin();
+        self.require_admin(None);
         self.status().set(&status);
     }
 
@@ -189,43 +175,33 @@ pub trait AdminModule:
         self.try_set_bid_cut_percentage(new_cut_percentage)
     }
 
-    #[only_owner]
-    #[endpoint(sendLostRoyalties)]
-    fn send_lost_royalties(&self, amount: &BigUint, creator: &ManagedAddress) {
-        require!(
-            self.blockchain().is_smart_contract(creator),
-            "The address is not a smart contract!"
-        );
-        self.send().direct_egld(creator, amount);
+    #[endpoint(unFreezeAuctionId)]
+    fn un_freeze_auction_id(&self, auction_id: u64) {
+        self.require_admin(None);
+        self.freezed_auctions().swap_remove(&auction_id);
     }
 
-    #[endpoint(claimTokensForCreator)]
-    fn claim_tokens_for_creator(
-        &self,
-        token_id: EgldOrEsdtTokenIdentifier,
-        token_nonce: u64,
-        creator: ManagedAddress,
-    ) {
-        self.require_admin();
-        let amount_mapper = self.claimable_amount(&creator, &token_id, token_nonce);
-        let amount = amount_mapper.get();
+    #[endpoint(unFreezeAllAuctionIds)]
+    fn un_freeze_all_auction_id(&self) {
+        self.require_admin(None);
+        self.freezed_auctions().clear();
+    }
 
-        if amount > 0 {
-            amount_mapper.clear();
-            let caller = self.blockchain().get_caller();
-            self.send().direct(&caller, &token_id, token_nonce, &amount);
-        }
+    #[endpoint(freezeAuctionId)]
+    fn freeze_auction_id(&self, auction_id: u64) {
+        self.require_admin(None);
+        self.freezed_auctions().insert(auction_id);
     }
 
     #[endpoint(addBlackListWallet)]
     fn add_blacklist(&self, wallet: ManagedAddress) -> bool {
-        self.require_admin();
+        self.require_admin(None);
         self.blacklist_wallets().insert(wallet)
     }
 
     #[endpoint(removeBlackListWallet)]
     fn remove_blacklist(&self, wallet: ManagedAddress) -> bool {
-        self.require_admin();
+        self.require_admin(None);
         self.blacklist_wallets().remove(&wallet)
     }
 }

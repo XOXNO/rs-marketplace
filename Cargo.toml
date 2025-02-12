@@ -7,18 +7,15 @@ publish = false
 
 [lib]
 path = "src/init.rs"
+
 [dependencies.multiversx-sc]
-version = "0.39.4"
+version = "0.56.1"
 
 [dependencies.multiversx-sc-modules]
-version = "0.39.4"
+version = "0.56.1"
+
+[dependencies.multiversx-wegld-swap-sc]
+version = "0.56.1"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.39.4"
-
-[dependencies.pair]
-git = "https://github.com/multiversx/mx-exchange-sc"
-branch = "feat/dex_v2"
-
-[dependencies.multiversx-wegld-swap-sc ]
-version = "0.39.4"
+version = "0.56.1"

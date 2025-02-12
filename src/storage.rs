@@ -4,23 +4,18 @@ use crate::auction::*;
 
 #[multiversx_sc::module]
 pub trait StorageModule {
-    #[view(getSigner)]
     #[storage_mapper("signer")]
     fn signer(&self) -> SingleValueMapper<ManagedAddress>;
 
-    #[view(wrappingSC)]
     #[storage_mapper("wrappingSC")]
     fn wrapping(&self) -> SingleValueMapper<ManagedAddress>;
 
-    #[view(wrappingToken)]
     #[storage_mapper("wrappingToken")]
     fn wrapping_token(&self) -> SingleValueMapper<TokenIdentifier>;
 
-    #[view(dexXOPair)]
-    #[storage_mapper("dexXOPair")]
-    fn swap_pair_xoxno(&self) -> SingleValueMapper<ManagedAddress>;
+    #[storage_mapper("aggregatorSC")]
+    fn aggregator_sc(&self) -> SingleValueMapper<ManagedAddress>;
 
-    #[view(xoxnoToken)]
     #[storage_mapper("xoxnoToken")]
     fn xoxno_token(&self) -> SingleValueMapper<TokenIdentifier>;
 
@@ -107,6 +102,7 @@ pub trait StorageModule {
     #[storage_mapper("collectionsListed")]
     fn collections_listed(&self) -> SetMapper<TokenIdentifier>;
 
+    #[view(getAllListings)]
     #[storage_mapper("listings")]
     fn listings(&self) -> SetMapper<u64>;
 
@@ -118,6 +114,7 @@ pub trait StorageModule {
     #[storage_mapper("status")]
     fn status(&self) -> SingleValueMapper<bool>;
 
+    #[view(getFullAuctionData)]
     #[storage_mapper("auctionById")]
     fn auction_by_id(&self, auction_id: u64) -> SingleValueMapper<Auction<Self::Api>>;
 
@@ -125,7 +122,6 @@ pub trait StorageModule {
     #[storage_mapper("offerById")]
     fn offer_by_id(&self, offer_id: u64) -> SingleValueMapper<Offer<Self::Api>>;
 
-    #[view(getLastValidAuctionId)]
     #[storage_mapper("lastValidAuctionId")]
     fn last_valid_auction_id(&self) -> SingleValueMapper<u64>;
 
@@ -137,20 +133,13 @@ pub trait StorageModule {
     #[storage_mapper("getRewardTicker")]
     fn reward_ticker(&self) -> SingleValueMapper<EgldOrEsdtTokenIdentifier>;
 
-    #[view(specialRewardAmount)]
-    #[storage_mapper("specialRewardAmount")]
-    fn special_reward_amount(&self, token: &TokenIdentifier) -> SingleValueMapper<BigUint>;
-
     #[view(defaultRewardAmount)]
     #[storage_mapper("defaultRewardAmount")]
     fn reward_amount(&self) -> SingleValueMapper<BigUint>;
 
-    #[view(getLastValidOfferId)]
     #[storage_mapper("lastValidOfferId")]
     fn last_valid_offer_id(&self) -> SingleValueMapper<u64>;
 
-
-    #[view(getLastValidGlobalOfferId)]
     #[storage_mapper("lastValidGlobalOfferId")]
     fn last_valid_global_offer_id(&self) -> SingleValueMapper<u64>;
 
@@ -172,5 +161,24 @@ pub trait StorageModule {
 
     #[view(userCollectionGlobalOffers)]
     #[storage_mapper("userCollectionGlobalOffers")]
-    fn user_collection_global_offers(&self, address: &ManagedAddress, collection: &TokenIdentifier) -> UnorderedSetMapper<u64>;
+    fn user_collection_global_offers(
+        &self,
+        address: &ManagedAddress,
+        collection: &TokenIdentifier,
+    ) -> UnorderedSetMapper<u64>;
+
+    #[view(getCollectionConfig)]
+    #[storage_mapper("getCollectionConfig")]
+    fn collection_config(
+        &self,
+        ticker: &TokenIdentifier,
+    ) -> SingleValueMapper<CollectionFeeConfig<Self::Api>>;
+
+    #[view(freezedAuctions)]
+    #[storage_mapper("freezedAuctions")]
+    fn freezed_auctions(&self) -> UnorderedSetMapper<u64>;
+
+    #[view(getAccumulator)]
+    #[storage_mapper("accumulator")]
+    fn accumulator(&self) -> SingleValueMapper<ManagedAddress>;
 }
