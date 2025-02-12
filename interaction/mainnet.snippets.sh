@@ -2,7 +2,7 @@ EGLD=0x4d45582d373966303633
 ADDRESS=erd1qqqqqqqqqqqqqpgq6wegs2xkypfpync8mn2sa5cmpqjlvrhwz5nqgepyg8
 PROXY=https://gateway.xoxno.com
 
-PROJECT="../output-docker/xoxno-protocol/xoxno-protocol.wasm"
+PROJECT="./output-docker/xoxno-protocol/xoxno-protocol.wasm"
 
 SHARD2WrappingWEGLD=erd1qqqqqqqqqqqqqpgqmuk0q2saj0mgutxm4teywre6dl8wqf58xamqdrukln
 ASHSWAP=erd1qqqqqqqqqqqqqpgqcc69ts8409p3h77q5chsaqz57y6hugvc4fvs64k74v
@@ -21,7 +21,7 @@ upgrade() {
 
 verifyContract() {
     mxpy --verbose contract verify "${ADDRESS}"  \
-    --packaged-src=../output-docker/xoxno-protocol/xoxno-protocol-0.0.0.source.json --verifier-url="https://play-api.multiversx.com" \
+    --packaged-src=../output-docker/xoxno-protocol/xoxno-protocol-1.0.0.source.json --verifier-url="https://play-api.multiversx.com" \
     --docker-image="multiversx/sdk-rust-contract-builder:v8.0.1" --ledger --ledger-account-index=0 --ledger-address-index=0  || return 
 }
 
