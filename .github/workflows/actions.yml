@@ -2,20 +2,27 @@ name: CI
 
 on:
   push:
-    branches:
-      - refactor
+    branches: [ main, feat/*, rc/* ]
   pull_request:
+    branches: [ main, feat/*, rc/* ]
+  workflow_dispatch:
 
 permissions:
+  actions: write
   checks: write
+  contents: write
+  id-token: write
+  issues: write
+  discussions: write
   pull-requests: write
+  statuses: write
 
 jobs:
   contracts:
     name: Contracts
-    uses: multiversx/mx-sc-actions/.github/workflows/contracts.yml@v2
+    uses: multiversx/mx-sc-actions/.github/workflows/contracts.yml@v4.2.1
     with:
-      rust-toolchain: nightly-2022-12-08
-      vmtools-version: v1.4.60
+      rust-toolchain: stable
+      coverage-args: --ignore-filename-regex='/.cargo/git' --output ./coverage.md
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}

@@ -76,7 +76,7 @@ pub trait XOXNOProtocol:
 
         require!(listings.len() == payments.len(), "Invalid body sent!");
         for (index, listing) in listings.to_vec().iter().enumerate() {
-            let (nft_type, nft_nonce, nft_amount) = payments.get(index).into_tuple();
+            let (nft_type, nft_nonce, nft_amount) = payments.get(index).clone().into_tuple();
             require!(
                 map_acc_tokens.contains(&listing.accepted_payment_token),
                 "The payment token is not whitelisted!"
@@ -145,7 +145,7 @@ pub trait XOXNOProtocol:
             if !fee_map.is_empty() {
                 let fee_config = fee_map.get();
                 if fee_config.custom_royalties {
-                    creator_royalties_percentage = listing.royalties;
+                    creator_royalties_percentage = listing.royalties.clone();
                     if creator_royalties_percentage > fee_config.max_royalties {
                         creator_royalties_percentage = fee_config.max_royalties;
                     } else if creator_royalties_percentage < fee_config.min_royalties {
@@ -192,10 +192,10 @@ pub trait XOXNOProtocol:
                 nr_auctioned_tokens: nft_amount.clone(),
                 auction_type,
 
-                payment_token_type: listing.accepted_payment_token,
+                payment_token_type: listing.accepted_payment_token.clone(),
                 payment_token_nonce: accepted_payment_nft_nonce,
 
-                min_bid: listing.min_bid,
+                min_bid: listing.min_bid.clone(),
                 max_bid: opt_max_bid.cloned(),
                 start_time,
                 deadline: listing.deadline,
@@ -432,7 +432,9 @@ pub trait XOXNOProtocol:
         let caller = self.blockchain().get_caller();
         let wegld = self.wrapping_token().get();
         let mut marketplace_fees = BigUint::zero();
+
         let map_frozen = self.freezed_auctions();
+
         for auction_id in auction_ids.into_iter() {
             let listing_map = self.auction_by_id(auction_id);
             if listing_map.is_empty() {
@@ -524,9 +526,11 @@ pub trait XOXNOProtocol:
                 &total_available,
             )
         }
+
         if bought_nfts.len() > 0 {
             self.send().direct_multi(&caller, &bought_nfts)
         }
+
         if marketplace_fees > BigUint::zero() {
             self.share_marketplace_fees(
                 &payments.token_identifier,

@@ -1,6 +1,8 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
+
 use crate::auction::AuctionType;
+
 #[multiversx_sc::module]
 pub trait AdminModule:
     crate::storage::StorageModule
@@ -105,7 +107,7 @@ pub trait AdminModule:
     #[endpoint(setRewardTicker)]
     fn set_reward_ticker(&self, token: EgldOrEsdtTokenIdentifier) {
         let map = self.reward_ticker();
-        // require!(map.is_empty(), "The ticker was already set!");
+        require!(map.is_empty(), "The ticker was already set!");
         map.set(token);
     }
 
@@ -189,103 +191,6 @@ pub trait AdminModule:
     fn freeze_auction_id(&self, auction_id: u64) {
         self.require_admin(None);
         self.freezed_auctions().insert(auction_id);
-    }
-
-    #[only_owner]
-    #[endpoint(claimLeftOverDust)]
-    fn claim_lost_funds(&self, token: &EgldOrEsdtTokenIdentifier, amount: &BigUint) {
-        self.send()
-            .direct(&self.blockchain().get_owner_address(), token, 0, amount);
-    }
-
-    #[endpoint(claimSavedFundsForUser)]
-    fn claim_tokens_for_creator(&self, wallet: &ManagedAddress) {
-        self.require_admin(None);
-        let mut tokens = self.claimable_tokens(wallet);
-        if tokens.len() > 0 {
-            for token in tokens.iter() {
-                let mut nonces = self.claimable_token_nonces(wallet, &token);
-                for nonce in nonces.iter() {
-                    let amount_map = self.claimable_amount(wallet, &token, nonce);
-                    let amount = amount_map.get();
-                    if amount > BigUint::zero() {
-                        if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero() {
-                            self.share_royalties(wallet, &token, amount, nonce);
-                        }
-                        amount_map.clear();
-                    }
-                }
-                nonces.clear();
-            }
-            tokens.clear();
-        } else {
-            let token = &EgldOrEsdtTokenIdentifier::esdt("LKMEX-aab910");
-            let mut nonces = self.claimable_token_nonces(wallet, token);
-            if nonces.len() > 0 {
-                for nonce in nonces.iter() {
-                    let amount_map = self.claimable_amount(wallet, &token, nonce);
-                    let amount = amount_map.get();
-                    if amount > BigUint::zero() {
-                        if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero() {
-                            self.share_royalties(wallet, &token, amount, nonce);
-                        }
-                        amount_map.clear();
-                    }
-                }
-                nonces.clear();
-            } else {
-                let token = &EgldOrEsdtTokenIdentifier::esdt("WATER-9ed400");
-                let mut nonces = self.claimable_token_nonces(wallet, token);
-                if nonces.len() > 0 {
-                    for nonce in nonces.iter() {
-                        let amount_map = self.claimable_amount(wallet, &token, nonce);
-                        let amount = amount_map.get();
-                        if amount > BigUint::zero() {
-                            if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero() {
-                                self.share_royalties(wallet, &token, amount, nonce);
-                            }
-                            amount_map.clear();
-                        }
-                    }
-                    nonces.clear();
-                } else {
-                    let token = &EgldOrEsdtTokenIdentifier::esdt("RIDE-7d18e9");
-                    let mut nonces = self.claimable_token_nonces(wallet, token);
-                    if nonces.len() > 0 {
-                        for nonce in nonces.iter() {
-                            let amount_map = self.claimable_amount(wallet, &token, nonce);
-                            let amount = amount_map.get();
-                            if amount > BigUint::zero() {
-                                if self.blockchain().get_sc_balance(&token, nonce) > BigUint::zero()
-                                {
-                                    self.share_royalties(wallet, &token, amount, nonce);
-                                }
-                                amount_map.clear();
-                            }
-                        }
-                        nonces.clear();
-                    } else {
-                        let token = &EgldOrEsdtTokenIdentifier::esdt("MEX-455c57");
-                        let mut nonces = self.claimable_token_nonces(wallet, token);
-                        if nonces.len() > 0 {
-                            for nonce in nonces.iter() {
-                                let amount_map = self.claimable_amount(wallet, &token, nonce);
-                                let amount = amount_map.get();
-                                if amount > BigUint::zero() {
-                                    if self.blockchain().get_sc_balance(&token, nonce)
-                                        > BigUint::zero()
-                                    {
-                                        self.share_royalties(wallet, &token, amount, nonce);
-                                    }
-                                    amount_map.clear();
-                                }
-                            }
-                            nonces.clear();
-                        }
-                    }
-                }
-            }
-        }
     }
 
     #[endpoint(addBlackListWallet)]

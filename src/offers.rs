@@ -49,6 +49,7 @@ pub trait CustomOffersModule:
         let auction_id_sent = auction_id.clone().into_option().unwrap_or(0);
 
         if auction_id.is_none() {
+            // Basically only 1 NFT has to be send when accepting an auction
             require!(
                 payment_amount == offer.quantity,
                 "The quantity sent is not matching the offer!"
@@ -358,7 +359,7 @@ pub trait CustomOffersModule:
             if offer.attributes.is_some() {
                 tmp_nonces.append(&self.decimal_to_ascii(nft.token_nonce.try_into().unwrap()));
             }
-            accepted_nfts.push(nft);
+            accepted_nfts.push(nft.clone());
         }
 
         for auction_id in auctions_ids.iter() {
