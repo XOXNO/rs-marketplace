@@ -576,7 +576,7 @@ pub trait CommonModule:
                     payment_token_nonce,
                     amount,
                 ))
-                .gas(3_500_000)
+                .gas(5_500_000)
                 .transfer_execute();
         }
     }
