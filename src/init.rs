@@ -548,7 +548,7 @@ pub trait XOXNOProtocol:
         let caller = self.blockchain().get_caller();
         let map_frozen = self.freezed_auctions();
         let sign = signature;
-        let has_sign = true;
+        let has_sign = false;
         // require!(sign.is_some(), "Signature required!");
         let mut data = ManagedBuffer::new();
         if has_sign {
