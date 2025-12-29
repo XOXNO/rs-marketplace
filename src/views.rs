@@ -42,7 +42,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
 
     #[view(expiredOffersCount)]
     fn expired_offers_count(&self) -> ManagedVec<u64> {
-        let timestamp = self.blockchain().get_block_timestamp();
+        let timestamp = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let mut vc = ManagedVec::new();
         for offer_id in self.offers().iter() {
             let offer = self.offer_by_id(offer_id).get();
@@ -138,9 +138,9 @@ pub trait ViewsModule: crate::storage::StorageModule {
                 for offer_id in offers.iter() {
                     let offer_info = self.offer_by_id(offer_id).get();
                     let result = BulkOffers {
-                        offer_id: offer_id,
+                        offer_id,
                         offer: offer_info,
-                        nonce: nonce,
+                        nonce,
                     };
                     results.push(result);
                 }
@@ -157,9 +157,9 @@ pub trait ViewsModule: crate::storage::StorageModule {
             if !map.is_empty() {
                 let offer = map.get();
                 let result = BulkOffers {
-                    offer_id: offer_id,
+                    offer_id,
                     nonce: offer.token_nonce,
-                    offer: offer,
+                    offer,
                 };
                 results.push(result);
             }
@@ -216,7 +216,7 @@ pub trait ViewsModule: crate::storage::StorageModule {
                     auction.auctioned_token_nonce,
                 );
                 let result = TokensOnSale {
-                    auction_id: auction_id,
+                    auction_id,
                     auction,
                     token_type: token_type.token_type.as_u8(),
                 };

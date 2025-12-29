@@ -7,7 +7,6 @@ use crate::{
     MIN_TRADE_REWARD, NFT_AMOUNT,
 };
 
-use crate::aggregator::{AggregatorStep, TokenAmount};
 #[multiversx_sc::module]
 pub trait CommonModule:
     crate::storage::StorageModule
@@ -31,10 +30,10 @@ pub trait CommonModule:
     }
 
     fn end_auction_common(&self, auction_id: u64, auction: &Auction<Self::Api>) {
-        self.update_or_remove_items_quantity(&auction, &auction.nr_auctioned_tokens);
-        self.remove_auction_common(auction_id, &auction);
+        self.update_or_remove_items_quantity(auction, &auction.nr_auctioned_tokens);
+        self.remove_auction_common(auction_id, auction);
         self.emit_end_auction_event(auction_id, auction);
-        self.distribute_tokens(&auction, Option::Some(&auction.nr_auctioned_tokens), false);
+        self.distribute_tokens(auction, Option::Some(&auction.nr_auctioned_tokens), false);
     }
 
     fn common_bid_checks(
@@ -50,7 +49,7 @@ pub trait CommonModule:
         require_swap: bool,
     ) {
         let caller = self.blockchain().get_caller();
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         require!(
             !self.freezed_auctions().contains(&auction_id),
             "Auction is frozen!"
@@ -124,8 +123,7 @@ pub trait CommonModule:
         opt_sft_buy_amount: OptionalValue<BigUint>,
         buy_for: OptionalValue<ManagedAddress>,
         message: OptionalValue<ManagedBuffer>,
-        swaps: OptionalValue<ManagedVec<AggregatorStep<Self::Api>>>,
-        limits: OptionalValue<ManagedVec<TokenAmount<Self::Api>>>,
+        swaps: OptionalValue<ManagedArgBuffer<Self::Api>>,
     ) {
         self.require_enabled();
         let payments = self.call_value().egld_or_single_esdt();
@@ -187,7 +185,7 @@ pub trait CommonModule:
             }
             self.update_or_remove_items_quantity(&auction, &buy_amount);
 
-            let current_time = self.blockchain().get_block_timestamp();
+            let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
             self.emit_buy_event(
                 auction_id,
                 &auction,
@@ -205,16 +203,6 @@ pub trait CommonModule:
             self.distribute_tokens(&auction, Option::Some(&buy_amount), wrapping);
         } else {
             let steps = swaps.into_option().unwrap();
-            let mut limits = limits.into_option().unwrap();
-            let return_egld = auction.payment_token_type.is_egld();
-            limits.remove(limits.len() - 1);
-            limits.push(TokenAmount {
-                token: match return_egld {
-                    true => self.wrapping_token().get(),
-                    false => auction.payment_token_type.unwrap_esdt(),
-                },
-                amount: total_value.clone(),
-            });
             self.freezed_auctions().insert(auction_id);
             let gas_left = self.blockchain().get_gas_left();
             let req_gas = (20_000_000 + steps.len() * 15_000_000).try_into().unwrap();
@@ -231,8 +219,6 @@ pub trait CommonModule:
                 payments,
                 req_gas,
                 steps,
-                limits,
-                return_egld,
                 message,
             );
         }
@@ -281,7 +267,7 @@ pub trait CommonModule:
                 wrapping,
             );
         } else {
-            self.return_auction_nft(&auction);
+            self.return_auction_nft(auction);
         }
     }
 
@@ -316,7 +302,7 @@ pub trait CommonModule:
             quantity_token.clear();
         }
 
-        if map_token_for_sale.len() == 0 {
+        if map_token_for_sale.is_empty() {
             self.collections_listed()
                 .remove(&auction.auctioned_token_type);
         }
@@ -428,7 +414,10 @@ pub trait CommonModule:
             + &bid_split_amounts.marketplace
             + &bid_split_amounts.extra;
 
-        if &bid_split_amounts.creator >= &BigUint::from(0u64) && &total_amount >= &BigUint::from(MIN_TRADE_REWARD) && payment_token_id.is_egld() {
+        if bid_split_amounts.creator >= 0u64
+            && total_amount >= MIN_TRADE_REWARD
+            && payment_token_id.is_egld()
+        {
             self.distribute_rewards(new_owner, original_owner);
         }
 
@@ -450,8 +439,6 @@ pub trait CommonModule:
                 &bid_split_amounts.extra,
             );
         }
-
-
 
         // send rest of the bid to original owner
         self.transfer_or_save_payment(
@@ -477,8 +464,8 @@ pub trait CommonModule:
                 bid_split_amounts.marketplace.clone(),
                 payment_token_nonce,
             );
-        }        
-        
+        }
+
         if bid_split_amounts.reverse_royalties {
             self.transfer_or_save_payment(
                 new_owner,
@@ -509,7 +496,7 @@ pub trait CommonModule:
     ) {
         let total_amount =
             &bid_split_amounts.seller + &bid_split_amounts.creator + &bid_split_amounts.marketplace;
-        if &total_amount >= &BigUint::from(MIN_TRADE_REWARD) && payment_token_id.is_egld() {
+        if total_amount >= MIN_TRADE_REWARD && payment_token_id.is_egld() {
             self.distribute_rewards(new_owner, original_owner);
         }
 
@@ -593,7 +580,7 @@ pub trait CommonModule:
                 .to(self.accumulator().get())
                 .typed(accumulator::AccumulatorProxy)
                 .deposit_royalties(creator)
-                .egld_or_single_esdt(&payment_token_id, payment_token_nonce, &amount)
+                .egld_or_single_esdt(payment_token_id, payment_token_nonce, &amount)
                 .gas(5_500_000)
                 .transfer_execute();
         }
@@ -612,9 +599,9 @@ pub trait CommonModule:
             );
             let reward_to_share = reward.clone().mul(2u64);
             if map_balance.get().ge(&reward_to_share) && balance_sc.ge(&reward_to_share) {
-                self.transfer_or_save_payment(&buyer, &ticker, 0u64, &reward);
+                self.transfer_or_save_payment(buyer, &ticker, 0u64, &reward);
 
-                self.transfer_or_save_payment(&seller, &ticker, 0u64, &reward);
+                self.transfer_or_save_payment(seller, &ticker, 0u64, &reward);
 
                 map_balance.update(|qt| *qt -= reward_to_share);
             }
@@ -630,27 +617,15 @@ pub trait CommonModule:
         auction_id: u64,
         payment: EgldOrEsdtTokenPayment,
         gas: u64,
-        steps: ManagedVec<AggregatorStep<Self::Api>>,
-        limits: ManagedVec<TokenAmount<Self::Api>>,
-        return_egld: bool,
+        steps: ManagedArgBuffer<Self::Api>,
         message: OptionalValue<ManagedBuffer>,
     ) {
-        let call = self
-            .tx()
-            .to(self.aggregator_sc().get())
-            .typed(crate::aggregator::AggregatorContractProxy);
-        if payment.token_identifier.is_esdt() {
-            call.aggregate_esdt(
-                steps,
-                limits,
-                return_egld,
-                OptionalValue::<ManagedAddress>::None,
-            )
-            .single_esdt(
-                &payment.token_identifier.clone().unwrap_esdt(),
-                0,
-                &payment.amount,
-            )
+        // Execute swap via external router with source tokens and configuration
+        self.tx()
+            .to(self.aggregator_sc().get()) // Use protocol-configured swap router
+            .raw_call(ManagedBuffer::new_from_bytes(b"xo"))
+            .arguments_raw(steps) // Pass through swap configuration (path, slippage, etc.)
+            .payment(&payment)
             .gas(gas)
             .callback(self.callbacks().callback_ash(
                 sent_to,
@@ -663,22 +638,6 @@ pub trait CommonModule:
             ))
             .gas_for_callback(30_000_000)
             .register_promise();
-        } else {
-            call.aggregate_egld(steps, limits, OptionalValue::<ManagedAddress>::None)
-                .egld(&payment.amount)
-                .gas(gas)
-                .callback(self.callbacks().callback_ash(
-                    sent_to,
-                    paid_by,
-                    quantity,
-                    total_price,
-                    auction_id,
-                    payment.clone(),
-                    message,
-                ))
-                .gas_for_callback(30_000_000)
-                .register_promise();
-        }
     }
 
     #[promises_callback]
@@ -701,7 +660,7 @@ pub trait CommonModule:
             let wrapping =
                 self.require_egld_conversion(&auction, &payment.token_identifier, &wegld);
             let has_required_token =
-                &payment.token_identifier == &auction.payment_token_type || wrapping;
+                payment.token_identifier == auction.payment_token_type || wrapping;
             if &payment.amount >= total_price && has_required_token {
                 let extra_amount = &payment.amount - total_price;
                 self.transfer_or_save_payment(
@@ -720,7 +679,7 @@ pub trait CommonModule:
                 }
                 self.update_or_remove_items_quantity(&auction, quantity);
 
-                let current_time = self.blockchain().get_block_timestamp();
+                let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
                 self.emit_buy_event(
                     auction_id,
                     &auction,

@@ -5,7 +5,7 @@ PROXY=https://gateway.xoxno.com
 PROJECT="./output-docker/xoxno-protocol/xoxno-protocol.wasm"
 
 SHARD2WrappingWEGLD=erd1qqqqqqqqqqqqqpgqmuk0q2saj0mgutxm4teywre6dl8wqf58xamqdrukln
-ASHSWAP=erd1qqqqqqqqqqqqqpgqcc69ts8409p3h77q5chsaqz57y6hugvc4fvs64k74v
+AGGREGATOR=erd1qqqqqqqqqqqqqpgq5rf2sppxk2xu4m0pkmugw2es4gak3rgjah0sxvajva
 ACCUMULATOR=erd1qqqqqqqqqqqqqpgq8538ku69p97lq4eug75y8d6g6yfwhd7c45qs4zvejt
 
 deploy() {
@@ -15,7 +15,7 @@ deploy() {
 
 upgrade() {
     echo "Smart contract address: ${ADDRESS}"
-    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments ${ACCUMULATOR} ${ASHSWAP} --bytecode=${PROJECT} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    mxpy --verbose contract upgrade ${ADDRESS} --metadata-payable-by-sc --arguments ${ACCUMULATOR} ${AGGREGATOR} --bytecode=${PROJECT} --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0 \
     --gas-limit=250000000 --send --outfile="upgrade.json" --proxy=${PROXY} --chain=1 || return
 }
 
@@ -27,4 +27,8 @@ verifyContract() {
 
 buildDocker() {
     mxpy contract reproducible-build --docker-image="multiversx/sdk-rust-contract-builder:v10.0.0"
+}
+
+removeRewardBalance() {
+    mxpy --verbose contract call ${ADDRESS} --function="removeRewardBalance" --recall-nonce --ledger --ledger-account-index=0 --ledger-address-index=0  --gas-limit=40000000 --send --proxy=${PROXY} --chain=1 || return
 }

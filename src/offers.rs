@@ -30,7 +30,7 @@ pub trait CustomOffersModule:
         let (payment_token, payment_token_nonce, payment_amount) =
             self.call_value().egld_or_single_esdt().into_tuple();
         let mut offer = self.try_get_offer(offer_id);
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         require!(
             current_time <= offer.deadline,
             "Cannot accept the offer after deadline!"
@@ -187,12 +187,9 @@ pub trait CustomOffersModule:
             nft_nonce > 0,
             "Only Semi-Fungible and Non-Fungible tokens can have offers"
         );
-        require!(
-            nft_amount == BigUint::from(NFT_AMOUNT),
-            "The quantity has to be 1!"
-        );
+        require!(nft_amount == NFT_AMOUNT, "The quantity has to be 1!");
         self.deposit();
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let caller = self.blockchain().get_caller();
         self.has_balance(
             &caller,
@@ -223,7 +220,7 @@ pub trait CustomOffersModule:
         let marketplace_cut_percentage = self.bid_cut_percentage().get();
 
         let offer_id = self.last_valid_offer_id().get() + 1;
-        self.last_valid_offer_id().set(&offer_id);
+        self.last_valid_offer_id().set(offer_id);
 
         let offer = Offer {
             token_type: nft_type.clone(),
@@ -246,7 +243,7 @@ pub trait CustomOffersModule:
         self.offers().insert(offer_id);
         // Add to the owner wallet the new Offer ID
         self.offers_by_wallet(&offer.offer_owner).insert(offer_id);
-        map_offer_check.set(&true);
+        map_offer_check.set(true);
         // Emit event for new offer
         self.emit_offer_token_event(offer_id, offer);
 
@@ -266,7 +263,7 @@ pub trait CustomOffersModule:
     ) -> u64 {
         self.require_enabled();
         self.deposit();
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let caller = self.blockchain().get_caller();
         self.has_balance(&caller, &payment_token, payment_nonce, &price);
         let mut map_count_user_offers = self.user_global_offers(&caller);
@@ -288,7 +285,7 @@ pub trait CustomOffersModule:
         let offer = GlobalOffer {
             offer_id,
             collection: collection.clone(),
-            quantity: quantity,
+            quantity,
             payment_token,
             payment_nonce,
             price,
@@ -297,7 +294,7 @@ pub trait CustomOffersModule:
             attributes: attributes.into_option(),
             new_version: true,
         };
-        self.last_valid_global_offer_id().set(&offer_id);
+        self.last_valid_global_offer_id().set(offer_id);
 
         self.collection_global_offers(&collection).insert(offer_id);
         map_count_user_offers.insert(offer_id);
@@ -380,7 +377,7 @@ pub trait CustomOffersModule:
             );
 
             require!(
-                auction.nr_auctioned_tokens == BigUint::from(1u32),
+                auction.nr_auctioned_tokens == 1u32,
                 "The quantity listed is not matching the offer!"
             );
 
@@ -412,13 +409,13 @@ pub trait CustomOffersModule:
         }
 
         require!(
-            &offer.quantity >= &total_quantity_wanted,
+            offer.quantity >= total_quantity_wanted,
             "The offer is not accepting more than {} items",
             (offer.quantity)
         );
 
         require!(
-            &total_quantity_wanted > &0,
+            total_quantity_wanted > 0,
             "You need to have a quantity higher than 0 for the offer {}",
             (offer.offer_id)
         );
@@ -442,7 +439,7 @@ pub trait CustomOffersModule:
             data.append(offer.collection.as_managed_buffer());
             data.append(&tmp_nonces);
             data.append(&self.decimal_to_ascii(offer.offer_id.try_into().unwrap()));
-            data.append(&offer.attributes.as_ref().unwrap());
+            data.append(offer.attributes.as_ref().unwrap());
 
             let signer: ManagedAddress = self.signer().get();
             self.crypto()
@@ -472,7 +469,7 @@ pub trait CustomOffersModule:
             false,
         );
 
-        if &offer.quantity != &total_quantity_wanted {
+        if offer.quantity != total_quantity_wanted {
             offer.quantity -= &total_quantity_wanted;
             offer_map.set(offer.clone());
         } else {

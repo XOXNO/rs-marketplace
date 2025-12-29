@@ -14,7 +14,7 @@ pub trait CreatorModule:
     #[endpoint(setCutFeesReverted)]
     fn set_cut_fees_reverted(&self, token_id: &TokenIdentifier, value: bool) {
         self.require_admin(None);
-        let config_map = self.collection_config(&token_id);
+        let config_map = self.collection_config(token_id);
         if config_map.is_empty() {
             config_map.set(CollectionFeeConfig {
                 reverse_cut_fees: value,
@@ -38,7 +38,7 @@ pub trait CreatorModule:
 
     #[endpoint(setRoyaltiesReverted)]
     fn set_royalties_reverted(&self, token_id: &TokenIdentifier, value: bool) {
-        let config_map = self.collection_config(&token_id);
+        let config_map = self.collection_config(token_id);
         if config_map.is_empty() {
             self.require_admin(None);
             config_map.set(CollectionFeeConfig {
@@ -64,7 +64,7 @@ pub trait CreatorModule:
 
     #[endpoint(setExtraFees)]
     fn set_extra_fees(&self, token_id: &TokenIdentifier, amount: BigUint, address: ManagedAddress) {
-        let config_map = self.collection_config(&token_id);
+        let config_map = self.collection_config(token_id);
         if config_map.is_empty() {
             self.require_admin(None);
             config_map.set(CollectionFeeConfig {
@@ -73,10 +73,7 @@ pub trait CreatorModule:
                 custom_royalties: false,
                 min_royalties: BigUint::zero(),
                 max_royalties: BigUint::zero(),
-                extra_fees: CollectionExtraFeesConfig {
-                    amount: amount,
-                    address: address,
-                },
+                extra_fees: CollectionExtraFeesConfig { amount, address },
                 admin: ManagedAddress::zero(),
             });
         } else {
@@ -97,7 +94,7 @@ pub trait CreatorModule:
         max: BigUint,
         enabled: bool,
     ) {
-        let config_map = self.collection_config(&token_id);
+        let config_map = self.collection_config(token_id);
         require!(
             min <= max,
             "Min royalties must be lower or equal than max royalties!"
@@ -130,7 +127,7 @@ pub trait CreatorModule:
     #[endpoint(setConfigAdmin)]
     fn set_config_admin(&self, token_id: &TokenIdentifier, admin: ManagedAddress) {
         self.require_admin(None);
-        let config_map = self.collection_config(&token_id);
+        let config_map = self.collection_config(token_id);
         if config_map.is_empty() {
             config_map.set(CollectionFeeConfig {
                 reverse_cut_fees: false,

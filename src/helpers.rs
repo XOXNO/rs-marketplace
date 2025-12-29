@@ -19,17 +19,15 @@ pub trait HelpersModule:
         nonce: u64,
         amount: &BigUint,
     ) {
-        if self.blockchain().is_smart_contract(to) {
-            if !self.whitelisted_contracts().contains(&to) {
-                if amount == &0 {
-                    return;
-                }
-                self.claimable_tokens(to).insert(token_id.clone());
-                self.claimable_token_nonces(to, token_id).insert(nonce);
-                self.claimable_amount(to, token_id, nonce)
-                    .update(|amt| *amt += amount);
+        if self.blockchain().is_smart_contract(to) && !self.whitelisted_contracts().contains(to) {
+            if amount == &0 {
                 return;
             }
+            self.claimable_tokens(to).insert(token_id.clone());
+            self.claimable_token_nonces(to, token_id).insert(nonce);
+            self.claimable_amount(to, token_id, nonce)
+                .update(|amt| *amt += amount);
+            return;
         }
         self.send().direct_non_zero(to, token_id, nonce, amount);
     }
@@ -74,7 +72,7 @@ pub trait HelpersModule:
         );
 
         self.bid_cut_percentage()
-            .set(&BigUint::from(new_cut_percentage));
+            .set(BigUint::from(new_cut_percentage));
     }
 
     fn calculate_cut_amount(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
@@ -106,22 +104,19 @@ pub trait HelpersModule:
         let mut extra_fee = BigUint::zero();
         let mut extra_address = ManagedAddress::zero();
 
-        let _ = match config {
-            Some(config) => {
-                extra_fee = config.extra_fees.amount;
-                extra_address = config.extra_fees.address;
-                reverse_royalties = config.reverse_royalties;
-                reverse_cut_fees = config.reverse_cut_fees;
-                if config.custom_royalties {
-                    if config.max_royalties < eligible_royalties {
-                        eligible_royalties = config.max_royalties;
-                    } else if config.min_royalties > eligible_royalties {
-                        eligible_royalties = config.min_royalties;
-                    }
+        if let Some(config) = config {
+            extra_fee = config.extra_fees.amount;
+            extra_address = config.extra_fees.address;
+            reverse_royalties = config.reverse_royalties;
+            reverse_cut_fees = config.reverse_cut_fees;
+            if config.custom_royalties {
+                if config.max_royalties < eligible_royalties {
+                    eligible_royalties = config.max_royalties;
+                } else if config.min_royalties > eligible_royalties {
+                    eligible_royalties = config.min_royalties;
                 }
             }
-            None => {}
-        };
+        }
 
         require!(
             &fees + &eligible_royalties + &extra_fee < PERCENTAGE_TOTAL,
@@ -133,7 +128,7 @@ pub trait HelpersModule:
         seller_amount_to_send -= &creator_royalties;
         seller_amount_to_send -= &marketplace_fees;
         if extra_fee > BigUint::zero() && extra_address != ManagedAddress::zero() {
-            extra_amount = self.calculate_cut_amount(&price, &extra_fee);
+            extra_amount = self.calculate_cut_amount(price, &extra_fee);
             seller_amount_to_send -= &extra_amount;
         }
 

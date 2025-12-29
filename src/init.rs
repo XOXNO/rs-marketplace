@@ -3,11 +3,9 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 pub mod auction;
-use crate::aggregator::{AggregatorStep, TokenAmount};
 use auction::*;
 pub mod accumulator;
 pub mod admin;
-pub mod aggregator;
 pub mod common;
 pub mod creator;
 pub mod events;
@@ -66,7 +64,7 @@ pub trait XOXNOProtocol:
         self.require_enabled();
         let payments = self.call_value().all_esdt_transfers();
         let marketplace_cut_percentage = &self.bid_cut_percentage().get();
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let caller = self.blockchain().get_caller();
 
         let mut map_listings = self.listings();
@@ -81,10 +79,7 @@ pub trait XOXNOProtocol:
                 map_acc_tokens.contains(&listing.accepted_payment_token),
                 "The payment token is not whitelisted!"
             );
-            require!(
-                nft_amount >= BigUint::from(NFT_AMOUNT),
-                "Must tranfer at least one"
-            );
+            require!(nft_amount >= NFT_AMOUNT, "Must tranfer at least one");
             require!(
                 nft_nonce == listing.nonce
                     && nft_type == listing.collection
@@ -161,9 +156,9 @@ pub trait XOXNOProtocol:
             let accepted_payment_nft_nonce = 0;
 
             let auction_id = self.last_valid_auction_id().get() + 1;
-            self.last_valid_auction_id().set(&auction_id);
+            self.last_valid_auction_id().set(auction_id);
 
-            let auction_type = if nft_amount > BigUint::from(NFT_AMOUNT) {
+            let auction_type = if nft_amount > NFT_AMOUNT {
                 match sft_max_one_per_payment {
                     true => AuctionType::SftOnePerPayment,
                     false => AuctionType::SftAll,
@@ -180,7 +175,7 @@ pub trait XOXNOProtocol:
                     auction_type == AuctionType::Nft
                         || auction_type == AuctionType::SftOnePerPayment
                         || (auction_type == AuctionType::SftAll
-                            && &listing.min_bid == &listing.max_bid),
+                            && listing.min_bid == listing.max_bid),
                     "Deadline is mandatory for this auction type!"
                 );
             }
@@ -312,7 +307,7 @@ pub trait XOXNOProtocol:
             !self.freezed_auctions().contains(&auction_id),
             "Auction is frozen!"
         );
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         require!(
             auction.auction_type == AuctionType::SftAll
                 || auction.auction_type == AuctionType::NftBid,
@@ -367,7 +362,6 @@ pub trait XOXNOProtocol:
             OptionalValue::None,
             OptionalValue::None,
             OptionalValue::None,
-            OptionalValue::None,
         );
     }
 
@@ -379,8 +373,7 @@ pub trait XOXNOProtocol:
         auction_id: u64,
         nft_type: TokenIdentifier,
         nft_nonce: u64,
-        steps: ManagedVec<AggregatorStep<Self::Api>>,
-        limits: ManagedVec<TokenAmount<Self::Api>>,
+        steps: ManagedArgBuffer<Self::Api>,
         opt_sft_buy_amount: OptionalValue<BigUint>,
     ) {
         self.common_buy(
@@ -391,7 +384,6 @@ pub trait XOXNOProtocol:
             OptionalValue::None,
             OptionalValue::None,
             OptionalValue::Some(steps),
-            OptionalValue::Some(limits),
         );
     }
 
@@ -415,7 +407,6 @@ pub trait XOXNOProtocol:
             buy_for,
             message,
             OptionalValue::None,
-            OptionalValue::None,
         );
     }
 
@@ -428,7 +419,7 @@ pub trait XOXNOProtocol:
         let payments = self.call_value().egld_or_single_esdt();
         let mut total_available = payments.amount.clone();
         let mut bought_nfts: ManagedVec<EsdtTokenPayment<Self::Api>> = ManagedVec::new();
-        let current_time = self.blockchain().get_block_timestamp();
+        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let caller = self.blockchain().get_caller();
         let wegld = self.wrapping_token().get();
         let mut marketplace_fees = BigUint::zero();
@@ -527,7 +518,7 @@ pub trait XOXNOProtocol:
             )
         }
 
-        if bought_nfts.len() > 0 {
+        if !bought_nfts.is_empty() {
             self.send().direct_multi(&caller, &bought_nfts)
         }
 
@@ -566,7 +557,7 @@ pub trait XOXNOProtocol:
             require!(!map_frozen.contains(&auction_id), "Auction is frozen!");
             let listing = listing_map.get();
             require!(
-                &listing.original_owner == &caller,
+                listing.original_owner == caller,
                 "Only the original owner can withdraw!"
             );
             self.withdraw_auction_common(auction_id, &listing);
@@ -582,7 +573,7 @@ pub trait XOXNOProtocol:
     fn bulk_change_listing(&self, updates: MultiValueEncoded<BulkUpdateListing<Self::Api>>) {
         self.require_enabled();
         let caller = self.blockchain().get_caller();
-        require!(updates.len() > 0, "You can not send len 0 of updates!");
+        require!(!updates.is_empty(), "You can not send len 0 of updates!");
         let map_frozen = self.freezed_auctions();
         for update in updates.into_iter() {
             let listing_map = self.auction_by_id(update.auction_id);

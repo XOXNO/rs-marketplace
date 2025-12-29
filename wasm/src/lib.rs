@@ -6,10 +6,10 @@
 
 // Init:                                 1
 // Upgrade:                              1
-// Endpoints:                           97
+// Endpoints:                           95
 // Async Callback (empty):               1
 // Promise callbacks:                    1
-// Total number of exported functions: 101
+// Total number of exported functions:  99
 
 #![no_std]
 
@@ -106,8 +106,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         unFreezeAuctionId => un_freeze_auction_id
         unFreezeAllAuctionIds => un_freeze_all_auction_id
         freezeAuctionId => freeze_auction_id
-        claimLeftOverDust => claim_lost_funds
-        claimSavedFundsForUser => claim_tokens_for_creator
         addBlackListWallet => add_blacklist
         removeBlackListWallet => remove_blacklist
         setCutFeesReverted => set_cut_fees_reverted

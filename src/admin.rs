@@ -27,20 +27,18 @@ pub trait AdminModule:
                 self.withdraw_auction_common(auction_id, &auction);
             } else if auction.current_winner.is_zero() {
                 self.end_auction_common(auction_id, &auction);
-            } else {
-                if auction.current_winner != ManagedAddress::zero() {
-                    self.transfer_or_save_payment(
-                        &auction.current_winner,
-                        &auction.payment_token_type,
-                        auction.payment_token_nonce,
-                        &auction.current_bid,
-                    );
-                    self.listings_bids(&auction.current_winner)
-                        .remove(&auction_id);
+            } else if auction.current_winner != ManagedAddress::zero() {
+                self.transfer_or_save_payment(
+                    &auction.current_winner,
+                    &auction.payment_token_type,
+                    auction.payment_token_nonce,
+                    &auction.current_bid,
+                );
+                self.listings_bids(&auction.current_winner)
+                    .remove(&auction_id);
 
-                    auction.current_winner = ManagedAddress::zero();
-                    self.end_auction_common(auction_id, &auction);
-                }
+                auction.current_winner = ManagedAddress::zero();
+                self.end_auction_common(auction_id, &auction);
             }
         }
     }
@@ -166,7 +164,7 @@ pub trait AdminModule:
     #[endpoint(setStatus)]
     fn set_status(&self, status: bool) {
         self.require_admin(None);
-        self.status().set(&status);
+        self.status().set(status);
     }
 
     #[only_owner]

@@ -32,6 +32,6 @@ tags
 **/wallets/**
 **/mxpy.data-storage.json
 **/*.interaction.json
-
+**/.move/*
 # Python scripts
 **/__pycache__/**

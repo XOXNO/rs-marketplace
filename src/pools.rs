@@ -56,7 +56,7 @@ pub trait PoolsModule: crate::storage::StorageModule + crate::events::EventsModu
         nonce: u64,
         amount: &BigUint,
     ) {
-        let map_user = self.user_funds(&buyer, token, nonce);
+        let map_user = self.user_funds(buyer, token, nonce);
         require!(!map_user.is_empty(), "This user has no balance deposited!");
 
         let balance = map_user.get();
@@ -84,7 +84,7 @@ pub trait PoolsModule: crate::storage::StorageModule + crate::events::EventsModu
         nonce: u64,
         amount: &BigUint,
     ) {
-        let map_user = self.user_funds(&buyer, &token, nonce);
+        let map_user = self.user_funds(buyer, token, nonce);
         require!(!map_user.is_empty(), "This user has no balance deposited!");
 
         let balance = map_user.get();

@@ -40,6 +40,7 @@ pub struct Offer<M: ManagedTypeApi> {
     pub marketplace_cut_percentage: BigUint<M>,
     pub new_version: bool,
 }
+
 impl<M: ManagedTypeApi> TopDecode for Offer<M> {
     fn top_decode<I>(input: I) -> Result<Self, DecodeError>
     where

@@ -12,7 +12,7 @@ pub trait WrappingModule: crate::storage::StorageModule {
         self.wegld_proxy(self.wrapping().get())
             .wrap_egld()
             .with_egld_transfer(amount)
-            .execute_on_dest_context()
+            .sync_call()
     }
 
     fn unwrap_egld(&self, amount: BigUint) {
@@ -23,6 +23,6 @@ pub trait WrappingModule: crate::storage::StorageModule {
                 0,
                 amount,
             ))
-            .execute_on_dest_context()
+            .sync_call()
     }
 }
