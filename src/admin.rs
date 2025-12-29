@@ -15,7 +15,15 @@ pub trait AdminModule:
     #[endpoint(returnListing)]
     fn return_listing(&self, auction_ids: MultiValueEncoded<u64>) {
         self.require_admin(None);
+        // SECURITY FIX: Get frozen auctions map to prevent interference during DEX swaps
+        let map_frozen = self.freezed_auctions();
         for auction_id in auction_ids {
+            // SECURITY FIX: Cannot return frozen auctions (they may be in the middle of a DEX swap)
+            require!(
+                !map_frozen.contains(&auction_id),
+                "Cannot return frozen auction! Wait for swap to complete."
+            );
+
             let map_auction = self.auction_by_id(auction_id);
             if map_auction.is_empty() {
                 continue;

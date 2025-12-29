@@ -37,6 +37,22 @@ pub trait CustomOffersModule:
         );
         let seller = self.blockchain().get_caller();
         require!(offer.offer_owner != seller, "Cannot accept your own offer!");
+
+        // SECURITY FIX: Check if offer owner has been blacklisted since creating the offer
+        require!(
+            !self.blacklist_wallets().contains(&offer.offer_owner),
+            "Offer owner has been blacklisted!"
+        );
+
+        // SECURITY FIX: Check if the auction is frozen (during DEX swap operations)
+        if auction_id.is_some() {
+            let auction_id_val = auction_id.clone().into_option().unwrap();
+            require!(
+                !self.freezed_auctions().contains(&auction_id_val),
+                "Auction is frozen!"
+            );
+        }
+
         if offer.new_version {
             self.has_balance_and_deduct(
                 &offer.offer_owner,
@@ -262,6 +278,16 @@ pub trait CustomOffersModule:
         attributes: OptionalValue<ManagedBuffer>,
     ) -> u64 {
         self.require_enabled();
+
+        // SECURITY FIX: Validate quantity is greater than 0
+        require!(quantity > 0, "Quantity must be greater than 0!");
+
+        // SECURITY FIX: Validate collection identifier (consistent with send_offer)
+        require!(
+            collection.is_valid_esdt_identifier(),
+            "Invalid collection identifier!"
+        );
+
         self.deposit();
         let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
         let caller = self.blockchain().get_caller();
@@ -341,6 +367,15 @@ pub trait CustomOffersModule:
         let seller = self.blockchain().get_caller();
         let mut offer = offer_map.get();
 
+        // SECURITY FIX: Check if offer owner has been blacklisted since creating the offer
+        require!(
+            !self.blacklist_wallets().contains(&offer.owner),
+            "Offer owner has been blacklisted!"
+        );
+
+        // SECURITY FIX: Get frozen auctions map to check during auction processing
+        let map_frozen = self.freezed_auctions();
+
         let mut tmp_nonces = ManagedBuffer::new();
         let mut accepted_nfts: ManagedVec<EsdtTokenPayment> = ManagedVec::new();
         let mut last_nft_info: EsdtTokenData = EsdtTokenData::default();
@@ -360,6 +395,12 @@ pub trait CustomOffersModule:
         }
 
         for auction_id in auctions_ids.iter() {
+            // SECURITY FIX: Check if auction is frozen (during DEX swap operations)
+            require!(
+                !map_frozen.contains(&auction_id),
+                "Auction is frozen!"
+            );
+
             let auction = self.try_get_auction(auction_id);
             require!(
                 auction.auction_type == AuctionType::Nft,

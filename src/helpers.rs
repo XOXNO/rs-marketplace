@@ -8,6 +8,9 @@ use crate::{
     PERCENTAGE_TOTAL,
 };
 
+// Minimum percentage that must go to the seller (10% = 1000 basis points)
+const MIN_SELLER_PERCENTAGE: u64 = 1_000;
+
 #[multiversx_sc::module]
 pub trait HelpersModule:
     crate::storage::StorageModule + crate::views::ViewsModule + crate::events::EventsModule
@@ -118,9 +121,10 @@ pub trait HelpersModule:
             }
         }
 
+        // Ensure combined fees don't exceed 90%, leaving at least 10% for the seller
         require!(
-            &fees + &eligible_royalties + &extra_fee < PERCENTAGE_TOTAL,
-            "Fees exceed 100%"
+            &fees + &eligible_royalties + &extra_fee <= PERCENTAGE_TOTAL - MIN_SELLER_PERCENTAGE,
+            "Combined fees cannot exceed 90%! Seller must receive at least 10%."
         );
         let creator_royalties = self.calculate_cut_amount(price, &eligible_royalties);
         let marketplace_fees = self.calculate_cut_amount(price, &fees);

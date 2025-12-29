@@ -3,6 +3,9 @@ use crate::{CollectionExtraFeesConfig, CollectionFeeConfig};
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
+// Maximum extra fee that can be set (20% = 2000 basis points)
+const MAX_EXTRA_FEE: u64 = 2_000;
+
 #[multiversx_sc::module]
 pub trait CreatorModule:
     crate::storage::StorageModule
@@ -64,6 +67,12 @@ pub trait CreatorModule:
 
     #[endpoint(setExtraFees)]
     fn set_extra_fees(&self, token_id: &TokenIdentifier, amount: BigUint, address: ManagedAddress) {
+        // SECURITY FIX: Validate extra fee doesn't exceed maximum (20%)
+        require!(
+            amount <= MAX_EXTRA_FEE,
+            "Extra fee cannot exceed 20%!"
+        );
+
         let config_map = self.collection_config(token_id);
         if config_map.is_empty() {
             self.require_admin(None);
