@@ -620,14 +620,14 @@ pub trait CommonModule:
         message: OptionalValue<ManagedBuffer>,
     ) {
         let gas_left = self.blockchain().get_gas_left();
-        let callback = 30_000_000;
+        let callback_gap = 50_000_000;
         // Execute swap via external router with source tokens and configuration
         self.tx()
             .to(self.aggregator_sc().get()) // Use protocol-configured swap router
             .raw_call(ManagedBuffer::new_from_bytes(b"xo"))
             .arguments_raw(steps) // Pass through swap configuration (path, slippage, etc.)
             .payment(&payment)
-            .gas(gas_left - callback)
+            .gas(gas_left - callback_gap)
             .callback(self.callbacks().callback_ash(
                 sent_to,
                 paid_by,
