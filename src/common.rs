@@ -49,7 +49,10 @@ pub trait CommonModule:
         require_swap: bool,
     ) {
         let caller = self.blockchain().get_caller();
-        let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+        let current_time = self
+            .blockchain()
+            .get_block_timestamp_seconds()
+            .as_u64_seconds();
         require!(
             !self.freezed_auctions().contains(&auction_id),
             "Auction is frozen!"
@@ -185,7 +188,10 @@ pub trait CommonModule:
             }
             self.update_or_remove_items_quantity(&auction, &buy_amount);
 
-            let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+            let current_time = self
+                .blockchain()
+                .get_block_timestamp_seconds()
+                .as_u64_seconds();
             self.emit_buy_event(
                 auction_id,
                 &auction,
@@ -204,12 +210,7 @@ pub trait CommonModule:
         } else {
             let steps = swaps.into_option().unwrap();
             self.freezed_auctions().insert(auction_id);
-            let gas_left = self.blockchain().get_gas_left();
-            let req_gas = (20_000_000 + steps.len() * 15_000_000).try_into().unwrap();
-            require!(
-                gas_left >= req_gas,
-                "Not enough gas left to complete the transaction!"
-            );
+
             self.aggregate(
                 buyer,
                 &caller,
@@ -217,7 +218,6 @@ pub trait CommonModule:
                 &total_value,
                 auction_id,
                 payments,
-                req_gas,
                 steps,
                 message,
             );
@@ -616,17 +616,18 @@ pub trait CommonModule:
         total_price: &BigUint,
         auction_id: u64,
         payment: EgldOrEsdtTokenPayment,
-        gas: u64,
         steps: ManagedArgBuffer<Self::Api>,
         message: OptionalValue<ManagedBuffer>,
     ) {
+        let gas_left = self.blockchain().get_gas_left();
+        let callback = 30_000_000;
         // Execute swap via external router with source tokens and configuration
         self.tx()
             .to(self.aggregator_sc().get()) // Use protocol-configured swap router
             .raw_call(ManagedBuffer::new_from_bytes(b"xo"))
             .arguments_raw(steps) // Pass through swap configuration (path, slippage, etc.)
             .payment(&payment)
-            .gas(gas)
+            .gas(gas_left - callback)
             .callback(self.callbacks().callback_ash(
                 sent_to,
                 paid_by,
@@ -679,7 +680,10 @@ pub trait CommonModule:
                 }
                 self.update_or_remove_items_quantity(&auction, quantity);
 
-                let current_time = self.blockchain().get_block_timestamp_seconds().as_u64_seconds();
+                let current_time = self
+                    .blockchain()
+                    .get_block_timestamp_seconds()
+                    .as_u64_seconds();
                 self.emit_buy_event(
                     auction_id,
                     &auction,
