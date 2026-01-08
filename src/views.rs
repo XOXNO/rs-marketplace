@@ -20,14 +20,14 @@ pub trait ViewsModule: crate::storage::StorageModule {
     }
 
     #[view(getListings)]
-    fn get_listings(&self, from: usize, to: usize) -> MultiValueEncoded<u64> {
+    fn get_listings(&self, from: &u64, to: usize) -> MultiValueEncoded<u64> {
         let mut results = MultiValueEncoded::new();
 
-        for auction_id in self.listings().iter().skip(from).take(to) {
+        for auction_id in self.listings().iter_from(from).take(to) {
             results.push(auction_id);
         }
 
-        return results;
+        results
     }
 
     #[view(getCollectionsCount)]
